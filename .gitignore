@@ -1,0 +1,8 @@
+src/*/bin/*
+src/*/obj/*
+src/.vs/*
+output/*
+output
+.vs/*
+!assets/*.png
+test_alc.ps1
