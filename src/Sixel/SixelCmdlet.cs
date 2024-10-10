@@ -1,6 +1,5 @@
-using System.IO;
 using System.Management.Automation;
-using System.Net.Http;
+using Sixel.Terminal;
 
 namespace Sixel;
 
@@ -10,6 +9,7 @@ namespace Sixel;
 public sealed class ConvertSixelCmdlet : PSCmdlet
 {
   [Parameter(
+        HelpMessage = "A path to a local image to convert to sixel.",
         Mandatory = true,
         ValueFromPipelineByPropertyName = true,
         Position = 0,
@@ -20,6 +20,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   public string Path { get; set; } = null!;
 
   [Parameter(
+        HelpMessage = "A URL of the image to download and convert to sixel.",
         Mandatory = true,
         ValueFromPipeline = true,
         ParameterSetName = "Url"
@@ -27,18 +28,24 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [Alias("Uri")]
   public string Url { get; set; } = null!;
 
-  [Parameter()]
+  [Parameter(
+        HelpMessage = "The maximum number of colors to use in the image."
+  )]
   [ValidateRange(1, 256)]
   public int MaxColors { get; set; } = 256;
 
-  [Parameter()]
+  [Parameter(
+        HelpMessage = "Width of the image in character cells, the height will be scaled to maintain aspect ratio."
+  )]
   public int Width { get; set; }
 
-  [Parameter()]
+  [Parameter(
+        HelpMessage = "Force the command to attempt to output sixel data even if the terminal does not support sixel."
+  )]
   public SwitchParameter Force { get; set; }
   protected override void BeginProcessing()
   {
-    if (Convert.GetTerminalSupportsSixel() == false && Force == false)
+    if (Compatibility.TerminalSupportsSixel() == false && Force == false)
     {
       this.ThrowTerminatingError(new ErrorRecord(new System.Exception("Terminal does not support sixel, override with -Force for test."), "SixelError", ErrorCategory.NotImplemented, null));
     }

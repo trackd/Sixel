@@ -1,5 +1,4 @@
-﻿
-using Sixel.Shared;
+﻿using Sixel.Terminal;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -17,21 +16,42 @@ namespace Sixel;
 public class Convert
 {
   private static readonly StringBuilder SixelBuilder = new();
+
+  /// <summary>
+  /// The character to use when a sixel is empty/transparent.
+  /// </summary>
   private const char SixelEmpty = '?';
+
+  /// <summary>
+  /// The character to use when moving to the next line in a sixel.
+  /// </summary>
   private const char SixelDECGNL = '-';
+
+  /// <summary>
+  /// The character to use when going back to the start of the current line in a sixel to write more data over it.
+  /// </summary>
   private const char SixelDECGCR = '$';
-  private const string SixelStart = "\u001BP0;1q\"1;1;";
-  private const string SixelEnd = "\u001b\\";
+
+  /// <summary>
+  /// The start of a sixel sequence.
+  /// </summary>
+  private const string SixelStart = $"{Constants.Escape}P0;1q";
+
+  /// <summary>
+  /// The raster settings for setting the sixel pixel ratio to 1:1 so images are square when rendered instead of the 2:1 double height default.
+  /// </summary>
+  private const string SixelRasterAttributes = "\"1;1;";
+
+  /// <summary>
+  /// The end of a sixel sequence.
+  /// </summary>
+  private const string SixelEnd = $"{Constants.Escape}\\";
+
+  /// <summary>
+  /// The transparent color for the sixel, this is red but the sixel should be transparent so this is not visible.
+  /// </summary>
   private const string TransparentColor = "#0;2;100;0;0";
-  internal static readonly bool TerminalSupportsSixel;
-  static Convert()
-  {
-    TerminalSupportsSixel = _TerminalSupportsSixel();
-  }
-  public static bool GetTerminalSupportsSixel()
-  {
-    return TerminalSupportsSixel;
-  }
+  
   private static readonly ResizeOptions ResizeOptions = new()
   {
     Sampler = KnownResamplers.NearestNeighbor,
@@ -57,13 +77,14 @@ public class Convert
       SixelBuilder.Clear();
     }
   }
-  public static string ImgToSixel(string filename, int maxColors, int width)
+  public static string ImgToSixel(string filename, int maxColors, int cellWidth)
   {
+    var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
     try
     {
       using var image = LoadImage(filename);
-      int scaledHeight = (int)Math.Round((double)image.Height / image.Width * width);
-      MutateSizeAndColors(image, width, scaledHeight, maxColors);
+      int scaledHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
+      MutateSizeAndColors(image, pixelWidth, scaledHeight, maxColors);
       RenderImage(image);
       return SixelBuilder.ToString();
     }
@@ -207,21 +228,10 @@ public class Convert
   private static void StartSixel(int width, int height)
   {
     SixelBuilder.Append(SixelStart)
+                .Append(SixelRasterAttributes)
                 .Append(width)
                 .Append(';')
                 .Append(height)
                 .Append(TransparentColor);
-  }
-  private static bool _TerminalSupportsSixel()
-  {
-    char? c = null;
-    var response = string.Empty;
-    System.Console.Write("\u001b[c");
-    do
-    {
-      c = Console.ReadKey(true).KeyChar;
-      response += c;
-    } while (c != 'c' && Console.KeyAvailable);
-    return response.Contains(";4;");
   }
 }
