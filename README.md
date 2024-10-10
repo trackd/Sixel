@@ -9,7 +9,22 @@ But we wanted to get something out quickly for people who wanted to test sixel.
 
 It will probably be added as an experimental feature there as well soon.  
 
-It uses an Assembly load context for the Sixlabor library, from [PowerShell-ALC](https://github.com/jborean93/PowerShell-ALC)  
+It uses an Assembly load context for the Sixlabors library, from [PowerShell-ALC](https://github.com/jborean93/PowerShell-ALC)  
+
+## Install
+
+```powershell
+Install-Module Sixel
+# or
+Install-PSResource Sixel
+```
+
+## Requirements
+
+This module requires Powershell version 7.4+  
+We test against the latest Windows Terminal Preview.  
+
+Sixel support has not been added to Windows Terminal Stable branch yet.  
 
 ## Authors
 
