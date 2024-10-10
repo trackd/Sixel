@@ -1,4 +1,5 @@
-﻿using Sixel.Terminal;
+﻿using Sixel.Shared;
+using Sixel.Terminal;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -51,7 +52,7 @@ public class Convert
   /// The transparent color for the sixel, this is red but the sixel should be transparent so this is not visible.
   /// </summary>
   private const string TransparentColor = "#0;2;100;0;0";
-  
+
   private static readonly ResizeOptions ResizeOptions = new()
   {
     Sampler = KnownResamplers.NearestNeighbor,
@@ -80,6 +81,21 @@ public class Convert
   public static string ImgToSixel(string filename, int maxColors, int cellWidth)
   {
     var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
+    try
+    {
+      using var image = LoadImage(filename);
+      int scaledHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
+      MutateSizeAndColors(image, pixelWidth, scaledHeight, maxColors);
+      RenderImage(image);
+      return SixelBuilder.ToString();
+    }
+    finally
+    {
+      SixelBuilder.Clear();
+    }
+  }
+  public static string ImgToSixelPixelWidth(string filename, int maxColors, int pixelWidth)
+  {
     try
     {
       using var image = LoadImage(filename);

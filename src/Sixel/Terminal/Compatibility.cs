@@ -44,8 +44,6 @@ public class Compatibility
         PixelWidth = 10,
         PixelHeight = 20
       };
-      // TODO: Write this to a normal powershell warning stream.
-      Console.Error.WriteLine("Could not get terminal cell size, using default size 10x20.");
     }
 
     return _cellSize;
@@ -66,7 +64,7 @@ public class Compatibility
     }
 
     _terminalSupportsSixel = GetControlSequenceResponse("[c").Contains(";4;");
-    
+
     return _terminalSupportsSixel.Value;
   }
 
@@ -79,7 +77,7 @@ public class Compatibility
   {
     char? c;
     var response = string.Empty;
-    
+
     Console.Write($"{Constants.Escape}{controlSequence}");
     do
     {

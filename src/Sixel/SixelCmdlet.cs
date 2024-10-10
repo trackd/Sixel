@@ -25,6 +25,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
         ValueFromPipeline = true,
         ParameterSetName = "Url"
   )]
+  [ValidateNotNullOrEmpty]
   [Alias("Uri")]
   public string Url { get; set; } = null!;
 
@@ -37,7 +38,13 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [Parameter(
         HelpMessage = "Width of the image in character cells, the height will be scaled to maintain aspect ratio."
   )]
+  [ValidateTerminalWidth()]
   public int Width { get; set; }
+
+  [Parameter(
+      HelpMessage = "Width of the image in Pixels, the height will be scaled to maintain aspect ratio."
+  )]
+  public int PixelWidth { get; set; }
 
   [Parameter(
         HelpMessage = "Force the command to attempt to output sixel data even if the terminal does not support sixel."
@@ -47,7 +54,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   {
     if (Compatibility.TerminalSupportsSixel() == false && Force == false)
     {
-      this.ThrowTerminatingError(new ErrorRecord(new System.Exception("Terminal does not support sixel, override with -Force for test."), "SixelError", ErrorCategory.NotImplemented, null));
+      ThrowTerminatingError(new ErrorRecord(new System.Exception("Terminal does not support sixel, override with -Force"), "SixelError", ErrorCategory.NotImplemented, null));
     }
   }
   protected override void ProcessRecord()
@@ -55,7 +62,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
     string? tempFilePath = null;
     try
     {
-      if (ParameterSetName == "Url")
+      if (null != Url)
       {
         tempFilePath = System.IO.Path.GetTempFileName();
         using (var client = new HttpClient())
@@ -69,15 +76,18 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
         }
         Path = tempFilePath;
       }
-      var resolvedPath = this.SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
+      var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
       if (Width > 0)
       {
-        WriteObject(Sixel.Convert.ImgToSixel(resolvedPath, MaxColors, Width));
+        WriteObject(Convert.ImgToSixel(resolvedPath, MaxColors, Width));
+        return;
       }
-      else
+      if (PixelWidth > 0)
       {
-        WriteObject(Sixel.Convert.ImgToSixel(resolvedPath, MaxColors));
+        WriteObject(Convert.ImgToSixelPixelWidth(resolvedPath, MaxColors, PixelWidth));
+        return;
       }
+      WriteObject(Convert.ImgToSixel(resolvedPath, MaxColors));
     }
     catch (Exception ex)
     {
@@ -85,18 +95,10 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
     }
     finally
     {
-      if (tempFilePath != null && System.IO.File.Exists(tempFilePath))
+      if (!string.IsNullOrEmpty(tempFilePath))
       {
         System.IO.File.Delete(tempFilePath);
       }
-    }
-  }
-  protected override void EndProcessing()
-  {
-    if (ParameterSetName == "Url")
-    {
-      WriteVerbose("Cleaning up temporary file.");
-      System.IO.File.Delete(Path);
     }
   }
 }

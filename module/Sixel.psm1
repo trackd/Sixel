@@ -30,18 +30,3 @@ if ($innerMod) {
         $addExportedCmdlet.Invoke($ExecutionContext.SessionState.Module, @(, $cmd))
     }
 }
-<#
-@(
-    foreach ($asm in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
-        if (-not ($asm.GetName().Name -like '*SixLabors*')) {
-            continue
-        }
-        $alc = [Runtime.Loader.AssemblyLoadContext]::GetLoadContext($asm)
-        [PSCustomObject]@{
-            Name = $asm.FullName
-            Location = $asm.Location
-            ALC = $alc
-        }
-    }
-) | Format-List
-#>

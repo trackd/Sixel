@@ -51,11 +51,11 @@ Converts a local file to sixel format
 
 ### -Path
 
-The filepath to an image  
+A path to a local image to convert to sixel.  
 
 ```yaml
 Type: String
-Parameter Sets: (Path)
+Parameter Sets: Path
 Aliases: FullName
 
 Required: True
@@ -67,12 +67,11 @@ Accept wildcard characters: False
 
 ### -Url
 
-the url to an image.  
-it will download the image to a temporary file and convert it and dispose of it afterwards.  
+A URL of the image to download and convert to sixel.  
 
 ```yaml
 Type: String
-Parameter Sets: (Url)
+Parameter Sets: Url
 Aliases: Uri
 
 Required: True
@@ -84,8 +83,7 @@ Accept wildcard characters: False
 
 ### -MaxColors
 
-Sets the amount of colors to use.  
-
+The maximum number of colors to use in the image.  
 Max is 256.  
 
 ```yaml
@@ -102,7 +100,23 @@ Accept wildcard characters: False
 
 ### -Width
 
-Sets the width of the image, it will resize to fit while keeping the aspect ratio.  
+Width of the image in character cells, the height will be scaled to maintain aspect ratio.  
+
+```yaml
+Type: int
+Parameter Sets: (All)
+Aliases: CellWidth
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -PixelWidth
+
+Width of the image in Pixels, the height will be scaled to maintain aspect ratio  
 
 ```yaml
 Type: int
@@ -118,8 +132,7 @@ Accept wildcard characters: False
 
 ### -Force
 
-Overrides the sixel support detection and output a sixel even if your terminal might not support it.  
-Note: this has no effect on the capabilities of the terminal, it will just force sixel output.  
+Force the command to attempt to output sixel data even if the terminal does not support sixel.  
 
 ```yaml
 Type: SwitchParameter

@@ -1,5 +1,11 @@
+[cmdletbinding()]
+param(
+    [Switch]$Publish
+)
+
 . $PSScriptRoot/common.ps1
 
+$reporoot = Split-Path $PSScriptRoot
 @(
     'Pester'
     'PlatyPS'
@@ -8,15 +14,15 @@
     Import-Module -Name $_ -Force
 }
 
-$output = Join-Path $PSScriptRoot 'output'
+$output = Join-Path $reporoot 'output'
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
 }
-Invoke-ModuleBuild -Path $PSScriptRoot
+Invoke-ModuleBuild -Path $reporoot
 
 Get-ChildItem $output -Recurse -File | Where-Object { $_.Extension -in '.json','.pdb' } | Remove-Item -Force
 
-$docs = Join-Path $PSScriptRoot 'docs'
+$docs = Join-Path $reporoot 'docs'
 
 Get-ChildItem -LiteralPath $docs -Directory | ForEach-Object {
         Write-Host "Building docs for $($_.Name)"
@@ -28,7 +34,9 @@ Get-ChildItem -LiteralPath $docs -Directory | ForEach-Object {
         New-ExternalHelp @helpParams | Out-Null
     }
 
-$module = Get-Module -Name Sixel
-$v = 'v' + $module.Version.ToString()
-Publish-Module -Name Sixel -Path $output -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
-gh release create $v --target prerelease --generate-notes --prerelease
+if ($Publish) {
+    $module = Get-Module $output/Sixel.psd1 -ListAvailable
+    $v = 'v' + $module.Version.ToString()
+    Publish-PSResource -Path $output -ApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
+    gh release create $v --target prerelease --generate-notes --prerelease
+}

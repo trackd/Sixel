@@ -173,7 +173,6 @@ Function Get-BuildInfo {
         [string]
         $Path
     )
-
     $moduleSrc = [Path]::Combine($Path, 'module')
     $manifestItem = Get-Item -Path ([Path]::Combine($moduleSrc, '*.psd1'))
     $manifest = Test-ModuleManifest -Path $manifestItem.FullName -ErrorAction Ignore -WarningAction Ignore
