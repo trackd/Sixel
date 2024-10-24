@@ -1,15 +1,12 @@
 ﻿namespace Sixel.Terminal.Models;
 
 /// <summary>
-/// terminals we can detect.
+/// known terminals
 /// not all terminals are supported.
 /// </summary>
 public enum Terminals
 {
   MicrosoftTerminal,
-  MicrosoftTerminalPreview,
-  MicrosoftTerminalDev,
-  MicrosoftTerminalCanary,
   MicrosoftConhost,
   Kitty,
   Iterm2,
@@ -17,8 +14,8 @@ public enum Terminals
   Ghostty,
   VSCode,
   Mintty,
-  Apple,
   Alacritty,
   xterm,
-  mlterm
-}
+  mlterm,
+  unknown
+};

@@ -20,6 +20,10 @@ if (Test-Path $output) {
 }
 Invoke-ModuleBuild -Path $reporoot
 
+$docspath = Join-Path $output 'en-US'
+if (Test-Path $docspath) {
+    Remove-Item $docspath -Recurse -Force
+}
 Get-ChildItem $output -Recurse -File | Where-Object { $_.Extension -in '.json','.pdb' } | Remove-Item -Force
 
 $docs = Join-Path $reporoot 'docs'

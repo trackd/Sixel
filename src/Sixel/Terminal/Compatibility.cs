@@ -15,6 +15,11 @@ public class Compatibility
   private static CellSize? _cellSize;
 
   /// <summary>
+  /// get the terminal info
+  /// </summary>
+
+  private static TerminalInfo? _terminalInfo;
+  /// <summary>
   /// Get the cell size of the terminal in pixel-sixel size.
   /// The response to the command will look like [6;20;10t where the 20 is height and 10 is width.
   /// I think the 6 is the terminal class, which is not used here.
@@ -32,7 +37,8 @@ public class Compatibility
     try
     {
       var parts = response.Split(';', 't');
-      _cellSize = new CellSize {
+      _cellSize = new CellSize
+      {
         PixelWidth = int.Parse(parts[2]),
         PixelHeight = int.Parse(parts[1])
       };
@@ -40,7 +46,8 @@ public class Compatibility
     catch
     {
       // Return the default Windows Terminal size if we can't get the size from the terminal.
-      _cellSize = new CellSize {
+      _cellSize = new CellSize
+      {
         PixelWidth = 10,
         PixelHeight = 20
       };
@@ -78,7 +85,7 @@ public class Compatibility
     char? c;
     var response = string.Empty;
 
-    Console.Write($"{Constants.Escape}{controlSequence}");
+    Console.Write($"{Constants.ESC}{controlSequence}");
     do
     {
       c = Console.ReadKey(true).KeyChar;
@@ -88,4 +95,18 @@ public class Compatibility
     return response;
   }
 
+  /// <summary>
+  /// Get the terminal info
+  /// </summary>
+  /// <returns>The terminal protocol</returns>
+  public static TerminalInfo GetTerminalInfo()
+  {
+    if (_terminalInfo != null)
+    {
+      return _terminalInfo;
+    }
+
+    _terminalInfo = TerminalChecker.CheckTerminal();
+    return _terminalInfo;
+  }
 }

@@ -1,15 +1,18 @@
 namespace Sixel.Terminal.Models;
 
+/// <summary>
+/// Represents the size of a cell in pixels for sixel rendering.
+/// </summary>
 public class CellSize
 {
   /// <summary>
-  /// The width of a cell in pixels.
+  /// Gets the width of a cell in pixels.
   /// </summary>
-  public int PixelWidth { get; set; }
+  public int PixelWidth { get; init; }
 
   /// <summary>
-  /// The height of a cell in pixels.
+  /// Gets the height of a cell in pixels.
   /// This isn't used for anything yet but this would be required for something like spectre console that needs to work around the size of the rendered sixel image.
   /// </summary>
-  public int PixelHeight { get; set; }
+  public int PixelHeight { get; init; }
 }

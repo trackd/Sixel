@@ -4,10 +4,11 @@
 /// The image protocols that exists.
 /// not all protocols are supported.
 /// </summary>
+[Flags]
 public enum ImageProtocol
 {
-  Sixel,
-  InlineImageProtocol,
-  KittyGraphicsProtocol,
-  Unsupported
-}
+  None = 0,
+  Sixel = 1,
+  InlineImageProtocol = 2,
+  KittyGraphicsProtocol = 4
+};

@@ -1,41 +1,65 @@
-﻿using System.Diagnostics;
-using Sixel.Terminal.Models;
+﻿using Sixel.Terminal.Models;
+using System.Collections;
 
-namespace Sixel.Terminal
+namespace Sixel.Terminal;
+public static class TerminalChecker
 {
-    public static class TerminalChecker
+    /// <summary>
+    /// Check the terminal for compatibility.
+    /// use enviroment variables to try and figure out which terminal is being used.
+    /// </summary>
+    internal static TerminalInfo CheckTerminal()
     {
-        public static (Terminals Terminal, ImageProtocol Protocol)? CheckTerminal()
+        var env = Environment.GetEnvironmentVariables();
+        foreach (DictionaryEntry item in env)
         {
-            var variables = Environment.GetEnvironmentVariables();
-            foreach (string key in variables.Keys)
+            var key = item.Key?.ToString();
+            var value = item.Value?.ToString();
+
+            if (key == "TERM_PROGRAM" && value != null && Helpers.GetTerminal(value) is Terminals terminal)
             {
-                if (Enum.TryParse(key, out Terminals terminalKey) && Helpers.EnvVars.TryGetValue(terminalKey, out var envVar))
+                if (Helpers.SupportedProtocol.TryGetValue(terminal, out var protocol))
                 {
-                    var envValue = variables[envVar]?.ToString();
-                    if (envVar == "WT_SESSION")
+                    return new TerminalInfo
                     {
-                        return Native.ProcessHelper.CheckParent(Process.GetCurrentProcess().Id);
-                    }
-                    if (Enum.TryParse(envValue, out Terminals terminal))
-                    {
-                        return GetTerminalProtocol(terminal);
-                    }
+                        Terminal = terminal,
+                        Protocol = protocol
+                    };
                 }
             }
-            if (variables.Contains("SESSIONNAME"))
+
+            if (key != null && Helpers.GetTerminal(key) is Terminals _terminal)
             {
-                return Native.ProcessHelper.CheckParent(Process.GetCurrentProcess().Id);
+                if (Helpers.SupportedProtocol.TryGetValue(_terminal, out var protocol))
+                {
+                    return new TerminalInfo
+                    {
+                        Terminal = _terminal,
+                        Protocol = protocol
+                    };
+                }
             }
-            return null;
         }
-        internal static (Terminals Terminal, ImageProtocol Protocol)? GetTerminalProtocol(Terminals terminal)
+        return new TerminalInfo
         {
-            if (Helpers.SupportedProtocol.TryGetValue(terminal, out var protocol))
+            Terminal = Terminals.unknown,
+            Protocol = ImageProtocol.None
+        };
+    }
+    internal static TerminalInfo CheckTerminal(Terminals terminal)
+    {
+        if (Helpers.SupportedProtocol.TryGetValue(terminal, out var protocol))
+        {
+            return new TerminalInfo
             {
-                return (terminal, protocol);
-            }
-            return null;
+                Terminal = terminal,
+                Protocol = protocol
+            };
         }
+        return new TerminalInfo
+        {
+            Terminal = Terminals.unknown,
+            Protocol = ImageProtocol.None
+        };
     }
 }
