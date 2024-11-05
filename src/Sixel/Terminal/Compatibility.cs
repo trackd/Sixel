@@ -2,7 +2,7 @@ using Sixel.Terminal.Models;
 
 namespace Sixel.Terminal;
 
-public class Compatibility
+public static class Compatibility
 {
   /// <summary>
   /// Memory-caches the result of the terminal supporting sixel graphics.

@@ -1,5 +1,4 @@
 ﻿using Sixel.Terminal;
-using Sixel.Terminal.Models;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,11 +13,11 @@ public static class Sixel
   /// </summary>
   /// <param name="image">The image to convert.</param>
   /// <param name="cellWidth">The width of the cell in terminal cells.</param>
-  /// <param name="MaxColors">The Max colors of the image.</param>
+  /// <param name="maxColors">The Max colors of the image.</param>
   /// <param name="frame">The frame to convert.</param>
   /// <param name="returnCursorToTopLeft">Whether to return the cursor to the top left after rendering the image.</param>
   /// <returns>The Sixel string.</returns>
-  public static string ImageToSixel(Image<Rgba32> image, int MaxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
+  public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
   {
     var imageClone = image.Clone();
     imageClone.Mutate(ctx =>
@@ -33,14 +32,13 @@ public static class Sixel
         ctx.Resize(new ResizeOptions()
         {
           Sampler = KnownResamplers.Bicubic,
-          Size = new SixLabors.ImageSharp.Size(pixelWidth, pixelHeight),
+          Size = new(pixelWidth, pixelHeight),
           PremultiplyAlpha = false,
         });
       }
       // Sixel supports 256 colors max
-      ctx.Quantize(new OctreeQuantizer(new()
-      {
-        MaxColors = MaxColors,
+      ctx.Quantize(new OctreeQuantizer(new() {
+        MaxColors = maxColors,
       }));
     });
     var targetFrame = imageClone.Frames[frame];

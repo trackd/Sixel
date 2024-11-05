@@ -1,9 +1,6 @@
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using Sixel.Protocols;
 using System.Management.Automation;
-using System.Text;
-
 
 namespace Sixel.Cmdlet;
 
@@ -58,32 +55,34 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       {
             try
             {
-                  if (null != Url)
+                  Stream? imageStream = null;
+                  switch (ParameterSetName)
                   {
-                        using var client = new HttpClient();
-                        var response = client.GetAsync(Url).Result;
-                        response.EnsureSuccessStatusCode();
-                        WriteObject(
-                        Load.ConsoleImage(
-                                    Protocol,
-                                    response.Content.ReadAsStream(),
-                                    MaxColors,
-                                    Width,
-                                    Force
-                              )
-                        );
+                        case "Path":
+                        {
+                              var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
+                              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+                              break;
+                        }
+                        case "Url":
+                        {
+                              using var client = new HttpClient();
+                              var response = client.GetAsync(Url).Result;
+                              response.EnsureSuccessStatusCode();
+                              imageStream = response.Content.ReadAsStream();
+                              break;
+                        }
                   }
-                  if (null != Path)
+                  if (imageStream is null) return;
+                  using (imageStream)
                   {
-                        var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
-                        using var imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
                         WriteObject(
-                        Load.ConsoleImage(
-                                    Protocol,
-                                    imageStream,
-                                    MaxColors,
-                                    Width,
-                                    Force
+                              Load.ConsoleImage(
+                              Protocol,
+                              imageStream,
+                              MaxColors,
+                              Width,
+                              Force.IsPresent
                               )
                         );
                   }

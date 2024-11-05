@@ -12,24 +12,22 @@
     Copyright            = '(c) trackd. All rights reserved.'
     Description          = 'Convert images to Sixel format and display them in the terminal, Requires a terminal with Sixel support. (Windows Terminal v1.22.2912.0 or later) or Inline Image Protocol support.'
     CmdletsToExport      = @('ConvertTo-Sixel')
-    AliasesToExport      = @('cts','ConvertTo-InlineImage')
+    AliasesToExport      = @('cts', 'ConvertTo-InlineImage')
     PrivateData          = @{
         PSData = @{
-            Tags = @(
+            Tags         = @(
                 'Sixel',
                 'Terminal',
                 'Graphics',
                 'Image',
-                'Sixel Graphics',
-                'Sixel Image',
+                'Console Image',
                 'Inline Image Protocol',
-                'xterm image',
-                'Windows Terminal'
+                'xterm image'
             )
-            LicenseUri = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
-            ProjectUri = 'https://github.com/trackd/Sixel'
+            LicenseUri   = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
+            ProjectUri   = 'https://github.com/trackd/Sixel'
             ReleaseNotes = @'
-            0.2.5 - bugfix, cleanup, added support for inline image protocol.
+            0.2.5 - bugfix, cleanup, added experimental support for inline image protocol.
             0.2.0 - Added better scaling, changes -Width to use cell width instead
             0.1.0 - Initial release
 '@
@@ -38,6 +36,6 @@
     # A missing or $null entry is equivalent to specifying the wildcard *. declare unused with @() for better perf.
     FunctionsToExport    = @()
     VariablesToExport    = @()
-    FormatsToProcess      = @()
-    TypesToProcess        = @()
+    FormatsToProcess     = @()
+    TypesToProcess       = @()
 }

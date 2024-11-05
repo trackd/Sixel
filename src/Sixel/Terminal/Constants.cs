@@ -53,7 +53,7 @@ public static class Constants
     /// <summary>
     /// The transparent color for the sixel, this is red but the sixel should be transparent so this is not visible.
     /// </summary>
-    public const string SIXELTRANSPARENTCOLOR = "#0;2;100;0;0";
+    public const string SIXELTRANSPARENTCOLOR = "#0;2;0;0;0";
 
     /// <summary>
     /// inline image protocol start
@@ -63,6 +63,8 @@ public static class Constants
     /// inline image protocol end
     /// </summary>
     public const char INLINEIMAGEEND = (char)7;
-
+    /// <summary>
+    /// newline
+    /// </summary>
     public const char NEWLINE = (char)10;
 }
