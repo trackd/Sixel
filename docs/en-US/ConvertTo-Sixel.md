@@ -114,12 +114,12 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -PixelWidth
+### -Force
 
-Width of the image in Pixels, the height will be scaled to maintain aspect ratio  
+Force the command to attempt to output sixel data even if the terminal does not support sixel.  
 
 ```yaml
-Type: int
+Type: SwitchParameter
 Parameter Sets: (All)
 Aliases:
 
@@ -130,12 +130,12 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Force
+### -Protocol
 
-Force the command to attempt to output sixel data even if the terminal does not support sixel.  
+Select the image protocol to output, supports Sixel & InlineImageProtocol (1337 xterm).  
 
 ```yaml
-Type: SwitchParameter
+Type: ImageProtocol
 Parameter Sets: (All)
 Aliases:
 

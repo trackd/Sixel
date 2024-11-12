@@ -26,6 +26,13 @@ We test against the latest Windows Terminal Preview.
 
 Sixel support has not been added to Windows Terminal Stable branch yet.  
 
+There is an example sixel file in the ./assets folder that can be used for testing  
+
+```powershell
+# test sixel
+Invoke-RestMethod https://raw.githubusercontent.com/trackd/Sixel/refs/heads/main/assets/chibi.six
+```
+
 ## Authors
 
 **[@trackd](https://github.com/trackd)**  
