@@ -19,15 +19,13 @@ public static class Sixel
   /// <returns>The Sixel string.</returns>
   public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
   {
-    var imageClone = image.Clone();
-    imageClone.Mutate(ctx =>
+    image.Mutate(ctx =>
     {
       if (cellWidth > 0)
       {
-        // We're going to resize the image when it's rendered, so use a copy to leave the original untouched.
         // Some math to get the target size in pixels and reverse it to cell height that it will consume.
         var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
-        var pixelHeight = (int)Math.Round((double)imageClone.Height / imageClone.Width * pixelWidth);
+        var pixelHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
         // Resize the image to the target size
         ctx.Resize(new ResizeOptions()
         {
@@ -41,7 +39,7 @@ public static class Sixel
         MaxColors = maxColors,
       }));
     });
-    var targetFrame = imageClone.Frames[frame];
+    var targetFrame = image.Frames[frame];
     return FrameToSixelString(targetFrame, returnCursorToTopLeft);
   }
   private static string FrameToSixelString(ImageFrame<Rgba32> frame, bool returnCursorToTopLeft)

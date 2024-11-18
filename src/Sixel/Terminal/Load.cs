@@ -1,6 +1,7 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Sixel.Terminal.Models;
+using Sixel.Protocols;
 
 namespace Sixel.Terminal;
 
@@ -26,7 +27,13 @@ public static class Load
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
-      throw new NotImplementedException("Kitty Graphics Protocol not implemented.");
+      if (width > 0)
+      {
+        // we need to resize the image to the target width
+        using var _image = Image.Load<Rgba32>(imageStream);
+        return Protocols.KittyGraphics.ImageToKitty(_image, width);
+      }
+      return Protocols.KittyGraphics.ImageToKitty(imageStream);
     }
     return null;
   }
