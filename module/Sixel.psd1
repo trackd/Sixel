@@ -22,14 +22,14 @@
                 'Image',
                 'Console Image',
                 'Inline Image Protocol',
-                'xterm image'
+                'Kitty Graphics Protocol'
             )
             LicenseUri   = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/trackd/Sixel'
             ReleaseNotes = @'
-            0.2.5 - bugfix, cleanup, added experimental support for inline image protocol.
-            0.2.0 - Added better scaling, changes -Width to use cell width instead
-            0.1.0 - Initial release
+            0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.
+            0.2.0 - Added better scaling, changes -Width to use cell width instead.
+            0.1.0 - Initial release.
 '@
         }
     }
