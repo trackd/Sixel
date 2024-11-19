@@ -23,7 +23,7 @@ public static class Load
     }
     if (imageProtocol == ImageProtocol.InlineImageProtocol)
     {
-      return Protocols.InlineImage.ImageToInline(imageStream);
+      return Protocols.InlineImage.ImageToInline(imageStream, width);
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
