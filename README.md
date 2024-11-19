@@ -1,13 +1,11 @@
 ﻿# Sixel
 
-A module that lets you convert images to sixel.  
+A module that lets you convert images to Sixel, Inline Images Protocol, Kitty Graphics Protocol.
 
 Supports converting bmp, gif, jpeg, pbm, png, tiff, tga, webp to sixel.  
 
 This code was originally meant to be added to [PwshSpectreConsole](https://github.com/ShaunLawrie/PwshSpectreConsole)  
 But we wanted to get something out quickly for people who wanted to test sixel.  
-
-It will probably be added as an experimental feature there as well soon.  
 
 It uses an Assembly load context for the Sixlabors library, from [PowerShell-ALC](https://github.com/jborean93/PowerShell-ALC)  
 

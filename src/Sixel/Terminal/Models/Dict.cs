@@ -15,7 +15,7 @@ internal partial class Helpers
       { Terminals.Iterm2, ImageProtocol.InlineImageProtocol },
       { Terminals.WezTerm, ImageProtocol.InlineImageProtocol },
       { Terminals.Ghostty, ImageProtocol.KittyGraphicsProtocol },
-      { Terminals.VSCode, ImageProtocol.Sixel },
+      { Terminals.VSCode, ImageProtocol.InlineImageProtocol },
       { Terminals.Mintty, ImageProtocol.InlineImageProtocol },
       { Terminals.Alacritty, ImageProtocol.None },
       { Terminals.xterm, ImageProtocol.InlineImageProtocol },
