@@ -132,7 +132,10 @@ Accept wildcard characters: False
 
 ### -Protocol
 
-Select the image protocol to output, supports Sixel & InlineImageProtocol (1337 xterm).  
+Select the image protocol to output.  
+Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol  
+
+It will attempt to autoselect the supported image protocol for your terminal.  
 
 ```yaml
 Type: ImageProtocol

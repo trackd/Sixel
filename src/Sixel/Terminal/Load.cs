@@ -27,6 +27,10 @@ public static class Load
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
+      if (Compatibility.TerminalSupportsKitty() == false && Force == false)
+      {
+        throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
+      }
       if (width > 0)
       {
         // we need to resize the image to the target width

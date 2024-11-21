@@ -10,7 +10,7 @@ class ValidateTerminalWidth : ValidateArgumentsAttribute
   {
     var requestedWidth = (int)arguments;
     var hostWidth = engineIntrinsics.Host.UI.RawUI.WindowSize.Width;
-    if (requestedWidth > hostWidth) 
+    if (requestedWidth > hostWidth)
     {
       throw new ValidationMetadataException($"{requestedWidth} width is greater than terminal width ({hostWidth}).");
     }

@@ -1,4 +1,5 @@
 using Sixel.Terminal.Models;
+using System.Diagnostics;
 
 namespace Sixel.Terminal;
 
@@ -10,6 +11,11 @@ public static class Compatibility
   private static bool? _terminalSupportsSixel;
 
   /// <summary>
+  /// Check if the terminal supports kitty graphics
+  /// </summary>
+  private static bool? _terminalSupportsKitty;
+
+  /// <summary>
   /// Memory-caches the result of the terminal cell size.
   /// </summary>
   private static CellSize? _cellSize;
@@ -17,8 +23,12 @@ public static class Compatibility
   /// <summary>
   /// get the terminal info
   /// </summary>
-
   private static TerminalInfo? _terminalInfo;
+
+  private static WindowSizePixels? _windowSizePixels;
+
+  private static WindowSizeCharacters? _windowSizeCharacters;
+
   /// <summary>
   /// Get the cell size of the terminal in pixel-sixel size.
   /// The response to the command will look like [6;20;10t where the 20 is height and 10 is width.
@@ -52,8 +62,54 @@ public static class Compatibility
         PixelHeight = 20
       };
     }
-
     return _cellSize;
+  }
+  public static WindowSizePixels GetWindowSizePixels()
+  {
+    // this class should be able to re-run, people can resize the terminal
+    // so should not cache the result.. hopefully this is not too slow
+    var response14 = GetControlSequenceResponse("[14t");
+    try
+    {
+      var parts14 = response14.Split(';', 't');
+      _windowSizePixels = new WindowSizePixels
+      {
+        PixelWidth = int.Parse(parts14[2]),
+        PixelHeight = int.Parse(parts14[1]),
+      };
+    }
+    catch
+    {
+      _windowSizePixels = new WindowSizePixels
+      {
+        PixelWidth = 0,
+        PixelHeight = 0
+      };
+    }
+    return _windowSizePixels;
+  }
+  public static WindowSizeCharacters GetWindowSizeCharacters()
+  {
+    // this class should be able to re-run, people can resize the terminal
+    // so should not cache the result.. hopefully this is not too slow
+    var response18 = GetControlSequenceResponse("[18t");
+    try
+    {
+      var parts18 = response18.Split(';', 't');
+      _windowSizeCharacters = new WindowSizeCharacters
+      {
+        CharacterWidth = int.Parse(parts18[2]),
+        CharacterHeight = int.Parse(parts18[1]),
+      };
+    }
+    catch {
+      _windowSizeCharacters = new WindowSizeCharacters
+      {
+        CharacterWidth = 0,
+        CharacterHeight = 0
+      };
+    }
+    return _windowSizeCharacters;
   }
 
   /// <summary>
@@ -69,17 +125,28 @@ public static class Compatibility
     {
       return _terminalSupportsSixel.Value;
     }
-
     _terminalSupportsSixel = GetControlSequenceResponse("[c").Contains(";4;");
-
     return _terminalSupportsSixel.Value;
   }
 
   /// <summary>
-  /// Send a control sequence to the terminal and read back the response from STDIN.
+  /// Check if the terminal supports kitty graphics.
+  /// https://sw.kovidgoyal.net/kitty/graphics-protocol/
+  // response: ␛_Gi=31;OK␛\␛[?62;c
   /// </summary>
-  /// <param name="controlSequence"></param>
-  /// <returns>The response from the terminal.</returns>
+  /// <returns>True if the terminal supports sixel graphics, false otherwise.</returns>
+  public static bool TerminalSupportsKitty()
+  {
+    if (_terminalSupportsKitty.HasValue)
+    {
+      return _terminalSupportsKitty.Value;
+    }
+    // string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\{Constants.ESC}[c";
+    string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\";
+    _terminalSupportsKitty = GetControlSequenceResponse(kittyTest).Contains(";OK");
+    return _terminalSupportsKitty.Value;
+  }
+
   private static string GetControlSequenceResponse(string controlSequence)
   {
     char? c;
