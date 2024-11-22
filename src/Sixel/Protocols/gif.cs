@@ -52,7 +52,7 @@ public static class GifToSixel {
     for (int i = 0; i < frameCount; i++)
     {
       var targetFrame = image.Frames[i];
-      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, false));
+      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, true));
     }
     return gif;
   }
@@ -62,41 +62,29 @@ public static class GifToSixel {
     {
       gif.LoopCount = LoopCount;
     }
-    (int positionX, int positionY) = Console.GetCursorPosition();
     Console.CursorVisible = false;
-    int endPositionY = positionY + gif.Height + 2;
-    // check if endPositionY is greater than the console buffer height, set it at the bottom then
-    if (endPositionY > Console.BufferHeight)
-    {
-      endPositionY = Console.BufferHeight - 1;
-      // make room for the gif to render scroll to make room for the gif
-      // need a crossplatform way for this..
-      // Console.MoveBufferArea(0, positionY, Console.BufferWidth, endPositionY - positionY, 0, positionY + 1);
-    }
+    // hack to remove the padding from the formatter
+    int height = gif.Height - 2;
     try
     {
       for (int i = 0; i < gif.LoopCount; i++)
       {
         foreach (var sixel in gif.Sixel)
         {
-          // Check for cancellation
           if (cancellationToken.IsCancellationRequested)
           {
-            Console.SetCursorPosition(positionX, endPositionY);
+            Console.Write($"{Constants.ESC}[{height}B");
             Console.CursorVisible = true;
             return;
           }
-          Console.SetCursorPosition(positionX, positionY);
-          Console.Write(sixel);
           Thread.Sleep(gif.Delay);
+          Console.Write(sixel);
         }
       }
     }
     finally
     {
-      // Move the cursor to avoid overlapping output
-      Console.SetCursorPosition(positionX, endPositionY);
-      // Ensure the cursor visibility is restored
+      Console.Write($"{Constants.ESC}[{height}B");
       Console.CursorVisible = true;
     }
   }

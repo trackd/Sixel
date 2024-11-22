@@ -1,0 +1,14 @@
+﻿<Types>
+  <Type>
+    <Name>Sixel.Terminal.Models.SixelGif</Name>
+    <Members>
+      <ScriptMethod>
+        <Name>ToString</Name>
+        <Script>
+          $cts = [System.Threading.CancellationTokenSource]::new()
+          [Sixel.Protocols.GifToSixel]::PlaySixelGif($this, 0, $cts.Token)
+        </Script>
+      </ScriptMethod>
+    </Members>
+  </Type>
+</Types>

@@ -13,6 +13,8 @@
     Description          = 'Convert images to Sixel format and display them in the terminal, Requires a terminal with Sixel support. (Windows Terminal v1.22.2912.0 or later), Inline Image Protocol or Kitty Graphics support.'
     CmdletsToExport      = @('ConvertTo-Sixel', 'New-SixelGif','Show-SixelGif')
     AliasesToExport      = @('cts', 'ConvertTo-InlineImage')
+    FormatsToProcess     = @('Sixel.format.ps1xml')
+    TypesToProcess     = @('Sixel.Types.ps1xml')
     PrivateData          = @{
         PSData = @{
             Tags         = @(
@@ -36,6 +38,4 @@
     # A missing or $null entry is equivalent to specifying the wildcard *. declare unused with @() for better perf.
     FunctionsToExport    = @()
     VariablesToExport    = @()
-    FormatsToProcess     = @()
-    TypesToProcess       = @()
 }

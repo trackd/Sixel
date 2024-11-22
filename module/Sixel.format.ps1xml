@@ -1,0 +1,23 @@
+﻿<Configuration>
+<ViewDefinitions>
+<View>
+  <Name>Sixel.Terminal.Models.SixelGif</Name>
+  <ViewSelectedBy>
+    <TypeName>Sixel.Terminal.Models.SixelGif</TypeName>
+  </ViewSelectedBy>
+  <CustomControl>
+    <CustomEntries>
+      <CustomEntry>
+        <CustomItem>
+          <ExpressionBinding>
+            <ScriptBlock>
+                  $_.ToString()
+                </ScriptBlock>
+          </ExpressionBinding>
+        </CustomItem>
+      </CustomEntry>
+    </CustomEntries>
+  </CustomControl>
+</View>
+</ViewDefinitions>
+</Configuration>
