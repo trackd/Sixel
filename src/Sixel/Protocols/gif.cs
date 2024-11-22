@@ -75,8 +75,8 @@ public static class GifToSixel {
         Thread.Sleep(gif.Delay);
       }
     }
-    Console.CursorVisible = true;
     int endPositionY = positionY + gif.Height;
-    Console.SetCursorPosition(positionX, positionY);
+    Console.SetCursorPosition(positionX, endPositionY);
+    Console.CursorVisible = true;
   }
 }
