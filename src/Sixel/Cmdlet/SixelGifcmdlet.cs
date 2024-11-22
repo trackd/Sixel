@@ -2,6 +2,7 @@
 using Sixel.Terminal.Models;
 using Sixel.Protocols;
 using System.Management.Automation;
+using System.Threading;
 
 namespace Sixel.Cmdlet;
 
@@ -111,13 +112,22 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
     try
     {
       if (Gif is null) return;
+      CancellationTokenSource cts = new CancellationTokenSource();
+      // Handle Ctrl+C
+      Console.CancelKeyPress += (sender, args) =>
+      {
+        // Prevent the process from terminating
+        args.Cancel = true;
+        cts.Cancel();
+      };
       if (LoopCount > 0)
       {
-        GifToSixel.PlaySixelGif(Gif, LoopCount);
+        GifToSixel.PlaySixelGif(Gif, LoopCount, cts.Token);
       }
       else
       {
-        GifToSixel.PlaySixelGif(Gif);
+        // GifToSixel.PlaySixelGif(Gif);
+        GifToSixel.PlaySixelGif(Gif, cancellationToken: cts.Token);
       }
     }
     catch (Exception ex)
