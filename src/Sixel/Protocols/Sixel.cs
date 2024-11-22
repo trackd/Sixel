@@ -42,7 +42,7 @@ public static class Sixel
     var targetFrame = image.Frames[frame];
     return FrameToSixelString(targetFrame, returnCursorToTopLeft);
   }
-  private static string FrameToSixelString(ImageFrame<Rgba32> frame, bool returnCursorToTopLeft)
+  internal static string FrameToSixelString(ImageFrame<Rgba32> frame, bool returnCursorToTopLeft)
   {
     var sixelBuilder = new StringBuilder();
     var palette = new Dictionary<Rgba32, int>();

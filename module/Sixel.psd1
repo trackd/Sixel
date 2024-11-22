@@ -11,7 +11,7 @@
     Author               = 'trackd, ShaunLawrie'
     Copyright            = '(c) trackd. All rights reserved.'
     Description          = 'Convert images to Sixel format and display them in the terminal, Requires a terminal with Sixel support. (Windows Terminal v1.22.2912.0 or later), Inline Image Protocol or Kitty Graphics support.'
-    CmdletsToExport      = @('ConvertTo-Sixel')
+    CmdletsToExport      = @('ConvertTo-Sixel', 'New-SixelGif','Show-SixelGif')
     AliasesToExport      = @('cts', 'ConvertTo-InlineImage')
     PrivateData          = @{
         PSData = @{
@@ -20,9 +20,9 @@
                 'Terminal',
                 'Graphics',
                 'Image',
-                'Console Image',
-                'Inline Image Protocol',
-                'Kitty Graphics Protocol'
+                'ConsoleImage',
+                'InlineImageProtocol',
+                'KittyGraphicsProtocol'
             )
             LicenseUri   = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/trackd/Sixel'
