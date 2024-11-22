@@ -14,7 +14,7 @@
     CmdletsToExport      = @('ConvertTo-Sixel', 'New-SixelGif','Show-SixelGif')
     AliasesToExport      = @('cts', 'ConvertTo-InlineImage')
     FormatsToProcess     = @('Sixel.format.ps1xml')
-    TypesToProcess     = @('Sixel.Types.ps1xml')
+    TypesToProcess       = @()
     PrivateData          = @{
         PSData = @{
             Tags         = @(

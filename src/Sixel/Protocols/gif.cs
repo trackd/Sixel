@@ -11,9 +11,8 @@ namespace Sixel.Protocols;
 public static class GifToSixel {
   public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount)
   {
-    var image = Image.Load<Rgba32>(imageStream);
-    var gif = ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
-    return gif;
+    using var image = Image.Load<Rgba32>(imageStream);
+    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
   }
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount)
   {
