@@ -6,10 +6,10 @@ using System.Threading;
 
 namespace Sixel.Cmdlet;
 
-[Cmdlet(VerbsCommon.New, "SixelGif", DefaultParameterSetName = "Path")]
+[Cmdlet(VerbsData.ConvertTo, "SixelGif", DefaultParameterSetName = "Path")]
 [Alias("gif")]
 [OutputType(typeof(SixelGif))]
-public sealed class NewSixelGifCmdlet : PSCmdlet
+public sealed class ConvertSixelGifCmdlet : PSCmdlet
 {
   [Parameter(
         HelpMessage = "A path to a local image to convert to sixel.",
@@ -90,7 +90,6 @@ public sealed class NewSixelGifCmdlet : PSCmdlet
 }
 
 [Cmdlet(VerbsCommon.Show, "SixelGif", DefaultParameterSetName = "Path")]
-[Alias("play")]
 public sealed class ShowSixelGifCmdlet : PSCmdlet
 {
   [Parameter(
@@ -116,7 +115,6 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
       // Handle Ctrl+C
       Console.CancelKeyPress += (sender, args) =>
       {
-        // Prevent the process from terminating
         args.Cancel = true;
         cts.Cancel();
       };
@@ -126,8 +124,7 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
       }
       else
       {
-        // GifToSixel.PlaySixelGif(Gif);
-        GifToSixel.PlaySixelGif(Gif, cancellationToken: cts.Token);
+        GifToSixel.PlaySixelGif(Gif, CT: cts.Token);
       }
     }
     catch (Exception ex)

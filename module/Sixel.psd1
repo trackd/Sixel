@@ -11,8 +11,8 @@
     Author               = 'trackd, ShaunLawrie'
     Copyright            = '(c) trackd. All rights reserved.'
     Description          = 'Convert images to Sixel format and display them in the terminal, Requires a terminal with Sixel support. (Windows Terminal v1.22.2912.0 or later), Inline Image Protocol or Kitty Graphics support.'
-    CmdletsToExport      = @('ConvertTo-Sixel', 'New-SixelGif','Show-SixelGif')
-    AliasesToExport      = @('cts', 'ConvertTo-InlineImage')
+    CmdletsToExport      = @('ConvertTo-Sixel', 'ConvertTo-SixelGif')
+    AliasesToExport      = @('cts', 'ConvertTo-InlineImage','gif')
     FormatsToProcess     = @('Sixel.format.ps1xml')
     TypesToProcess       = @()
     PrivateData          = @{

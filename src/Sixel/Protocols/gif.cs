@@ -55,14 +55,18 @@ public static class GifToSixel {
     }
     return gif;
   }
-  public static void PlaySixelGif(SixelGif gif, int LoopCount = 0, CancellationToken cancellationToken = default)
+  public static void PlaySixelGif(SixelGif gif, int LoopCount = 0, CancellationToken CT = default)
   {
     if (LoopCount > 0)
     {
+      // override the loop count on the object.
       gif.LoopCount = LoopCount;
     }
     Console.CursorVisible = false;
+    // custom padding before gif.
+    Console.Write($"{Constants.ESC}[1B");
     // hack to remove the padding from the formatter
+    // the formatter adds 2 lines of padding at the end.
     int height = gif.Height - 2;
     try
     {
@@ -70,10 +74,8 @@ public static class GifToSixel {
       {
         foreach (var sixel in gif.Sixel)
         {
-          if (cancellationToken.IsCancellationRequested)
+          if (CT.IsCancellationRequested)
           {
-            Console.Write($"{Constants.ESC}[{height}B");
-            Console.CursorVisible = true;
             return;
           }
           Thread.Sleep(gif.Delay);
@@ -83,6 +85,7 @@ public static class GifToSixel {
     }
     finally
     {
+      // move the cursor below the gif.
       Console.Write($"{Constants.ESC}[{height}B");
       Console.CursorVisible = true;
     }
