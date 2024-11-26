@@ -6,3 +6,4 @@ output
 .vs/*
 !assets/*.png
 test_alc.ps1
+testimages/*

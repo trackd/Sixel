@@ -1,0 +1,26 @@
+﻿<Types>
+  <Type>
+    <Name>Sixel.Terminal.Models.SixelGif</Name>
+    <Members>
+      <MemberSet>
+        <Name>PSStandardMembers</Name>
+        <Members>
+          <PropertySet>
+            <Name>DefaultDisplayPropertySet</Name>
+            <ReferencedProperties>
+              <Name>Delay</Name>
+              <Name>LoopCount</Name>
+              <Name>Height</Name>
+              <Name>Audio</Name>
+              <Name>FrameCount</Name>
+            </ReferencedProperties>
+          </PropertySet>
+          <NoteProperty>
+            <Name>DefaultDisplayProperty</Name>
+            <Value>LoopCount</Value>
+          </NoteProperty>
+        </Members>
+      </MemberSet>
+    </Members>
+  </Type>
+</Types>

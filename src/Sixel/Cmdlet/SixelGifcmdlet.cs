@@ -54,6 +54,10 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
 )]
   [ValidateRange(1, 256)]
   public int LoopCount { get; set; } = 3;
+  [Parameter(
+    HelpMessage = "The audio track to overlay the gif"
+)]
+  public string? AudioFile { get; set; }
   protected override void ProcessRecord()
   {
     try
@@ -76,10 +80,19 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
             break;
           }
       }
+
       if (imageStream is null) return;
+
       using (imageStream)
       {
-        WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
+        if (AudioFile is not null)
+        {
+          var resolvedAudio = SessionState.Path.GetResolvedPSPathFromPSPath(AudioFile)[0].Path;
+          WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
+        }
+        else {
+          WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
+        }
       }
     }
     catch (Exception ex)
@@ -100,12 +113,6 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
   )]
   [ValidateNotNullOrEmpty]
   public SixelGif? Gif { get; set; }
-
-  [Parameter(
-    HelpMessage = "The number of times to loop the gif."
-  )]
-  [ValidateRange(1, 256)]
-  public int LoopCount { get; set; } = 0;
   protected override void ProcessRecord()
   {
     try
@@ -118,14 +125,7 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
         args.Cancel = true;
         cts.Cancel();
       };
-      if (LoopCount > 0)
-      {
-        GifToSixel.PlaySixelGif(Gif, LoopCount, cts.Token);
-      }
-      else
-      {
-        GifToSixel.PlaySixelGif(Gif, CT: cts.Token);
-      }
+        GifToSixel.PlaySixelGif(Gif, cts.Token);
     }
     catch (Exception ex)
     {

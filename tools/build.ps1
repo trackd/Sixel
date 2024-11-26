@@ -10,7 +10,9 @@ $reporoot = Split-Path $PSScriptRoot
     'Pester'
     'PlatyPS'
 ) | ForEach-Object {
-    Install-Module -Name $_ -Force -Scope CurrentUser
+    if (-not (Get-Module -Name $_ -ListAvailable)) {
+        Install-Module -Name $_ -Force -Scope CurrentUser
+    }
     Import-Module -Name $_ -Force
 }
 

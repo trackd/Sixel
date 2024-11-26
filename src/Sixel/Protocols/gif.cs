@@ -2,6 +2,7 @@
 using Sixel.Terminal.Models;
 using System.Text;
 using System.Threading;
+using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -9,12 +10,16 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
 public static class GifToSixel {
-  public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount)
+  public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
   {
     using var image = Image.Load<Rgba32>(imageStream);
+    if (AudioFile != null)
+    {
+      return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
+    }
     return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
   }
-  private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount)
+  private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount, string? AudioPath = null)
   {
     image.Mutate(ctx =>
     {
@@ -47,6 +52,7 @@ public static class GifToSixel {
       // Delay = metadata?.FrameDelay * 10 ?? 1000,
       LoopCount = LoopCount,
       Height = (int)cellHeight,
+      Audio = AudioPath ?? null
     };
     for (int i = 0; i < frameCount; i++)
     {
@@ -55,36 +61,52 @@ public static class GifToSixel {
     }
     return gif;
   }
-  public static void PlaySixelGif(SixelGif gif, int LoopCount = 0, CancellationToken CT = default)
+  public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default)
   {
-    if (LoopCount > 0)
-    {
-      // override the loop count on the object.
-      gif.LoopCount = LoopCount;
-    }
     Console.CursorVisible = false;
     // custom padding before gif.
     Console.Write($"{Constants.ESC}[1B");
+    // CONOUT testing is windows only and a bit weird.
+    // Console.Write is unfortunately a bit too slow.. so we need to use a different method.
+    // var fs = System.IO.File.OpenWrite("CONOUT$");
+    // var writer = new StreamWriter(fs);
     // hack to remove the padding from the formatter
     // the formatter adds 2 lines of padding at the end.
     int height = gif.Height - 2;
+    GifAudio? audio = null;
     try
     {
+      if (gif.Audio != null)
+      {
+        audio = new GifAudio(gif.Audio);
+        audio.Play();
+      }
       for (int i = 0; i < gif.LoopCount; i++)
       {
+        if (audio != null && !audio.IsPlaying)
+        {
+          // restart the audio if it's not playing.
+          audio.Play();
+        }
         foreach (var sixel in gif.Sixel)
         {
           if (CT.IsCancellationRequested)
           {
             return;
           }
-          Thread.Sleep(gif.Delay);
           Console.Write(sixel);
+          // writer.Write(sixel);
+          Thread.Sleep(gif.Delay);
         }
       }
     }
     finally
     {
+      if (audio != null)
+      {
+        audio.Stop();
+        audio.Dispose();
+      }
       // move the cursor below the gif.
       Console.Write($"{Constants.ESC}[{height}B");
       Console.CursorVisible = true;
