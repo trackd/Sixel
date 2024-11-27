@@ -1,5 +1,6 @@
 ﻿using Sixel.Terminal;
 using Sixel.Terminal.Models;
+using System;
 using System.Text;
 using System.Threading;
 using System.IO;
@@ -48,8 +49,8 @@ public static class GifToSixel {
     var gif = new SixelGif()
     {
       Sixel = new List<string>(),
-      Delay = metadata?.FrameDelay ?? 1000,
-      // Delay = metadata?.FrameDelay * 10 ?? 1000,
+      // Delay = metadata?.FrameDelay ?? 1000,
+      Delay = metadata?.FrameDelay * 10 ?? 1000,
       LoopCount = LoopCount,
       Height = (int)cellHeight,
       Audio = AudioPath ?? null
@@ -57,21 +58,28 @@ public static class GifToSixel {
     for (int i = 0; i < frameCount; i++)
     {
       var targetFrame = image.Frames[i];
-      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, true));
+      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, cellHeight, true));
     }
     return gif;
   }
   public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default)
   {
     Console.CursorVisible = false;
-    // custom padding before gif.
-    Console.Write($"{Constants.ESC}[1B");
-    // CONOUT testing is windows only and a bit weird.
-    // Console.Write is unfortunately a bit too slow.. so we need to use a different method.
-    // var fs = System.IO.File.OpenWrite("CONOUT$");
-    // var writer = new StreamWriter(fs);
+    // Create a new VTWriter instance, Console.Write is slow..
+    var writer = new VTWriter();
+    // if its the last cursor position, we need to add an empty row.
+    if (Console.CursorTop == Console.WindowHeight - 1)
+    {
+      // can't move the cursor ahead of the buffer.. so we add a empty line.
+      writer.Write("\r\n");
+    }
+    else {
+      // add 1 row padding before the gif.
+      writer.Write($"{Constants.ESC}[1B");
+    }
     // hack to remove the padding from the formatter
     // the formatter adds 2 lines of padding at the end.
+    // because we dont really use the formatter.
     int height = gif.Height - 2;
     GifAudio? audio = null;
     try
@@ -92,23 +100,27 @@ public static class GifToSixel {
         {
           if (CT.IsCancellationRequested)
           {
+            // bail if cancellation is requested.
             return;
           }
-          Console.Write(sixel);
-          // writer.Write(sixel);
+          writer.Write(sixel);
           Thread.Sleep(gif.Delay);
         }
       }
     }
     finally
     {
+      // move the cursor below the gif.
+      writer.Write($"{Constants.ESC}[{height}B");
       if (audio != null)
       {
         audio.Stop();
         audio.Dispose();
       }
-      // move the cursor below the gif.
-      Console.Write($"{Constants.ESC}[{height}B");
+      if (writer != null)
+      {
+        writer.Dispose();
+      }
       Console.CursorVisible = true;
     }
   }

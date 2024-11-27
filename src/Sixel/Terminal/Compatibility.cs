@@ -25,9 +25,33 @@ public static class Compatibility
   /// </summary>
   private static TerminalInfo? _terminalInfo;
 
+  /// <summary>
+  /// Window size in pixels
+  /// </summary>
   private static WindowSizePixels? _windowSizePixels;
 
+  /// <summary>
+  /// Window size in characters
+  /// </summary>
   private static WindowSizeCharacters? _windowSizeCharacters;
+
+  /// <summary>
+  /// Get the response to a control sequence.
+  /// </summary>
+  public static string GetControlSequenceResponse(string controlSequence)
+  {
+    char? c;
+    var response = string.Empty;
+
+    Console.Write($"{Constants.ESC}{controlSequence}{Constants.ST}");
+    do
+    {
+      c = Console.ReadKey(true).KeyChar;
+      response += c;
+    } while (c != 'c' && Console.KeyAvailable);
+
+    return response;
+  }
 
   /// <summary>
   /// Get the cell size of the terminal in pixel-sixel size.
@@ -64,6 +88,11 @@ public static class Compatibility
     }
     return _cellSize;
   }
+
+  /// <summary>
+  /// Get the window size in pixels
+  /// </summary>
+  /// <returns>WindowSizePixels</returns>
   public static WindowSizePixels GetWindowSizePixels()
   {
     // this class should be able to re-run, people can resize the terminal
@@ -88,6 +117,11 @@ public static class Compatibility
     }
     return _windowSizePixels;
   }
+
+  /// <summary>
+  /// Get the window size in characters
+  /// </summary>
+  /// <returns>WindowSizeCharacters</returns>
   public static WindowSizeCharacters GetWindowSizeCharacters()
   {
     // this class should be able to re-run, people can resize the terminal
@@ -132,7 +166,7 @@ public static class Compatibility
   /// <summary>
   /// Check if the terminal supports kitty graphics.
   /// https://sw.kovidgoyal.net/kitty/graphics-protocol/
-  // response: ␛_Gi=31;OK␛\␛[?62;c
+  /// response: ␛_Gi=31;OK␛\␛[?62;c
   /// </summary>
   /// <returns>True if the terminal supports sixel graphics, false otherwise.</returns>
   public static bool TerminalSupportsKitty()
@@ -141,25 +175,10 @@ public static class Compatibility
     {
       return _terminalSupportsKitty.Value;
     }
-    // string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\{Constants.ESC}[c";
-    string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\";
+    string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\{Constants.ESC}[c";
+    // string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\";
     _terminalSupportsKitty = GetControlSequenceResponse(kittyTest).Contains(";OK");
     return _terminalSupportsKitty.Value;
-  }
-
-  private static string GetControlSequenceResponse(string controlSequence)
-  {
-    char? c;
-    var response = string.Empty;
-
-    Console.Write($"{Constants.ESC}{controlSequence}");
-    do
-    {
-      c = Console.ReadKey(true).KeyChar;
-      response += c;
-    } while (c != 'c' && Console.KeyAvailable);
-
-    return response;
   }
 
   /// <summary>
