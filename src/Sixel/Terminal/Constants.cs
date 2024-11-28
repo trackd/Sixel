@@ -103,4 +103,10 @@ internal static class Constants
     /// </summary>
     internal const int KittychunkSize = 4096;
 
+    /// <summary>
+    /// half block character
+    /// </summary>
+    ///
+    internal const char LowerHalfBlock = '\u2584';
+
 }

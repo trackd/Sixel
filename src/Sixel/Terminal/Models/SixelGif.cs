@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using SixLabors.ImageSharp;
+
 using Sixel.Protocols;
 
 namespace Sixel.Terminal.Models;
@@ -19,15 +21,17 @@ public class SixelGif
   /// <summary>
   /// The height of the gif, in characters.
   /// </summary>
-  public int Height { get; set; }
-
+  public Size Size { get; set; }
   /// <summary>
-  /// The audio data for the gif.
+  /// The audio data for the gif, optional
   /// </summary>
   public string? Audio { get; set; }
   /// <summary>
   /// The sixel data for each frame of the gif.
   /// </summary>
   internal List<string> Sixel { get; set; } = new List<string>();
+  /// <summary>
+  /// The number of frames in the gif.
+  /// </summary>
   public int FrameCount => Sixel.Count;
 }

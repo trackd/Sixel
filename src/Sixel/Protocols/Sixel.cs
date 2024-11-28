@@ -19,6 +19,16 @@ public static class Sixel
   /// <returns>The Sixel string.</returns>
   public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
   {
+    // get image size in characters
+    var cellSize = Compatibility.GetCellSize();
+    // get the image size in console characters
+    var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
+    // Console.WriteLine($"Image Size: {imageSize.Width}x{imageSize.Height}");
+    if (imageSize.Width > Console.WindowWidth)
+    {
+      // if the image is larger than the console window width, resize it to fit
+      cellWidth = Console.WindowWidth - 2;
+    }
     image.Mutate(ctx =>
     {
       if (cellWidth > 0)
@@ -33,6 +43,8 @@ public static class Sixel
           Size = new(pixelWidth, pixelHeight),
           PremultiplyAlpha = false,
         });
+        // update imageSize
+        var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
       }
       // Sixel supports 256 colors max
       ctx.Quantize(new OctreeQuantizer(new() {
@@ -40,10 +52,11 @@ public static class Sixel
       }));
     });
     var targetFrame = image.Frames[frame];
-    var cellHeight = Math.Ceiling((double)(targetFrame.Height / Compatibility.GetCellSize().PixelHeight));
-    return FrameToSixelString(targetFrame, cellHeight, returnCursorToTopLeft);
+    // var cellHeight = Math.Ceiling((double)(targetFrame.Height / Compatibility.GetCellSize().PixelHeight));
+    // return FrameToSixelString(targetFrame, cellHeight, returnCursorToTopLeft);
+    return FrameToSixelString(targetFrame, imageSize, returnCursorToTopLeft);
   }
-  internal static string FrameToSixelString(ImageFrame<Rgba32> frame, double cellHeight, bool returnCursorToTopLeft)
+  internal static string FrameToSixelString(ImageFrame<Rgba32> frame, Size size, bool returnCursorToTopLeft)
   {
     var sixelBuilder = new StringBuilder();
     var palette = new Dictionary<Rgba32, int>();
@@ -109,7 +122,7 @@ public static class Sixel
     {
 
       // Move the cursor back to the top left of the image.
-      sixelBuilder.Append($"{Constants.ESC}[{cellHeight}A");
+      sixelBuilder.Append($"{Constants.ESC}[{size.Height}A");
     }
 
     return sixelBuilder.ToString();
@@ -117,9 +130,12 @@ public static class Sixel
 
   private static void AddColorToPalette(this StringBuilder sixelBuilder, Rgba32 pixel, int colorIndex)
   {
-    var r = (int)Math.Round(pixel.R / 255.0 * 100);
-    var g = (int)Math.Round(pixel.G / 255.0 * 100);
-    var b = (int)Math.Round(pixel.B / 255.0 * 100);
+    // rgb 0-255 to 0-100
+    var (r, g, b) = (
+        (int)pixel.R * 100 / 255,
+        (int)pixel.G * 100 / 255,
+        (int)pixel.B * 100 / 255
+    );
 
     sixelBuilder.Append(Constants.SixelColorStart)
                 .Append(colorIndex)
@@ -132,8 +148,14 @@ public static class Sixel
   }
   private static void AppendRepeatEntry(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel)
   {
+    if (colorIndex == 0)
+    {
+      // Transparent pixels are a special case and are always 0 in the palette.
+      sixel = Constants.SixelTransparent;
+    }
     if (repeatCounter <= 1)
     {
+      // single entry
       sixelBuilder.AppendEntry(colorIndex, sixel);
     }
     else
@@ -143,14 +165,14 @@ public static class Sixel
                   .Append(colorIndex)
                   .Append(Constants.SixelRepeat)
                   .Append(repeatCounter)
-                  .Append(colorIndex != 0 ? sixel : Constants.SixelTransparent);
+                  .Append(sixel);
     }
   }
   private static void AppendEntry(this StringBuilder sixelBuilder, int colorIndex, char sixel)
   {
     sixelBuilder.Append(Constants.SixelColorStart)
                 .Append(colorIndex)
-                .Append(colorIndex != 0 ? sixel : Constants.SixelTransparent);
+                .Append(sixel);
   }
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
   {

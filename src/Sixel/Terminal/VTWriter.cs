@@ -5,28 +5,26 @@ internal class VTWriter : IDisposable
 {
   private readonly TextWriter? _writer;
   private readonly FileStream? _windowsStream;
-  internal readonly bool isWindows;
-  private readonly bool _isRedirected;
+  private readonly bool _customwriter;
   private bool _disposed;
 
   public VTWriter()
   {
-    // Check if the OS is Windows
-    isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-    // Check if the output is redirected
-    _isRedirected = Console.IsOutputRedirected;
-
-    if (isWindows && !_isRedirected)
+    bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    bool isRedirected = Console.IsOutputRedirected;
+    if (isWindows && !isRedirected)
     {
       // Open the Windows stream to CONOUT$, for better performance..
       // Console.Write is too slow for gifs.
       _windowsStream = File.OpenWrite("CONOUT$");
       _writer = new StreamWriter(_windowsStream);
+      _customwriter = true;
     }
   }
+
   public void Write(string text)
   {
-    if (isWindows && !_isRedirected)
+    if (_customwriter)
     {
       _writer?.Write(text);
     }
@@ -35,9 +33,10 @@ internal class VTWriter : IDisposable
       Console.Write(text);
     }
   }
+
   public void WriteLine(string text)
   {
-    if (isWindows && !_isRedirected)
+    if (_customwriter)
     {
       _writer?.WriteLine(text);
     }
@@ -49,7 +48,7 @@ internal class VTWriter : IDisposable
 
   protected virtual void Dispose(bool disposing)
   {
-    if (!_disposed)
+    if (!_disposed && _customwriter)
     {
       if (disposing)
       {

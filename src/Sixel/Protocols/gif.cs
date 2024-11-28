@@ -45,20 +45,23 @@ public static class GifToSixel {
     });
     var metadata = image.Frames.RootFrame.Metadata.GetGifMetadata();
     int frameCount = image.Frames.Count;
-    var cellHeight = Math.Ceiling((double)(image.Height / Compatibility.GetCellSize().PixelHeight));
+    // var cellHeight = Math.Ceiling((double)(image.Height / Compatibility.GetCellSize().PixelHeight));
+    var cellSize = Compatibility.GetCellSize();
+    var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
+
     var gif = new SixelGif()
     {
       Sixel = new List<string>(),
       // Delay = metadata?.FrameDelay ?? 1000,
       Delay = metadata?.FrameDelay * 10 ?? 1000,
       LoopCount = LoopCount,
-      Height = (int)cellHeight,
+      Size = imageSize,
       Audio = AudioPath ?? null
     };
     for (int i = 0; i < frameCount; i++)
     {
       var targetFrame = image.Frames[i];
-      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, cellHeight, true));
+      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, imageSize, true));
     }
     return gif;
   }
@@ -80,7 +83,7 @@ public static class GifToSixel {
     // hack to remove the padding from the formatter
     // the formatter adds 2 lines of padding at the end.
     // because we dont really use the formatter.
-    int height = gif.Height - 2;
+    int height = gif.Size.Height - 2;
     GifAudio? audio = null;
     try
     {
