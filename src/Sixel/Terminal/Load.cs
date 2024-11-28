@@ -46,11 +46,11 @@ public static class Load
       }
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
     }
-    // if (imageProtocol == ImageProtocol.None)
-    // {
-    //   using var _image = Image.Load<Rgba32>(imageStream);
-    //   return Protocols.AsciiGenerator.ImageToAscii(_image, width);
-    // }
-    return null;
+    if (imageProtocol == ImageProtocol.None)
+    {
+        using var _image = Image.Load<Rgba32>(imageStream);
+        return Protocols.HalfBlockCell.ImageToAscii(_image, width);
+    }
+     return null;
   }
 }
