@@ -90,23 +90,46 @@ internal static class Constants
     /// Kitty raster
     /// </summary>
     internal const string KittyPos = "a=T,f=100,";
+
     /// <summary>
     /// Kitty more chunks
     /// </summary>
     internal const string KittyMore = "m=1";
+
     /// <summary>
     /// Kitty last chunk
     /// </summary>
     internal const string KittyFinish = "m=0";
+
     /// <summary>
     /// Kitty chunksize
     /// </summary>
     internal const int KittychunkSize = 4096;
 
     /// <summary>
-    /// half block character
+    /// lower half block character
+    /// ▄
+    /// this allows you to color the top and bottom of a cell.
+    /// foreground colors the lower block and background colors the space above the block in the same cell.
     /// </summary>
-    ///
     internal const char LowerHalfBlock = '\u2584';
+
+    /// <summary>
+    /// upper half block character
+    /// ▀
+    /// this allows you to color the top and bottom of a cell.
+    /// foreground colors the upper block and background colors the space below the block in the same cell.
+    /// </summary>
+    internal const char UpperHalfBlock = '\u2580';
+
+    /// <summary>
+    /// background color escape sequence
+    /// </summary>
+    internal const string VTBG = "[48;2;";
+
+    /// <summary>
+    /// foreground color escape sequence
+    /// </summary>
+    internal const string VTFG = "[38;2;";
 
 }

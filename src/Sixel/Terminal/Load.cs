@@ -49,7 +49,7 @@ public static class Load
     if (imageProtocol == ImageProtocol.None)
     {
         using var _image = Image.Load<Rgba32>(imageStream);
-        return Protocols.HalfBlockCell.ImageToAscii(_image, width);
+        return Protocols.HalfBlock.ImageToAscii(_image, width);
     }
      return null;
   }
