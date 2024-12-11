@@ -23,7 +23,6 @@ public static class Sixel
     var cellSize = Compatibility.GetCellSize();
     // get the image size in console characters
     var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
-    // Console.WriteLine($"Image Size: {imageSize.Width}x{imageSize.Height}");
     if (imageSize.Width > Console.WindowWidth)
     {
       // if the image is larger than the console window width, resize it to fit
@@ -44,7 +43,7 @@ public static class Sixel
           PremultiplyAlpha = false,
         });
         // update imageSize
-        var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
+        imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
       }
       // Sixel supports 256 colors max
       ctx.Quantize(new OctreeQuantizer(new() {
@@ -52,11 +51,9 @@ public static class Sixel
       }));
     });
     var targetFrame = image.Frames[frame];
-    // var cellHeight = Math.Ceiling((double)(targetFrame.Height / Compatibility.GetCellSize().PixelHeight));
-    // return FrameToSixelString(targetFrame, cellHeight, returnCursorToTopLeft);
-    return FrameToSixelString(targetFrame, imageSize, returnCursorToTopLeft);
+    return FrameToSixelString(targetFrame);
   }
-  internal static string FrameToSixelString(ImageFrame<Rgba32> frame, Size size, bool returnCursorToTopLeft)
+  internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
     var sixelBuilder = new StringBuilder();
     var palette = new Dictionary<Rgba32, int>();
@@ -97,7 +94,7 @@ public static class Sixel
           }
 
           // Every time the color is not repeated the previous color is written to the string.
-          sixelBuilder.AppendRepeatEntry(lastColor, repeatCounter, c);
+          sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
 
           // Remember the current color and reset the repeat counter.
           lastColor = colorId;
@@ -105,7 +102,7 @@ public static class Sixel
         }
 
         // Write the last color and repeat counter to the string for the current row.
-        sixelBuilder.AppendRepeatEntry(lastColor, repeatCounter, c);
+        sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
 
         // Add a carriage return at the end of each row and a new line every 6 pixel rows.
         sixelBuilder.AppendCarriageReturn();
@@ -115,15 +112,8 @@ public static class Sixel
         }
       }
     });
-
-    // Add the exit sixel sequence and return the cursor to the top left if requested.
+    sixelBuilder.AppendNextLine();
     sixelBuilder.AppendExitSixel();
-    if (returnCursorToTopLeft)
-    {
-
-      // Move the cursor back to the top left of the image.
-      sixelBuilder.Append($"{Constants.ESC}[{size.Height}A");
-    }
 
     return sixelBuilder.ToString();
   }
@@ -146,7 +136,7 @@ public static class Sixel
                 .Append(Constants.Divider)
                 .Append(b);
   }
-  private static void AppendRepeatEntry(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel)
+  private static void AppendSixel(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel)
   {
     if (colorIndex == 0)
     {
@@ -156,7 +146,10 @@ public static class Sixel
     if (repeatCounter <= 1)
     {
       // single entry
-      sixelBuilder.AppendEntry(colorIndex, sixel);
+      // sixelBuilder.AppendEntry(colorIndex, sixel);
+      sixelBuilder.Append(Constants.SixelColorStart)
+                  .Append(colorIndex)
+                  .Append(sixel);
     }
     else
     {
@@ -168,12 +161,12 @@ public static class Sixel
                   .Append(sixel);
     }
   }
-  private static void AppendEntry(this StringBuilder sixelBuilder, int colorIndex, char sixel)
-  {
-    sixelBuilder.Append(Constants.SixelColorStart)
-                .Append(colorIndex)
-                .Append(sixel);
-  }
+  // private static void AppendEntryOld(this StringBuilder sixelBuilder, int colorIndex, char sixel)
+  // {
+  //   sixelBuilder.Append(Constants.SixelColorStart)
+  //               .Append(colorIndex)
+  //               .Append(sixel);
+  // }
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
   {
     sixelBuilder.Append(Constants.SixelDECGCR);
@@ -186,8 +179,7 @@ public static class Sixel
 
   private static void AppendExitSixel(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SixelDECGNL)
-                .Append(Constants.ST);
+    sixelBuilder.Append(Constants.ST);
   }
 
   private static void StartSixel(this StringBuilder sixelBuilder, int width, int height)

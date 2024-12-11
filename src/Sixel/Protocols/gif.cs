@@ -10,7 +10,9 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
+
 public static class GifToSixel {
+
   public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
   {
     using var image = Image.Load<Rgba32>(imageStream);
@@ -20,48 +22,50 @@ public static class GifToSixel {
     }
     return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
   }
+
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount, string? AudioPath = null)
   {
+    var cellSize = Compatibility.GetCellSize();
+    var targetSize = SizeHelper.GetTerminalImageSize(image.Width, image.Height, cellWidth);
+
     image.Mutate(ctx =>
     {
-      if (cellWidth > 0)
+      var targetPixelWidth = targetSize.Width * cellSize.PixelWidth;
+      var targetPixelHeight = targetSize.Height * cellSize.PixelHeight;
+
+      if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
       {
-        // Some math to get the target size in pixels and reverse it to cell height that it will consume.
-        var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
-        var pixelHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
-        // Resize the image to the target size
-        ctx.Resize(new ResizeOptions()
+        ctx.Resize(new ResizeOptions
         {
+          Size = new Size(targetPixelWidth, targetPixelHeight),
           Sampler = KnownResamplers.Bicubic,
-          Size = new(pixelWidth, pixelHeight),
-          PremultiplyAlpha = false,
+          PremultiplyAlpha = false
         });
       }
-      // Sixel supports 256 colors max
-      ctx.Quantize(new OctreeQuantizer(new()
+
+      ctx.Quantize(new OctreeQuantizer(new QuantizerOptions
       {
         MaxColors = maxColors,
       }));
     });
+
     var metadata = image.Frames.RootFrame.Metadata.GetGifMetadata();
     int frameCount = image.Frames.Count;
-    // var cellHeight = Math.Ceiling((double)(image.Height / Compatibility.GetCellSize().PixelHeight));
-    var cellSize = Compatibility.GetCellSize();
-    var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
 
     var gif = new SixelGif()
     {
-      Sixel = new List<string>(),
-      // Delay = metadata?.FrameDelay ?? 1000,
-      Delay = metadata?.FrameDelay * 10 ?? 1000,
-      LoopCount = LoopCount,
-      Size = imageSize,
-      Audio = AudioPath ?? null
+        Sixel = new List<string>(),
+        Delay = metadata?.FrameDelay * 10 ?? 1000,
+        LoopCount = LoopCount,
+        Height = targetSize.Height,
+        Width = targetSize.Width,
+        Audio = AudioPath
     };
+
     for (int i = 0; i < frameCount; i++)
     {
-      var targetFrame = image.Frames[i];
-      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame, imageSize, true));
+        var targetFrame = image.Frames[i];
+        gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
     }
     return gif;
   }
@@ -83,8 +87,9 @@ public static class GifToSixel {
     // hack to remove the padding from the formatter
     // the formatter adds 2 lines of padding at the end.
     // because we dont really use the formatter.
-    int height = gif.Size.Height - 2;
+    int height = gif.Height - 2;
     GifAudio? audio = null;
+
     try
     {
       if (gif.Audio != null)
@@ -108,6 +113,7 @@ public static class GifToSixel {
           }
           writer.Write(sixel);
           Thread.Sleep(gif.Delay);
+          writer.Write($"{Constants.ESC}[{gif.Height}A");
         }
       }
     }

@@ -1,6 +1,9 @@
 ﻿using Sixel.Terminal;
 using Sixel.Terminal.Models;
+using System;
 using System.Text;
+using System.Linq;
+using System.Numerics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -118,7 +121,6 @@ public static class HalfBlock
         return (r, g, b);
     }
     private static bool IsTransparent(Rgba32 pixel) => pixel.A < 5;
-
     private static Rgba32 GetConsoleBackgroundColor()
     {
         var color = Console.BackgroundColor switch
@@ -143,4 +145,5 @@ public static class HalfBlock
         };
         return color.ToPixel<Rgba32>();
     }
+
 }

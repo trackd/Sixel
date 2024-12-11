@@ -51,12 +51,12 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
 
   [Parameter(
       HelpMessage = "The number of times to loop the gif."
-)]
+  )]
   [ValidateRange(1, 256)]
   public int LoopCount { get; set; } = 3;
   [Parameter(
-    HelpMessage = "The audio track to overlay the gif"
-)]
+        HelpMessage = "The audio track to overlay the gif"
+  )]
   public string? AudioFile { get; set; }
   protected override void ProcessRecord()
   {

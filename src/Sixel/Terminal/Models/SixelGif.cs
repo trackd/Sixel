@@ -21,7 +21,11 @@ public class SixelGif
   /// <summary>
   /// The height of the gif, in characters.
   /// </summary>
-  public Size Size { get; set; }
+  public int Height { get; set; }
+  /// <summary>
+  /// The width of the gif, in characters.
+  /// </summary>
+  public int Width { get; set; }
   /// <summary>
   /// The audio data for the gif, optional
   /// </summary>
