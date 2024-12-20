@@ -22,28 +22,25 @@ public static class Sixel
     // get image size in characters
     var cellSize = Compatibility.GetCellSize();
     // get the image size in console characters
-    var imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
-    if (imageSize.Width > Console.WindowWidth)
-    {
-      // if the image is larger than the console window width, resize it to fit
-      cellWidth = Console.WindowWidth - 2;
-    }
+    var imageSize = SizeHelper.GetTerminalImageSize(image.Width, image.Height, cellWidth);
+
     image.Mutate(ctx =>
     {
-      if (cellWidth > 0)
-      {
-        // Some math to get the target size in pixels and reverse it to cell height that it will consume.
-        var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
-        var pixelHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
+      // Some math to get the target size in pixels and reverse it to cell height that it will consume.
+      var targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
+      var targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
+        {
         // Resize the image to the target size
         ctx.Resize(new ResizeOptions()
         {
+          // https://en.wikipedia.org/wiki/Bicubic_interpolation
+          // quality goes Bicubic > Bilinear > NearestNeighbor
           Sampler = KnownResamplers.Bicubic,
-          Size = new(pixelWidth, pixelHeight),
+          Size = new(targetPixelWidth, targetPixelHeight),
           PremultiplyAlpha = false,
         });
-        // update imageSize
-        imageSize = new Size(image.Width / cellSize.PixelWidth, image.Height / cellSize.PixelHeight);
       }
       // Sixel supports 256 colors max
       ctx.Quantize(new OctreeQuantizer(new() {
@@ -120,7 +117,7 @@ public static class Sixel
 
   private static void AddColorToPalette(this StringBuilder sixelBuilder, Rgba32 pixel, int colorIndex)
   {
-    // rgb 0-255 to 0-100
+    // rgb 0-255 needs to be translated to 0-100 for sixel.
     var (r, g, b) = (
         (int)pixel.R * 100 / 255,
         (int)pixel.G * 100 / 255,
@@ -146,14 +143,13 @@ public static class Sixel
     if (repeatCounter <= 1)
     {
       // single entry
-      // sixelBuilder.AppendEntry(colorIndex, sixel);
       sixelBuilder.Append(Constants.SixelColorStart)
                   .Append(colorIndex)
                   .Append(sixel);
     }
     else
     {
-      // add the repeat entry
+      // add repeats
       sixelBuilder.Append(Constants.SixelColorStart)
                   .Append(colorIndex)
                   .Append(Constants.SixelRepeat)
@@ -161,12 +157,6 @@ public static class Sixel
                   .Append(sixel);
     }
   }
-  // private static void AppendEntryOld(this StringBuilder sixelBuilder, int colorIndex, char sixel)
-  // {
-  //   sixelBuilder.Append(Constants.SixelColorStart)
-  //               .Append(colorIndex)
-  //               .Append(sixel);
-  // }
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
   {
     sixelBuilder.Append(Constants.SixelDECGCR);

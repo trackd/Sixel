@@ -16,11 +16,12 @@ public static class GifToSixel {
   public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
   {
     using var image = Image.Load<Rgba32>(imageStream);
-    if (AudioFile != null)
-    {
-      return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
-    }
-    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
+    // if (AudioFile != null)
+    // {
+    //   return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
+    // }
+    // return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
+    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
   }
 
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount, string? AudioPath = null)
@@ -74,20 +75,11 @@ public static class GifToSixel {
     Console.CursorVisible = false;
     // Create a new VTWriter instance, Console.Write is slow..
     var writer = new VTWriter();
-    // if its the last cursor position, we need to add an empty row.
-    if (Console.CursorTop == Console.WindowHeight - 1)
-    {
-      // can't move the cursor ahead of the buffer.. so we add a empty line.
-      writer.Write("\r\n");
-    }
-    else {
-      // add 1 row padding before the gif.
-      writer.Write($"{Constants.ESC}[1B");
-    }
+    // add 1 row padding before the gif.
+    writer.Write(Environment.NewLine);
     // hack to remove the padding from the formatter
     // the formatter adds 2 lines of padding at the end.
-    // because we dont really use the formatter.
-    int height = gif.Height - 2;
+    int height = gif.Height - 1;
     GifAudio? audio = null;
 
     try

@@ -11,10 +11,10 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
 
-public static class HalfBlock
+public static class Blocks
 {
     private static Rgba32 _backgroundColor;
-    public static string ImageToAscii(Image<Rgba32> image, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
+    public static string ImageToBlocks(Image<Rgba32> image, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
     {
         _backgroundColor = GetConsoleBackgroundColor();
         var cellSize = Compatibility.GetCellSize();

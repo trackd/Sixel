@@ -15,17 +15,17 @@
 
     ✅ Sixel
         - requires Windows Terminal v1.22+ (currently preview)
+        - Gif support using ConvertTo-SixelGif
     ✅ Inline Image Protocol
         - Supported by VSCode, xterm2, WezTerm, and others.
     ✅ Kitty Graphics Protocol
         - Supported by Kitty terminal.
-    ✅ ASCII art using halfblock cells
-        - Fallback to ASCII art if no image protocol is supported.
+    ✅ Block cells
+        - Fallback to block cells if no image protocol is supported.
 @'
     CmdletsToExport      = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
     AliasesToExport      = 'cts','gif'
     FormatsToProcess     = 'Sixel.format.ps1xml'
-    TypesToProcess       = 'Sixel.types.ps1xml'
     PrivateData          = @{
         PSData = @{
             Tags         = @(
@@ -51,4 +51,5 @@
     # A missing or $null entry is equivalent to specifying the wildcard *. declare unused with @() for better perf.
     FunctionsToExport    = @()
     VariablesToExport    = @()
+    TypesToProcess       = @()
 }

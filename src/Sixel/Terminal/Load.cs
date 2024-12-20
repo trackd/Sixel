@@ -20,17 +20,12 @@ public static class Load
         throw new InvalidOperationException("Terminal does not support sixel, override with -Force (Windows Terminal needs Preview release for Sixel Support)");
       }
       using var _image = Image.Load<Rgba32>(imageStream);
-      // move it here? decisions decisions.. we could yeet the gif cmdlet and just make it a param.
-      // check if the image is a gif
       // if (_image.Frames.Count > 1)
       // {
+      // move it here?
       //   return Protocols.GifToSixel.LoadGif(imageStream, maxColors, width, 3);
       // }
       return Protocols.Sixel.ImageToSixel(_image, maxColors, width);
-    }
-    if (imageProtocol == ImageProtocol.InlineImageProtocol)
-    {
-      return Protocols.InlineImage.ImageToInline(imageStream, width);
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
@@ -46,11 +41,15 @@ public static class Load
       }
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
     }
-    if (imageProtocol == ImageProtocol.None)
+    if (imageProtocol == ImageProtocol.InlineImageProtocol)
+    {
+      return Protocols.InlineImage.ImageToInline(imageStream, width);
+    }
+    if (imageProtocol == ImageProtocol.Blocks)
     {
         using var _image = Image.Load<Rgba32>(imageStream);
-        return Protocols.HalfBlock.ImageToAscii(_image, width);
+        return Protocols.Blocks.ImageToBlocks(_image, width);
     }
-     return null;
+      return null;
   }
 }

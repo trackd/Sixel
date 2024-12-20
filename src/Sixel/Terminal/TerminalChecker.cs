@@ -43,7 +43,7 @@ public static class TerminalChecker
         return new TerminalInfo
         {
             Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.None
+            Protocol = ImageProtocol.Blocks
         };
     }
     internal static TerminalInfo CheckTerminal(Terminals terminal)
@@ -59,7 +59,7 @@ public static class TerminalChecker
         return new TerminalInfo
         {
             Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.None
+            Protocol = ImageProtocol.Blocks
         };
     }
 }
