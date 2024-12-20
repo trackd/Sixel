@@ -17,9 +17,9 @@ internal partial class Helpers
       { Terminals.Ghostty, ImageProtocol.KittyGraphicsProtocol },
       { Terminals.VSCode, ImageProtocol.InlineImageProtocol },
       { Terminals.Mintty, ImageProtocol.InlineImageProtocol },
-      { Terminals.Alacritty, ImageProtocol.None },
+      { Terminals.Alacritty, ImageProtocol.Blocks },
       { Terminals.xterm, ImageProtocol.InlineImageProtocol },
       { Terminals.mlterm, ImageProtocol.Sixel },
-      { Terminals.unknown, ImageProtocol.None }
+      { Terminals.unknown, ImageProtocol.Blocks }
   };
 }

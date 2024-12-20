@@ -1,0 +1,29 @@
+﻿<Configuration>
+  <ViewDefinitions>
+    <View>
+      <Name>Sixel.Terminal.Models.SixelGif</Name>
+      <ViewSelectedBy>
+        <TypeName>Sixel.Terminal.Models.SixelGif</TypeName>
+      </ViewSelectedBy>
+      <CustomControl>
+        <CustomEntries>
+          <CustomEntry>
+            <CustomItem>
+              <ExpressionBinding>
+                <ScriptBlock>
+                  # this is a hack to not have to expose the orchestrating cmdlet and just have it play automatically.
+                  # probably not worth it, but it's a fun experiment.
+                  $cmdlet = [System.Management.Automation.CmdletInfo]::new(
+                    'Show-SixelGif',
+                    [Sixel.Cmdlet.ShowSixelGifCmdlet]
+                  )
+                  $_ | &amp; $cmdlet
+                </ScriptBlock>
+              </ExpressionBinding>
+            </CustomItem>
+          </CustomEntry>
+        </CustomEntries>
+      </CustomControl>
+    </View>
+  </ViewDefinitions>
+</Configuration>

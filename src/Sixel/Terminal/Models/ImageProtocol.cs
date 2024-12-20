@@ -7,7 +7,7 @@
 [Flags]
 public enum ImageProtocol
 {
-  None = 0,
+  Blocks = 0,
   Sixel = 1,
   InlineImageProtocol = 2,
   KittyGraphicsProtocol = 4
