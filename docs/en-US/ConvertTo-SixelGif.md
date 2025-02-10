@@ -1,48 +1,46 @@
 ﻿---
 external help file: Sixel.dll-Help.xml
 Module Name: Sixel
-online version: https://github.com/trackd/Sixel/blob/main/docs/en-US/ConvertTo-Sixel.md
+online version: https://github.com/trackd/Sixel/blob/main/docs/en-US/ConvertTo-SixelGif.md
 schema: 2.0.0
 ---
 
-# ConvertTo-Sixel
+# ConvertTo-SixelGif
 
 ## SYNOPSIS
 
-Converts an image to sixel  
+Converts a gif to a sixel animation  
 
 ## SYNTAX
 
 ### ByPath (Default)
 
 ```powershell
-ConvertTo-Sixel [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-SixelGif [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ### ByUrl
 
 ```powershell
-ConvertTo-Sixel -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-SixelGif -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
-The `ConvertTo-Sixel` takes an image and converts it to sixel  
+The `ConvertTo-SixelGif` takes a gif and converts it to sixel animation  
 
 ## EXAMPLES
 
 ### -------------------------- EXAMPLE 1 --------------------------
 
 ```powershell
-PS C:\> ConvertTo-Sixel -Url 'https://imgs.xkcd.com/comics/git_commit.png'
+PS C:\> ConvertTo-SixelGif -Url 'https://i.gifer.com/10j2.gif'
 ```
-
-Converts the xkcd to sixel  
 
 ### -------------------------- EXAMPLE 2 --------------------------
 
 ```powershell
-PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
+PS C:\> ConvertTo-SixelGif -Path $env:USERPROFILE\desktop\hello.gif
 ```
 
 Converts a local file to sixel format  
@@ -51,7 +49,7 @@ Converts a local file to sixel format
 
 ### -Path
 
-A path to a local image to convert to sixel.  
+A path to a local gif to convert to sixel.  
 
 ```yaml
 Type: String
@@ -67,7 +65,7 @@ Accept wildcard characters: False
 
 ### -Url
 
-A URL of the image to download and convert to sixel.  
+A URL of the gif to download and convert to sixel.  
 
 ```yaml
 Type: String
@@ -153,13 +151,13 @@ Accept wildcard characters: False
 
 ### System.String
 
-Path or url to an image file  
+Path or url to an gif file  
 
 ## OUTPUTS
 
 ### System.String
 
-a sixel string  
+a sixel animation  
 
 ## NOTES
 

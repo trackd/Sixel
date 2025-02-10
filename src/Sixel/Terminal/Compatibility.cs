@@ -8,12 +8,12 @@ public static class Compatibility
   /// <summary>
   /// Memory-caches the result of the terminal supporting sixel graphics.
   /// </summary>
-  private static bool? _terminalSupportsSixel;
+  internal static bool? _terminalSupportsSixel;
 
   /// <summary>
   /// Check if the terminal supports kitty graphics
   /// </summary>
-  private static bool? _terminalSupportsKitty;
+  internal static bool? _terminalSupportsKitty;
 
   /// <summary>
   /// Memory-caches the result of the terminal cell size.

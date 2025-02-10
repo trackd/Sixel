@@ -10,17 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Roslynator.Analyzers" Version="4.12.9">
+    <PackageReference Include="Roslynator.Analyzers" Version="4.13.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Roslynator.CodeFixes" Version="4.12.9">
+    <PackageReference Include="Roslynator.CodeFixes" Version="4.13.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageReference Include="System.Management.Automation" Version="7.4" PrivateAssets="all" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <!-- <PackageReference Include="NAudio" Version="2.2.1" /> -->
     <ProjectReference Include="../Sixel.Shared/Sixel.Shared.csproj" />
 </ItemGroup>
 <ItemGroup>

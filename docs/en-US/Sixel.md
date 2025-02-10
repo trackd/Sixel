@@ -12,8 +12,12 @@ Locale: en-US
 
 Convert images to Sixel  
 
-## Yayaml Cmdlets
+## Sixel Cmdlets
 
 ### [ConvertTo-Sixel](ConvertTo-Sixel.md)
 
 Converts an image to sixel  
+
+### [ConvertTo-SixelGif](ConvertTo-SixelGif.md)
+
+Converts a gif to a sixel animation  

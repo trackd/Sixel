@@ -13,14 +13,14 @@
     Description          = '@
     Display images in the terminal using various protocols
 
-    ✅ Sixel
-        - requires Windows Terminal v1.22+ (currently preview)
+    ✔️ Sixel
+        - requires Windows Terminal v1.22+
         - Gif support using ConvertTo-SixelGif
-    ✅ Inline Image Protocol
+    ✔️ Inline Image Protocol
         - Supported by VSCode, xterm2, WezTerm, and others.
-    ✅ Kitty Graphics Protocol
+    ✔️ Kitty Graphics Protocol
         - Supported by Kitty terminal.
-    ✅ Block cells
+    ✔️ Block cells
         - Fallback to block cells if no image protocol is supported.
 @'
     CmdletsToExport      = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
@@ -41,7 +41,7 @@
             LicenseUri   = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/trackd/Sixel'
             ReleaseNotes = @'
-            0.3.0 - Added GIF support, possible to add Audio, added Ascii art using halfblock cells.
+            0.3.0 - Added GIF support, added Ascii art using halfblock cells.
             0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.
             0.2.0 - Added better scaling, changes -Width to use cell width instead.
             0.1.0 - Initial release.

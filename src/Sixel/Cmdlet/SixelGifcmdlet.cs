@@ -54,10 +54,10 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
   )]
   [ValidateRange(1, 256)]
   public int LoopCount { get; set; } = 3;
-  [Parameter(
-        HelpMessage = "The audio track to overlay the gif"
-  )]
-  public string? AudioFile { get; set; }
+  // [Parameter(
+  //       HelpMessage = "The audio track to overlay the gif"
+  // )]
+  // public string? AudioFile { get; set; }
   protected override void ProcessRecord()
   {
     try
@@ -85,14 +85,14 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
 
       using (imageStream)
       {
-        if (AudioFile is not null)
-        {
-          var resolvedAudio = SessionState.Path.GetResolvedPSPathFromPSPath(AudioFile)[0].Path;
-          WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
-        }
-        else {
+        // if (AudioFile is not null)
+        // {
+        //   var resolvedAudio = SessionState.Path.GetResolvedPSPathFromPSPath(AudioFile)[0].Path;
+        //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
+        // }
+        // else {
           WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
-        }
+        // }
       }
     }
     catch (Exception ex)
