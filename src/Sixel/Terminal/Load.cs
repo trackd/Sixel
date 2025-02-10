@@ -10,6 +10,7 @@ public static class Load
   /// <summary>
   /// Load an image and convert it to a terminal compatible format.
   /// </summary>
+  /// implement type <T> to allow for more image types..
   public static string? ConsoleImage(ImageProtocol imageProtocol, Stream imageStream, int maxColors, int width, bool Force)
   {
     if (imageProtocol == ImageProtocol.Sixel)
@@ -19,11 +20,12 @@ public static class Load
         throw new InvalidOperationException("Terminal does not support sixel, override with -Force (Windows Terminal needs Preview release for Sixel Support)");
       }
       using var _image = Image.Load<Rgba32>(imageStream);
+      // if (_image.Frames.Count > 1)
+      // {
+      // move it here?
+      //   return Protocols.GifToSixel.LoadGif(imageStream, maxColors, width, 3);
+      // }
       return Protocols.Sixel.ImageToSixel(_image, maxColors, width);
-    }
-    if (imageProtocol == ImageProtocol.InlineImageProtocol)
-    {
-      return Protocols.InlineImage.ImageToInline(imageStream, width);
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
@@ -39,6 +41,15 @@ public static class Load
       }
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
     }
-    return null;
+    if (imageProtocol == ImageProtocol.InlineImageProtocol)
+    {
+      return Protocols.InlineImage.ImageToInline(imageStream, width);
+    }
+    if (imageProtocol == ImageProtocol.Blocks)
+    {
+        using var _image = Image.Load<Rgba32>(imageStream);
+        return Protocols.Blocks.ImageToBlocks(_image, width);
+    }
+      return null;
   }
 }

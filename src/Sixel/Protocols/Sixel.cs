@@ -19,18 +19,26 @@ public static class Sixel
   /// <returns>The Sixel string.</returns>
   public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
   {
+    // get image size in characters
+    var cellSize = Compatibility.GetCellSize();
+    // get the image size in console characters
+    var imageSize = SizeHelper.GetTerminalImageSize(image.Width, image.Height, cellWidth);
+
     image.Mutate(ctx =>
     {
-      if (cellWidth > 0)
-      {
-        // Some math to get the target size in pixels and reverse it to cell height that it will consume.
-        var pixelWidth = cellWidth * Compatibility.GetCellSize().PixelWidth;
-        var pixelHeight = (int)Math.Round((double)image.Height / image.Width * pixelWidth);
+      // Some math to get the target size in pixels and reverse it to cell height that it will consume.
+      var targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
+      var targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
+        {
         // Resize the image to the target size
         ctx.Resize(new ResizeOptions()
         {
+          // https://en.wikipedia.org/wiki/Bicubic_interpolation
+          // quality goes Bicubic > Bilinear > NearestNeighbor
           Sampler = KnownResamplers.Bicubic,
-          Size = new(pixelWidth, pixelHeight),
+          Size = new(targetPixelWidth, targetPixelHeight),
           PremultiplyAlpha = false,
         });
       }
@@ -40,9 +48,9 @@ public static class Sixel
       }));
     });
     var targetFrame = image.Frames[frame];
-    return FrameToSixelString(targetFrame, returnCursorToTopLeft);
+    return FrameToSixelString(targetFrame);
   }
-  private static string FrameToSixelString(ImageFrame<Rgba32> frame, bool returnCursorToTopLeft)
+  internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
     var sixelBuilder = new StringBuilder();
     var palette = new Dictionary<Rgba32, int>();
@@ -53,47 +61,47 @@ public static class Sixel
       for (var y = 0; y < accessor.Height; y++)
       {
         var pixelRow = accessor.GetRowSpan(y);
-        // The way sixel works, this bitshift starting from the SIXELEMPTY constant
-        // will give us the correct character to use for the current row.
-        // Every six rows we swap back to the "empty character + 1" after adding a newline
-        // character to the string.
-        var c = (char)(Constants.SIXELEMPTY + (1 << (y % 6)));
+        // The value of 1 left-shifted by the remainder of the current row divided by 6 gives the correct sixel character offset from the empty sixel char for each row.
+        // See the description of s...s for more detail on the sixel format https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.2.1
+        var c = (char)(Constants.SixelTransparent + (1 << (y % 6)));
         var lastColor = -1;
         var repeatCounter = 0;
         foreach (ref var pixel in pixelRow)
         {
+
+          // The colors can be added to the palette and interleaved with the sixel data so long as the color is defined before it is used.
           if (!palette.TryGetValue(pixel, out var colorIndex))
           {
             colorIndex = colorCounter++;
             palette[pixel] = colorIndex;
             sixelBuilder.AddColorToPalette(pixel, colorIndex);
           }
+
+          // Transparency is a special color index of 0 that exists in our sixel palette.
           var colorId = pixel.A == 0 ? 0 : colorIndex;
+
+          // Sixel data will use a repeat entry if the color is the same as the last one.
+          // https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.3.1
           if (colorId == lastColor || repeatCounter == 0)
           {
+            // If the color was repeated go to the next loop iteration to check the next pixel.
             lastColor = colorId;
             repeatCounter++;
             continue;
           }
-          if (repeatCounter > 1)
-          {
-            sixelBuilder.AppendRepeatEntry(lastColor, repeatCounter, c);
-          }
-          else
-          {
-            sixelBuilder.AppendSixelEntry(lastColor, c);
-          }
+
+          // Every time the color is not repeated the previous color is written to the string.
+          sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
+
+          // Remember the current color and reset the repeat counter.
           lastColor = colorId;
           repeatCounter = 1;
         }
-        if (repeatCounter > 1)
-        {
-          sixelBuilder.AppendRepeatEntry(lastColor, repeatCounter, c);
-        }
-        else
-        {
-          sixelBuilder.AppendSixelEntry(lastColor, c);
-        }
+
+        // Write the last color and repeat counter to the string for the current row.
+        sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
+
+        // Add a carriage return at the end of each row and a new line every 6 pixel rows.
         sixelBuilder.AppendCarriageReturn();
         if (y % 6 == 5)
         {
@@ -101,69 +109,76 @@ public static class Sixel
         }
       }
     });
+    sixelBuilder.AppendNextLine();
     sixelBuilder.AppendExitSixel();
-    if (returnCursorToTopLeft)
-    {
-      var cellHeight = Math.Ceiling((double)(frame.Height / Compatibility.GetCellSize().PixelHeight));
-      sixelBuilder.Append($"{Constants.ESC}[{cellHeight}A");
-    }
+
     return sixelBuilder.ToString();
   }
 
   private static void AddColorToPalette(this StringBuilder sixelBuilder, Rgba32 pixel, int colorIndex)
   {
-    var r = (int)Math.Round(pixel.R / 255.0 * 100);
-    var g = (int)Math.Round(pixel.G / 255.0 * 100);
-    var b = (int)Math.Round(pixel.B / 255.0 * 100);
+    // rgb 0-255 needs to be translated to 0-100 for sixel.
+    var (r, g, b) = (
+        (int)pixel.R * 100 / 255,
+        (int)pixel.G * 100 / 255,
+        (int)pixel.B * 100 / 255
+    );
 
-    sixelBuilder.Append(Constants.SIXELCOLORSTART)
+    sixelBuilder.Append(Constants.SixelColorStart)
                 .Append(colorIndex)
-                .Append(";2;")
+                .Append(Constants.SixelColorParam)
                 .Append(r)
-                .Append(';')
+                .Append(Constants.Divider)
                 .Append(g)
-                .Append(';')
+                .Append(Constants.Divider)
                 .Append(b);
   }
-
-  private static void AppendRepeatEntry(this StringBuilder sixelBuilder, int color, int repeatCounter, char e)
+  private static void AppendSixel(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel)
   {
-    sixelBuilder.Append(Constants.SIXELCOLORSTART)
-                .Append(color)
-                .Append(Constants.SIXELREPEAT)
-                .Append(repeatCounter)
-                .Append(color != 0 ? e : Constants.SIXELEMPTY);
+    if (colorIndex == 0)
+    {
+      // Transparent pixels are a special case and are always 0 in the palette.
+      sixel = Constants.SixelTransparent;
+    }
+    if (repeatCounter <= 1)
+    {
+      // single entry
+      sixelBuilder.Append(Constants.SixelColorStart)
+                  .Append(colorIndex)
+                  .Append(sixel);
+    }
+    else
+    {
+      // add repeats
+      sixelBuilder.Append(Constants.SixelColorStart)
+                  .Append(colorIndex)
+                  .Append(Constants.SixelRepeat)
+                  .Append(repeatCounter)
+                  .Append(sixel);
+    }
   }
-
-  private static void AppendSixelEntry(this StringBuilder sixelBuilder, int color, char e)
-  {
-    sixelBuilder.Append(Constants.SIXELCOLORSTART)
-                .Append(color)
-                .Append(color != 0 ? e : Constants.SIXELEMPTY);
-  }
-
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SIXELDECGCR);
+    sixelBuilder.Append(Constants.SixelDECGCR);
   }
 
   private static void AppendNextLine(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SIXELDECGNL);
+    sixelBuilder.Append(Constants.SixelDECGNL);
   }
 
   private static void AppendExitSixel(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SIXELEND);
+    sixelBuilder.Append(Constants.ST);
   }
 
   private static void StartSixel(this StringBuilder sixelBuilder, int width, int height)
   {
-    sixelBuilder.Append(Constants.SIXELSTART)
-                .Append(Constants.SIXELRASTERATTRIBUTES)
+    sixelBuilder.Append(Constants.SixelStart)
+                .Append(Constants.SixelRaster)
                 .Append(width)
-                .Append(';')
+                .Append(Constants.Divider)
                 .Append(height)
-                .Append(Constants.SIXELTRANSPARENTCOLOR);
+                .Append(Constants.SixelTransparentColor);
   }
 }

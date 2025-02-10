@@ -42,30 +42,31 @@ public static class KittyGraphics
   }
   private static string ConvertToKittyGraphics(string base64Image)
   {
-    const int chunkSize = 4096;
+    // basic implementation of kitty graphics protocol
     StringBuilder sb = new();
     int pos = 0;
     while (pos < base64Image.Length)
     {
-      sb.Append("\x1b_G");
+      sb.Append(Constants.KittyStart);
       if (pos == 0)
       {
-        sb.Append("a=T,f=100,");
+        sb.Append(Constants.KittyPos);
       }
       int remaining = base64Image.Length - pos;
-      string chunk = base64Image.Substring(pos, Math.Min(chunkSize, remaining));
+      string chunk = base64Image.Substring(pos, Math.Min(Constants.KittychunkSize, remaining));
       pos += chunk.Length;
       if (pos < base64Image.Length)
       {
-        sb.Append("m=1");
+        sb.Append(Constants.KittyMore);
       }
       else
       {
-        sb.Append("m=0");
+        sb.Append(Constants.KittyFinish);
       }
-      sb.Append(";").Append(chunk).Append("\x1b\\");
+      sb.Append(Constants.Divider)
+        .Append(chunk)
+        .Append(Constants.ST);
     }
     return sb.ToString();
   }
-
 }

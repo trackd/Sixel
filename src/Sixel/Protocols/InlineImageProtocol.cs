@@ -12,20 +12,19 @@ public static class InlineImage
   {
     using var ms = new MemoryStream();
     image.CopyTo(ms);
-
     var imageBytes = ms.ToArray();
     var base64Image = Convert.ToBase64String(imageBytes);
     string size = imageBytes.Length.ToString();
     string widthString = width > 0 ? $"width={width};" : "width=auto;";
     var iip = new StringBuilder();
-    iip.Append(Constants.INLINEIMAGESTART)
+    iip.Append(Constants.InlineImageStart)
       .Append("1337;File=inline=1;")
       .Append("size=" + size + ";")
       .Append(widthString)
       .Append("height=auto;")
       .Append("preserveAspectRatio=1:")
       .Append(base64Image)
-      .Append(Constants.INLINEIMAGEEND);
+      .Append(Constants.InlineImageEnd);
     return iip.ToString();
   }
 }

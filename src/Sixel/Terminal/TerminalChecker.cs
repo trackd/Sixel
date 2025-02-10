@@ -11,6 +11,9 @@ public static class TerminalChecker
     internal static TerminalInfo CheckTerminal()
     {
         var env = Environment.GetEnvironmentVariables();
+        TerminalInfo? envTerminalInfo = null;
+
+        // First check environment variables to identify the terminal
         foreach (DictionaryEntry item in env)
         {
             var key = item.Key?.ToString();
@@ -20,11 +23,12 @@ public static class TerminalChecker
             {
                 if (Helpers.SupportedProtocol.TryGetValue(terminal, out var protocol))
                 {
-                    return new TerminalInfo
+                    envTerminalInfo = new TerminalInfo
                     {
                         Terminal = terminal,
                         Protocol = protocol
                     };
+                    break;
                 }
             }
 
@@ -32,18 +36,40 @@ public static class TerminalChecker
             {
                 if (Helpers.SupportedProtocol.TryGetValue(_terminal, out var protocol))
                 {
-                    return new TerminalInfo
+                    envTerminalInfo = new TerminalInfo
                     {
                         Terminal = _terminal,
                         Protocol = protocol
                     };
+                    break;
                 }
             }
         }
-        return new TerminalInfo
+
+        // Then check VT capabilities and override protocol if supported
+        if (Compatibility._terminalSupportsKitty ?? false)
+        {
+            return new TerminalInfo
+            {
+                Terminal = envTerminalInfo?.Terminal ?? Terminals.Kitty,
+                Protocol = ImageProtocol.KittyGraphicsProtocol
+            };
+        }
+
+        if (Compatibility._terminalSupportsSixel ?? false)
+        {
+            return new TerminalInfo
+            {
+                Terminal = envTerminalInfo?.Terminal ?? Terminals.MicrosoftTerminal,
+                Protocol = ImageProtocol.Sixel
+            };
+        }
+
+        // Return environment-detected terminal or fallback to unknown
+        return envTerminalInfo ?? new TerminalInfo
         {
             Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.None
+            Protocol = ImageProtocol.Blocks
         };
     }
     internal static TerminalInfo CheckTerminal(Terminals terminal)
@@ -59,7 +85,7 @@ public static class TerminalChecker
         return new TerminalInfo
         {
             Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.None
+            Protocol = ImageProtocol.Blocks
         };
     }
 }
