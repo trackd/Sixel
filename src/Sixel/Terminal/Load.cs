@@ -41,7 +41,7 @@ public static class Load
       }
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
     }
-    if (imageProtocol == ImageProtocol.InlineImageProtocol)
+    if (imageProtocol == ImageProtocol.InlineImageProtocol || imageProtocol == ImageProtocol.iTerm2)
     {
       return Protocols.InlineImage.ImageToInline(imageStream, width);
     }

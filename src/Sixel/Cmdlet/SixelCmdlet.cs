@@ -1,6 +1,6 @@
+using System.Management.Automation;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using System.Management.Automation;
 
 namespace Sixel.Cmdlet;
 
@@ -31,6 +31,17 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       public string Url { get; set; } = null!;
 
       [Parameter(
+            HelpMessage = "A stream of the image to convert to sixel.",
+            Mandatory = true,
+            ValueFromPipelineByPropertyName = true,
+            Position = 0,
+            ParameterSetName = "Stream"
+      )]
+      [ValidateNotNullOrEmpty]
+      [Alias("FileStream")]
+      public Stream Stream { get; set; } = null!;
+
+      [Parameter(
             HelpMessage = "The maximum number of colors to use in the image."
       )]
       [ValidateRange(1, 256)]
@@ -51,6 +62,11 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             HelpMessage = "Choose ImageProtocol to use for conversion."
       )]
       public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol;
+
+      [Parameter(
+            HelpMessage = "Xterm specific options for cursor hiding and restoring."
+      )]
+      public SwitchParameter Xterm { get; set; }
       protected override void ProcessRecord()
       {
             try
@@ -59,32 +75,64 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
                   switch (ParameterSetName)
                   {
                         case "Path":
-                        {
-                              var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
-                              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
-                              break;
-                        }
+                              {
+                                    var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
+                                    imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+                                    break;
+                              }
                         case "Url":
-                        {
-                              using var client = new HttpClient();
-                              var response = client.GetAsync(Url).Result;
-                              response.EnsureSuccessStatusCode();
-                              imageStream = response.Content.ReadAsStream();
-                              break;
-                        }
+                              {
+                                    using var client = new HttpClient();
+                                    var response = client.GetAsync(Url).Result;
+                                    response.EnsureSuccessStatusCode();
+                                    imageStream = response.Content.ReadAsStream();
+                                    break;
+                              }
+                        case "Stream":
+                              {
+                                    if (Stream.Position != 0)
+                                    {
+                                          // if something has already read the stream, reset it.. maybe risky
+                                          Stream.Position = 0;
+                                    }
+                                    imageStream = Stream;
+                                    break;
+                              }
                   }
                   if (imageStream is null) return;
                   using (imageStream)
                   {
-                        WriteObject(
+                        if (!Xterm.IsPresent)
+                        {
+                              WriteObject(
                               Load.ConsoleImage(
-                              Protocol,
-                              imageStream,
-                              MaxColors,
-                              Width,
-                              Force.IsPresent
-                              )
-                        );
+                                    Protocol,
+                                    imageStream,
+                                    MaxColors,
+                                    Width,
+                                    Force.IsPresent));
+                        }
+                        else
+                        {
+                              // cursor shenanigans .. sigh just temporary testing.
+                              // var size = SizeHelper.GetTerminalImageSize(imageStream, Width);
+                              Console.CursorVisible = false;
+                              Console.Write(Constants.HideCursor);
+                              // Console.Write(Constants.DECSDM);
+                              Console.Write(Constants.xtermHideCursor);
+                              WriteObject(
+                              Load.ConsoleImage(
+                                    Protocol,
+                                    imageStream,
+                                    MaxColors,
+                                    Width,
+                                    Force.IsPresent));
+                              // Console.Write($"{Constants.ESC}[{size.Height}B");
+                              Console.CursorVisible = true;
+                              Console.Write(Constants.ShowCursor);
+                              Console.Write(Constants.xtermShowCursor);
+                        }
+
                   }
             }
             catch (Exception ex)
