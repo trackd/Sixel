@@ -13,19 +13,19 @@ Converts an image to sixel
 
 ## SYNTAX
 
-### ByPath (Default)
+### Path (Default)
 
 ```powershell
 ConvertTo-Sixel [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
 ```
 
-### ByUrl
+### Url
 
 ```powershell
-ConvertTo-Sixel -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
 ```
 
-### ByStream
+### Stream
 
 ```powershell
 ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
@@ -175,7 +175,7 @@ Accept wildcard characters: False
 
 ### System.String
 
-Path or url to an image file  
+Path, url, Stream of an image file  
 
 ## OUTPUTS
 

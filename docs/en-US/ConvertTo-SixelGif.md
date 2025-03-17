@@ -13,16 +13,22 @@ Converts a gif to a sixel animation
 
 ## SYNTAX
 
-### ByPath (Default)
+### Path (Default)
 
 ```powershell
 ConvertTo-SixelGif [-Path] <string> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
-### ByUrl
+### Url
 
 ```powershell
-ConvertTo-SixelGif -Url <string> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Url <uri> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+```
+
+### Stream
+
+```powershell
+ConvertTo-SixelGif -Stream <stream> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -68,9 +74,25 @@ Accept wildcard characters: False
 A URL of the gif to download and convert to sixel.  
 
 ```yaml
-Type: String
+Type: Uri
 Parameter Sets: Url
 Aliases: Uri
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -Stream
+
+A stream of an image.  
+
+```yaml
+Type: Stream
+Parameter Sets: Stream
+Aliases: FileStream, InputStream, ImageStream, ContentStream
 
 Required: True
 Position: Named

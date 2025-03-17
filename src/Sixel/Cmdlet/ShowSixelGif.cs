@@ -12,7 +12,7 @@ namespace Sixel.Cmdlet;
 /// this cmdlet uses Console.Write and is not captureable by the pipeline.
 /// </summary>
 
-[Cmdlet(VerbsCommon.Show, "SixelGif", DefaultParameterSetName = "Path")]
+[Cmdlet(VerbsCommon.Show, "SixelGif")]
 [OutputType(typeof(void))]
 public sealed class ShowSixelGifCmdlet : PSCmdlet
 {

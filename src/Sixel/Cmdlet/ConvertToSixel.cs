@@ -76,7 +76,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       {
         case "Path":
           {
-            var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
+            var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
             imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
             break;
           }

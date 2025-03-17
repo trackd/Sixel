@@ -3,12 +3,12 @@
 # Generated on: 2024-10-09
 
 @{
-    RootModule             = 'SixelAlt.psm1'
-    ModuleVersion          = '0.3.2'
+    RootModule             = 'Sixel.psm1'
+    ModuleVersion          = '0.4.0'
     CompatiblePSEditions   = @('Desktop', 'Core')
     PowerShellVersion      = '5.1'
     DotNetFrameworkVersion = '4.7.2'
-    # ClrVersion             = '4.0'
+    ClrVersion             = '4.0'
     GUID                   = '95f4627c-f8f5-43d5-824b-4c356737f87b'
     Author                 = 'trackd, ShaunLawrie'
     Copyright              = '(c) trackd. All rights reserved.'
@@ -16,7 +16,6 @@
     Display images in the terminal using various protocols
 
     ✔️ Sixel
-        - requires Windows Terminal v1.22+
         - Gif support using ConvertTo-SixelGif with Audio support.
     ✔️ Inline Image Protocol
         - Supported by VSCode, xterm2, WezTerm, and others.
@@ -24,6 +23,8 @@
         - Supported by Kitty terminal.
     ✔️ Block cells
         - Fallback to block cells if no image protocol is supported.
+
+    Note: Sixel requires Windows Terminal v1.22+ or VSCode Insiders.
 '
     CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
     AliasesToExport        = 'cts', 'gif'
@@ -42,8 +43,9 @@
             )
             LicenseUri   = 'https://github.com/trackd/Sixel/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/trackd/Sixel'
-            Prerelease   = 'prerelease01'
+            # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
+            0.4.0 - Added support for Windows Powershell 5.1, added parameter -Stream.
             0.3.2 - Added support for Audio in ConvertTo-SixelGif.
             0.3.1 - Added GIF support, added Ascii art using halfblock cells.
             0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.
