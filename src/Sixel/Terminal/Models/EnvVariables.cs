@@ -1,5 +1,5 @@
 ﻿namespace Sixel.Terminal.Models;
-
+using System.Collections.Generic;
 internal partial class Helpers
 {
     /// <summary>
@@ -33,13 +33,14 @@ internal partial class Helpers
     }
     internal static Terminals? GetTerminal(string str)
     {
-        if (_reverseLookup.TryGetValue(str, out var _terminal))
+        Terminals _terminal;
+        if (_reverseLookup.TryGetValue(str, out _terminal))
         {
             return _terminal;
         }
-        if (Enum.TryParse<Terminals>(str, true, out var terminal))
+        if (Enum.TryParse<Terminals>(str, true, out _terminal))
         {
-            return terminal;
+            return _terminal;
         }
         return null;
     }

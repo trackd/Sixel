@@ -1,3 +1,6 @@
+// AssemblyLoadContext won't work in net472 so we conditionally compile this
+// for net5.0 or greater.
+#if NET5_0_OR_GREATER
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -79,3 +82,4 @@ public class LoadContext : AssemblyLoadContext
         }
     }
 }
+#endif

@@ -26,6 +26,7 @@ public static class Load
       //   return Protocols.GifToSixel.LoadGif(imageStream, maxColors, width, 3);
       // }
       return Protocols.Sixel.ImageToSixel(_image, maxColors, width);
+      // return ImageToSixel(_image, maxColors, width);
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
@@ -38,8 +39,10 @@ public static class Load
         // we need to resize the image to the target width
         using var _image = Image.Load<Rgba32>(imageStream);
         return Protocols.KittyGraphics.ImageToKitty(_image, width);
+        // return ImageToKitty(_image, width);
       }
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
+      // return ImageToKitty(imageStream);
     }
     if (imageProtocol == ImageProtocol.InlineImageProtocol || imageProtocol == ImageProtocol.iTerm2)
     {

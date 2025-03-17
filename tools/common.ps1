@@ -1,5 +1,6 @@
-using namespace System.IO
+﻿using namespace System.IO
 using namespace System.Net
+using namespace System.Runtime.InteropServices
 
 # Common code used in the build.ps1 scripts of each process
 
@@ -53,10 +54,10 @@ Function Get-NugetAssembly {
 
     $archive = [System.IO.Compression.ZipFile]::Open(
         $targetFile,
-        'Read')
+        "Read")
     try {
         $archive.Entries | Where-Object {
-            $_.FullName -like 'lib/*/*.dll'
+            $_.FullName -like "lib/*/*.dll"
         } | ForEach-Object {
             $dllName = Split-Path -Path $_.FullName -Leaf
             $dllFolder = (Split-Path -Path $_.FullName -Parent).Substring(4)
@@ -95,20 +96,35 @@ Function Get-PowerShell {
         [string]$Version
     )
 
+    $releaseArch = switch ([RuntimeInformation]::ProcessArchitecture) {
+        X64 { 'x64' }
+        X86 { 'x86' }
+        ARM64 { 'arm64' }
+        default {
+            $err = [ErrorRecord]::new(
+                [Exception]::new("Unsupported archecture requests '$_'"),
+                "UnknownArch",
+                [ErrorCategory]::InvalidArgument,
+                $_
+            )
+            $PSCmdlet.ThrowTerminatingError($err)
+        }
+    }
+
     $targetFolder = Join-Path $PSScriptRoot bin
     if (-not (Test-Path -LiteralPath $targetFolder)) {
         New-Item -Path $targetFolder -ItemType Directory | Out-Null
     }
 
     if (-not $IsCoreCLR -or $IsWindows) {
-        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/PowerShell-$Version-win-x64.zip"
+        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/PowerShell-$Version-win-$releaseArch.zip"
         $fileName = "pwsh-$Version.zip"
-        $nativeExt = '.exe'
+        $nativeExt = ".exe"
     }
     else {
-        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/powershell-$Version-linux-x64.tar.gz"
+        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/powershell-$Version-linux-$releaseArch.tar.gz"
         $fileName = "pwsh-$Version.tar.gz"
-        $nativeExt = ''
+        $nativeExt = ""
     }
 
     $targetFile = Join-Path $targetFolder $fileName
@@ -173,33 +189,36 @@ Function Get-BuildInfo {
         [string]
         $Path
     )
+
     $moduleSrc = [Path]::Combine($Path, 'module')
     $manifestItem = Get-Item -Path ([Path]::Combine($moduleSrc, '*.psd1'))
     $manifest = Test-ModuleManifest -Path $manifestItem.FullName -ErrorAction Ignore -WarningAction Ignore
     $moduleName = $manifest.Name
     $moduleVersion = $manifest.Version
 
-    $dotnetSrc = [Path]::Combine($Path, 'src', $moduleName)
+    $dotnetSrc = [Path]::Combine($Path, "src", $moduleName)
     if (Test-Path -LiteralPath $dotnetSrc) {
         [xml]$csharpProjectInfo = Get-Content -Path ([Path]::Combine($dotnetSrc, '*.csproj'))
-        $targetFrameworks = $csharpProjectInfo.Project.PropertyGroup.TargetFramework
+        $targetFrameworks = @(@($csharpProjectInfo.Project.PropertyGroup)[0].TargetFrameworks.Split(
+                ';', [StringSplitOptions]::RemoveEmptyEntries))
     }
     else {
         $dotnetSrc = $null
         $targetFrameworks = @()
     }
+
     [Ordered]@{
-        ModuleName       = $moduleName
-        Version          = $moduleVersion
+        ModuleName = $moduleName
+        Version = $moduleVersion
         PowerShellSource = $moduleSrc
-        DotnetSource     = $dotnetSrc
-        Configuration    = 'Release'
+        DotnetSource = $dotnetSrc
+        Configuration = "Release"
         TargetFrameworks = $targetFrameworks
-        BuildDir         = [Path]::Combine($Path, 'output', $build.ModuleName, $build.Version)
+        BuildDir = [Path]::Combine($Path, 'output', $build.ModuleName, $build.Version)
     }
 }
 
-Function Invoke-ModuleBuild {
+Function Invoke-ModuleBuilder {
     <#
     .SYNOPSIS
     Builds the module.
@@ -208,20 +227,21 @@ Function Invoke-ModuleBuild {
     The module directory to build.
     #>
     [CmdletBinding()]
+    [Alias('Invoke-ModuleBuild')]
     param (
         [Parameter(Mandatory)]
         [string]
         $Path
     )
 
-    Write-Host 'Getting build information'
+    Write-Host "Getting build information"
     $Build = Get-BuildInfo -Path $Path
 
     if (-not (Test-Path -LiteralPath $Build.BuildDir)) {
         New-Item -Path $Build.BuildDir -ItemType Directory -Force | Out-Null
     }
 
-    Write-Host 'Compiling Dotnet assemblies'
+    Write-Host "Compiling Dotnet assemblies"
     Push-Location -LiteralPath $Build.DotnetSource
     try {
         $dotnetArgs = @(
@@ -232,7 +252,7 @@ Function Invoke-ModuleBuild {
             "-p:Version=$($Build.Version)"
         )
 
-        foreach ($framework in @($Build.TargetFrameworks)) {
+        foreach ($framework in $Build.TargetFrameworks) {
             dotnet @dotnetArgs --framework $framework
             if ($LASTEXITCODE) {
                 throw "Failed to compile code for $framework"
@@ -243,16 +263,16 @@ Function Invoke-ModuleBuild {
         Pop-Location
     }
 
-    Write-Host 'Build PowerShell module result'
-    Copy-Item -Path ([Path]::Combine($Build.PowerShellSource, '*')) -Destination $Build.BuildDir -Recurse
+    Write-Host "Build PowerShell module result"
+    Copy-Item -Path ([Path]::Combine($Build.PowerShellSource, "*")) -Destination $Build.BuildDir -Recurse
 
     foreach ($framework in $Build.TargetFrameworks) {
-        $publishFolder = [Path]::Combine($Build.DotnetSource, 'bin', $Build.Configuration, $framework, 'publish')
-        $binFolder = [Path]::Combine($Build.BuildDir, 'bin', $framework)
+        $publishFolder = [Path]::Combine($Build.DotnetSource, "bin", $Build.Configuration, $framework, "publish")
+        $binFolder = [Path]::Combine($Build.BuildDir, "bin", $framework)
         if (-not (Test-Path -LiteralPath $binFolder)) {
             New-Item -Path $binFolder -ItemType Directory | Out-Null
         }
-        Copy-Item ([Path]::Combine($publishFolder, '*')) -Destination $binFolder -Recurse
+        Copy-Item ([Path]::Combine($publishFolder, "*")) -Destination $binFolder -Recurse
     }
 }
 
@@ -279,7 +299,7 @@ if (-not $IsCoreCLR -or $IsWindows) {
             Invoke-Command @invokeParams -ScriptBlock {
                 $ErrorActionPreference = 'Stop'
 
-                [System.Reflection.Assembly]::LoadWithPartialName('System.EnterpriseServices') | Out-Null
+                [System.Reflection.Assembly]::LoadWithPartialName("System.EnterpriseServices") | Out-Null
                 $publish = [System.EnterpriseServices.Internal.Publish]::new()
                 $publish.GacInstall($args[0])
             } -ArgumentList $Path
@@ -311,7 +331,7 @@ if (-not $IsCoreCLR -or $IsWindows) {
             Invoke-Command @invokeParams -ScriptBlock {
                 $ErrorActionPreference = 'Stop'
 
-                [System.Reflection.Assembly]::LoadWithPartialName('System.EnterpriseServices') | Out-Null
+                [System.Reflection.Assembly]::LoadWithPartialName("System.EnterpriseServices") | Out-Null
                 $publish = [System.EnterpriseServices.Internal.Publish]::new()
                 $publish.GacRemove($args[0])
             } -ArgumentList $Path

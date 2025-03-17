@@ -16,13 +16,13 @@ Converts a gif to a sixel animation
 ### ByPath (Default)
 
 ```powershell
-ConvertTo-SixelGif [-Path] <string> [-AudioFile <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif [-Path] <string> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ### ByUrl
 
 ```powershell
-ConvertTo-SixelGif -Url <string> [-AudioFile <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Url <string> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -79,14 +79,14 @@ Accept pipeline input: True
 Accept wildcard characters: False
 ```
 
-### -AudioFile
+### -AudioPath
 
 Path to an audiofile to play with the gif.  
 
 ```yaml
 Type: string
 Parameter Sets: (All)
-Aliases: None
+Aliases: AudioFile
 
 Required: False
 Position: Named

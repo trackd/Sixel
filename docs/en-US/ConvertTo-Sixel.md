@@ -25,6 +25,12 @@ ConvertTo-Sixel [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [<Co
 ConvertTo-Sixel -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
 ```
 
+### ByStream
+
+```powershell
+ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+```
+
 ## DESCRIPTION
 
 The `ConvertTo-Sixel` takes an image and converts it to sixel  
@@ -70,9 +76,25 @@ Accept wildcard characters: False
 A URL of the image to download and convert to sixel.  
 
 ```yaml
-Type: String
+Type: Uri
 Parameter Sets: Url
 Aliases: Uri
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -Stream
+
+A stream of an image.  
+
+```yaml
+Type: Stream
+Parameter Sets: Stream
+Aliases: FileStream, InputStream, ImageStream, ContentStream
 
 Required: True
 Position: Named
@@ -133,7 +155,7 @@ Accept wildcard characters: False
 ### -Protocol
 
 Select the image protocol to output.  
-Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol  
+Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol, Block  
 
 It will attempt to autoselect the supported image protocol for your terminal.  
 

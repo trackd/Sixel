@@ -10,7 +10,6 @@ public enum ImageProtocol
   Blocks = 0,
   Sixel = 1,
   InlineImageProtocol = 2,
-  // Alias for InlineImageProtocol
-  iTerm2 = 4,
+  iTerm2 = 4, // Alias for InlineImageProtocol
   KittyGraphicsProtocol = 8
 };

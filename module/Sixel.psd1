@@ -3,14 +3,16 @@
 # Generated on: 2024-10-09
 
 @{
-    RootModule           = 'Sixel.psm1'
-    ModuleVersion        = '0.3.2'
-    CompatiblePSEditions = 'Core'
-    PowerShellVersion    = '7.4'
-    GUID                 = '95f4627c-f8f5-43d5-824b-4c356737f87b'
-    Author               = 'trackd, ShaunLawrie'
-    Copyright            = '(c) trackd. All rights reserved.'
-    Description          = '
+    RootModule             = 'SixelAlt.psm1'
+    ModuleVersion          = '0.3.2'
+    CompatiblePSEditions   = @('Desktop', 'Core')
+    PowerShellVersion      = '5.1'
+    DotNetFrameworkVersion = '4.7.2'
+    # ClrVersion             = '4.0'
+    GUID                   = '95f4627c-f8f5-43d5-824b-4c356737f87b'
+    Author                 = 'trackd, ShaunLawrie'
+    Copyright              = '(c) trackd. All rights reserved.'
+    Description            = '
     Display images in the terminal using various protocols
 
     ✔️ Sixel
@@ -23,10 +25,10 @@
     ✔️ Block cells
         - Fallback to block cells if no image protocol is supported.
 '
-    CmdletsToExport      = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
-    AliasesToExport      = 'cts','gif'
-    FormatsToProcess     = 'Sixel.format.ps1xml'
-    PrivateData          = @{
+    CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
+    AliasesToExport        = 'cts', 'gif'
+    FormatsToProcess       = 'Sixel.format.ps1xml'
+    PrivateData            = @{
         PSData = @{
             Tags         = @(
                 'Sixel',
@@ -51,7 +53,7 @@
         }
     }
     # A missing or $null entry is equivalent to specifying the wildcard *. declare unused with @() for better perf.
-    FunctionsToExport    = @()
-    VariablesToExport    = @()
-    TypesToProcess       = @()
+    FunctionsToExport      = @()
+    VariablesToExport      = @()
+    TypesToProcess         = @()
 }

@@ -20,7 +20,7 @@ $output = Join-Path $reporoot 'output'
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
 }
-Invoke-ModuleBuild -Path $reporoot
+Invoke-ModuleBuilder -Path $reporoot
 
 $docspath = Join-Path $output 'en-US'
 if (Test-Path $docspath) {
@@ -37,7 +37,7 @@ Get-ChildItem -LiteralPath $docs -Directory | ForEach-Object {
             OutputPath = [System.IO.Path]::Combine($output, $_.Name)
             Encoding = [System.Text.Encoding]::UTF8
         }
-        New-ExternalHelp @helpParams | Out-Null
+        $null = New-ExternalHelp @helpParams
     }
 
 if ($Publish) {
