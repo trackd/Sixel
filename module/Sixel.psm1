@@ -20,7 +20,6 @@ else {
     # just load the module assembly directly.
 
     # The type can be any type within our ALCLoader project
-    # new way
     if (-not ('Sixel.Shared.AssemblyResolver' -as [type])) {
         Add-Type -Path ([Path]::Combine($PSScriptRoot, 'bin', 'net472', "$moduleName.Shared.dll"))
     }

@@ -45,7 +45,7 @@
             ProjectUri   = 'https://github.com/trackd/Sixel'
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
-            0.4.0 - Added support for Windows Powershell 5.1, added parameter -Stream.
+            0.4.0 - Added support for Windows Powershell 5.1, added parameter -Stream as input.
             0.3.2 - Added support for Audio in ConvertTo-SixelGif.
             0.3.1 - Added GIF support, added Ascii art using halfblock cells.
             0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.

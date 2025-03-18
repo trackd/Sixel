@@ -8,10 +8,13 @@ namespace Sixel.Terminal;
 
 internal static class NativeMethods
 {
+    private const uint GENERIC_READ = 0x80000000;
     private const uint GENERIC_WRITE = 0x40000000;
+    private const uint FILE_SHARE_READ = 0x00000001;
+    private const uint FILE_SHARE_WRITE = 0x00000002;
     private const uint OPEN_EXISTING = 3;
-    private const string CONOUT = "CONOUT$";
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet=CharSet.Unicode, ExactSpelling = true)]
     private static extern SafeFileHandle CreateFileW(
         string lpFileName,
         uint dwDesiredAccess,
@@ -22,14 +25,27 @@ internal static class NativeMethods
         IntPtr hTemplateFile
     );
 
-    internal static SafeFileHandle OpenConsole()
+    internal static SafeFileHandle OpenConOut()
     {
-        SafeFileHandle handle = CreateFileW(CONOUT, GENERIC_WRITE, 0, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+        SafeFileHandle handle = CreateFileW("CONOUT$", GENERIC_WRITE, FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
         if (handle.IsInvalid)
         {
-            throw new IOException("Unable to open console output handle.");
+            int errorCode = Marshal.GetLastWin32Error();
+            throw new IOException("Unable to open console output handle, error code: " + errorCode);
         }
         return handle;
     }
+    // [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+    // internal static extern uint GetConsoleMode(SafeFileHandle consoleHandle, out uint mode);
+    // maybe this can be used to read input from the console..
+    // internal static SafeFileHandle OpenConIn()
+    // {
+    //     SafeFileHandle fileHandle = CreateFileW("CONIN$", GENERIC_READ, FILE_SHARE_READ, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+    //     if (fileHandle.IsInvalid)
+    //     {
+    //         throw new System.ComponentModel.Win32Exception();
+    //     }
+    //     return fileHandle;
+    // }
 }
 #endif
