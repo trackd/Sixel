@@ -9,26 +9,28 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts a gif to a sixel animation  
+Converts a gif to a sixel animation.  
+
+this cmdlet only supports Sixel.  
 
 ## SYNTAX
 
 ### Path (Default)
 
 ```powershell
-ConvertTo-SixelGif [-Path] <string> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ### Url
 
 ```powershell
-ConvertTo-SixelGif -Url <uri> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ### Stream
 
 ```powershell
-ConvertTo-SixelGif -Stream <stream> [-AudioPath <string>] [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Stream <stream> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -101,18 +103,18 @@ Accept pipeline input: True
 Accept wildcard characters: False
 ```
 
-### -AudioPath
+### -LoopCount
 
-Path to an audiofile to play with the gif.  
+The amount of times the gif will loop.  
 
 ```yaml
-Type: string
+Type: int
 Parameter Sets: (All)
-Aliases: AudioFile
+Aliases: None
 
 Required: False
 Position: Named
-Default value: None
+Default value: 3
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -141,7 +143,7 @@ Width of the image in character cells, the height will be scaled to maintain asp
 ```yaml
 Type: int
 Parameter Sets: (All)
-Aliases: CellWidth
+Aliases: 
 
 Required: False
 Position: Named
@@ -156,25 +158,6 @@ Force the command to attempt to output sixel data even if the terminal does not 
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Protocol
-
-Select the image protocol to output.  
-Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol  
-
-It will attempt to autoselect the supported image protocol for your terminal.  
-
-```yaml
-Type: ImageProtocol
 Parameter Sets: (All)
 Aliases:
 

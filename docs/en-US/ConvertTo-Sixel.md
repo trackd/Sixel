@@ -9,7 +9,7 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts an image to sixel  
+Converts an image to Sixel, Kitty, InlineImage or Ascii Blocks as fallback.  
 
 ## SYNTAX
 
