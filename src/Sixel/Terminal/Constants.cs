@@ -42,6 +42,7 @@ internal static class Constants
 
     /// <summary>
     /// The start of a sixel sequence.
+    /// evaluate $"{ESC}P0;1;0q"; which chafa uses
     /// </summary>
     internal const string SixelStart = $"{ESC}P0;1q";
 
@@ -132,4 +133,29 @@ internal static class Constants
     /// </summary>
     internal const string VTFG = "[38;2;";
 
+    /// <summary>
+    /// hide cursor
+    /// </summary>
+    internal const string HideCursor = $"{ESC}[?25l";
+    /// <summary>
+    /// show cursor
+    /// </summary>
+    /// <summary>
+    internal const string ShowCursor = $"{ESC}[?25h";
+
+    /// <summary>
+    /// chafa compatibility string
+    /// </summary>
+    internal const string xtermHideCursor = $"{ESC}[?8452l";
+    /// <summary>
+    /// Adds VT sequence SM ? 8452 h / RM ? 8452 l for enabling/disabling sixel cursor placement conformance (xterm extension).
+    /// </summary>
+    internal const string xtermShowCursor = $"{ESC}[?8452h";
+    /// <summary>
+    /// DECSDM (sixel display mode)
+    /// Nota bene: this reference has the sense for DECSDM (sixel display mode) reversed!
+    // The actual behaviour of the VT340 is that when DECSDM is reset (the default), sixel scrolling is enabled.
+    /// https://github.com/hackerb9/lsix/blob/master/README.md
+    /// </summary>
+    // internal const string DECSDM = $"{ESC}[?80L";
 }

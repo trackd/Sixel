@@ -20,8 +20,7 @@ public static class GifToSixel {
     // {
     //   return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
     // }
-    // return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
-    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
+    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
   }
 
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount, string? AudioPath = null)
@@ -60,7 +59,7 @@ public static class GifToSixel {
         LoopCount = LoopCount,
         Height = targetSize.Height,
         Width = targetSize.Width,
-        Audio = AudioPath
+        // Audio = AudioPath
     };
 
     for (int i = 0; i < frameCount; i++)

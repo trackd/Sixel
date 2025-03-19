@@ -10,6 +10,11 @@ public static class SizeHelper {
     {
         return GetTerminalImageSize(image.Width, image.Height, maxWidth);
     }
+    public static Size GetTerminalImageSize(Stream image, int? maxWidth = null)
+    {
+        using var _image = Image.Load<Rgba32>(image);
+        return GetTerminalImageSize(_image.Width, _image.Height, maxWidth);
+    }
 
     public static Size GetTerminalImageSize(int Width, int Height, int? maxWidth = null)
     {

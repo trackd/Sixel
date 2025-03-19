@@ -53,9 +53,10 @@ public static class Sixel
   internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
     var sixelBuilder = new StringBuilder();
+    var sixel = new StringBuilder();
     var palette = new Dictionary<Rgba32, int>();
     var colorCounter = 1;
-    sixelBuilder.StartSixel(frame.Width, frame.Height);
+    sixel.StartSixel(frame.Width, frame.Height);
     frame.ProcessPixelRows(accessor =>
     {
       for (var y = 0; y < accessor.Height; y++)
@@ -74,7 +75,7 @@ public static class Sixel
           {
             colorIndex = colorCounter++;
             palette[pixel] = colorIndex;
-            sixelBuilder.AddColorToPalette(pixel, colorIndex);
+            sixel.AddColorToPalette(pixel, colorIndex);
           }
 
           // Transparency is a special color index of 0 that exists in our sixel palette.
@@ -112,7 +113,7 @@ public static class Sixel
     sixelBuilder.AppendNextLine();
     sixelBuilder.AppendExitSixel();
 
-    return sixelBuilder.ToString();
+    return sixel.Append(sixelBuilder).ToString();
   }
 
   private static void AddColorToPalette(this StringBuilder sixelBuilder, Rgba32 pixel, int colorIndex)

@@ -5,5 +5,7 @@ output/*
 output
 .vs/*
 !assets/*.png
+test_alc.ps1
+testimages.ps1
 testimages/*
-*.ps1
+testdata/*

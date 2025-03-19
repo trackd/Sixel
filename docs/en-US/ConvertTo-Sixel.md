@@ -9,20 +9,26 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts an image to sixel  
+Converts an image to Sixel, Kitty, InlineImage or Ascii Blocks as fallback.  
 
 ## SYNTAX
 
-### ByPath (Default)
+### Path (Default)
 
 ```powershell
 ConvertTo-Sixel [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
 ```
 
-### ByUrl
+### Url
 
 ```powershell
-ConvertTo-Sixel -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+```
+
+### Stream
+
+```powershell
+ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -70,9 +76,25 @@ Accept wildcard characters: False
 A URL of the image to download and convert to sixel.  
 
 ```yaml
-Type: String
+Type: Uri
 Parameter Sets: Url
 Aliases: Uri
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -Stream
+
+A stream of an image.  
+
+```yaml
+Type: Stream
+Parameter Sets: Stream
+Aliases: FileStream, InputStream, ImageStream, ContentStream
 
 Required: True
 Position: Named
@@ -133,7 +155,7 @@ Accept wildcard characters: False
 ### -Protocol
 
 Select the image protocol to output.  
-Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol  
+Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol, Block  
 
 It will attempt to autoselect the supported image protocol for your terminal.  
 
@@ -153,7 +175,7 @@ Accept wildcard characters: False
 
 ### System.String
 
-Path or url to an image file  
+Path, url, Stream of an image file  
 
 ## OUTPUTS
 

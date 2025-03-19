@@ -9,20 +9,28 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts a gif to a sixel animation  
+Converts a gif to a sixel animation.  
+
+this cmdlet only supports Sixel.  
 
 ## SYNTAX
 
-### ByPath (Default)
+### Path (Default)
 
 ```powershell
 ConvertTo-SixelGif [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
-### ByUrl
+### Url
 
 ```powershell
-ConvertTo-SixelGif -Url <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+```
+
+### Stream
+
+```powershell
+ConvertTo-SixelGif -Stream <stream> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -68,7 +76,7 @@ Accept wildcard characters: False
 A URL of the gif to download and convert to sixel.  
 
 ```yaml
-Type: String
+Type: Uri
 Parameter Sets: Url
 Aliases: Uri
 
@@ -76,6 +84,38 @@ Required: True
 Position: Named
 Default value: None
 Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -Stream
+
+A stream of an image.  
+
+```yaml
+Type: Stream
+Parameter Sets: Stream
+Aliases: FileStream, InputStream, ImageStream, ContentStream
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -LoopCount
+
+The amount of times the gif will loop.  
+
+```yaml
+Type: int
+Parameter Sets: (All)
+Aliases: None
+
+Required: False
+Position: Named
+Default value: 3
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
@@ -103,7 +143,7 @@ Width of the image in character cells, the height will be scaled to maintain asp
 ```yaml
 Type: int
 Parameter Sets: (All)
-Aliases: CellWidth
+Aliases: 
 
 Required: False
 Position: Named
@@ -118,25 +158,6 @@ Force the command to attempt to output sixel data even if the terminal does not 
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Protocol
-
-Select the image protocol to output.  
-Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol  
-
-It will attempt to autoselect the supported image protocol for your terminal.  
-
-```yaml
-Type: ImageProtocol
 Parameter Sets: (All)
 Aliases:
 

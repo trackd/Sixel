@@ -2,7 +2,7 @@
 using Sixel.Terminal.Models;
 using Sixel.Protocols;
 using System.Management.Automation;
-using System.Threading;
+using System.Net.Http;
 
 namespace Sixel.Cmdlet;
 
@@ -12,8 +12,9 @@ namespace Sixel.Cmdlet;
 public sealed class ConvertSixelGifCmdlet : PSCmdlet
 {
   [Parameter(
-        HelpMessage = "A path to a local image to convert to sixel.",
+        HelpMessage = "A path to a local gif to convert to a sixel object.",
         Mandatory = true,
+        ValueFromPipeline = true,
         ValueFromPipelineByPropertyName = true,
         Position = 0,
         ParameterSetName = "Path"
@@ -23,14 +24,27 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
   public string Path { get; set; } = null!;
 
   [Parameter(
-        HelpMessage = "A URL of the image to download and convert to sixel.",
+        HelpMessage = "An URL of the gif to download and convert to a sixel object.",
         Mandatory = true,
         ValueFromPipeline = true,
+        ValueFromPipelineByPropertyName = true,
         ParameterSetName = "Url"
   )]
   [ValidateNotNullOrEmpty]
   [Alias("Uri")]
-  public string Url { get; set; } = null!;
+  public Uri Url { get; set; } = null!;
+
+  [Parameter(
+      HelpMessage = "A stream of the gif to convert to a sixel object.",
+      Mandatory = true,
+      ValueFromPipeline = true,
+      ValueFromPipelineByPropertyName = true,
+      Position = 0,
+      ParameterSetName = "Stream"
+)]
+  [ValidateNotNullOrEmpty]
+  [Alias("FileStream", "InputStream", "ImageStream", "ContentStream")]
+  public Stream Stream { get; set; } = null!;
 
   [Parameter(
         HelpMessage = "The maximum number of colors to use in the image."
@@ -57,7 +71,9 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
   // [Parameter(
   //       HelpMessage = "The audio track to overlay the gif"
   // )]
-  // public string? AudioFile { get; set; }
+  // [ValidateNotNullOrEmpty]
+  // [Alias("AudioFile")]
+  // public string? AudioPath { get; set; }
   protected override void ProcessRecord()
   {
     try
@@ -67,7 +83,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
       {
         case "Path":
           {
-            var resolvedPath = SessionState.Path.GetResolvedPSPathFromPSPath(Path)[0].Path;
+            var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
             imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
             break;
           }
@@ -76,7 +92,18 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
             using var client = new HttpClient();
             var response = client.GetAsync(Url).Result;
             response.EnsureSuccessStatusCode();
-            imageStream = response.Content.ReadAsStream();
+            // imageStream = response.Content.ReadAsStream();
+            imageStream = response.Content.ReadAsStreamAsync().Result;
+            break;
+          }
+        case "Stream":
+          {
+            if (Stream.Position != 0)
+            {
+              // if something has already read the stream, reset it.. maybe risky
+              Stream.Position = 0;
+            }
+            imageStream = Stream;
             break;
           }
       }
@@ -85,51 +112,19 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
 
       using (imageStream)
       {
-        // if (AudioFile is not null)
+        // if (AudioPath is not null)
         // {
-        //   var resolvedAudio = SessionState.Path.GetResolvedPSPathFromPSPath(AudioFile)[0].Path;
+        //   var resolvedAudio = SessionState.Path.GetUnresolvedProviderPathFromPSPath(AudioPath);
         //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
         // }
         // else {
-          WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
+        WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
         // }
       }
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "SixelError", ErrorCategory.NotSpecified, null));
-    }
-  }
-}
-
-[Cmdlet(VerbsCommon.Show, "SixelGif", DefaultParameterSetName = "Path")]
-public sealed class ShowSixelGifCmdlet : PSCmdlet
-{
-  [Parameter(
-    HelpMessage = "SixelGif object to play.",
-    Mandatory = true,
-    ValueFromPipeline = true,
-    Position = 0
-  )]
-  [ValidateNotNullOrEmpty]
-  public SixelGif? Gif { get; set; }
-  protected override void ProcessRecord()
-  {
-    try
-    {
-      if (Gif is null) return;
-      CancellationTokenSource cts = new CancellationTokenSource();
-      // Handle Ctrl+C
-      Console.CancelKeyPress += (sender, args) =>
-      {
-        args.Cancel = true;
-        cts.Cancel();
-      };
-        GifToSixel.PlaySixelGif(Gif, cts.Token);
-    }
-    catch (Exception ex)
-    {
-      WriteError(new ErrorRecord(ex, "SixelError", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "SixelGifError", ErrorCategory.NotSpecified, null));
     }
   }
 }
