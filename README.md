@@ -33,8 +33,6 @@ Invoke-RestMethod https://raw.githubusercontent.com/trackd/Sixel/refs/heads/main
 
 - [Sixlabors.Imagesharp](https://github.com/SixLabors/ImageSharp) [Apache2.0](https://github.com/SixLabors/ImageSharp/blob/main/LICENSE)  
 
-- [NAudio](https://github.com/naudio/NAudio) [MIT](https://github.com/naudio/NAudio?tab=MIT-1-ov-file)  
-
 ## ALC
 
 [PowerShell-ALC](https://github.com/jborean93/PowerShell-ALC)  

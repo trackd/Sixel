@@ -26,19 +26,38 @@ $docspath = Join-Path $output 'en-US'
 if (Test-Path $docspath) {
     Remove-Item $docspath -Recurse -Force
 }
-Get-ChildItem $output -Recurse -File | Where-Object { $_.Extension -in '.json','.pdb' } | Remove-Item -Force
+Get-ChildItem $output -Recurse -File | Where-Object { $_.Extension -in '.json', '.pdb' } | Remove-Item -Force
 
 $docs = Join-Path $reporoot 'docs'
 
 Get-ChildItem -LiteralPath $docs -Directory | ForEach-Object {
-        Write-Host "Building docs for $($_.Name)"
-        $helpParams = @{
-            Path = $_.FullName
-            OutputPath = [System.IO.Path]::Combine($output, $_.Name)
-            Encoding = [System.Text.Encoding]::UTF8
-        }
-        $null = New-ExternalHelp @helpParams
+    Write-Host "Building docs for $($_.Name)"
+    $helpParams = @{
+        Path       = $_.FullName
+        OutputPath = [System.IO.Path]::Combine($output, $_.Name)
+        Encoding   = [System.Text.Encoding]::UTF8
     }
+    $null = New-ExternalHelp @helpParams
+}
+
+$testargs = @{
+    reportFile = [System.IO.Path]::Combine($reporoot, 'testdata', ('Sixel.report-{0}.xml' -f (Get-Date).ToString('yyyyMMdd-HHmmss')))
+    TestPath   = [System.IO.Path]::Combine($reporoot, 'tests')
+    tools      = $PSScriptRoot
+}
+$sb = {
+    param($ht)
+    $tools, $TestPath, $reportFile = $ht.tools, $ht.TestPath, $ht.reportFile
+    & $tools/Pester.ps1 -TestPath $TestPath -OutputFile $reportFile
+}
+
+if ($PSVersionTable.PSEdition -eq 'Core') {
+    pwsh -NoProfile -Command $sb -args $testargs
+}
+else {
+    # disabled test for 5.1, sixlabor produces slightly different output.
+    # powershell -NoProfile -Command $sb -args $testargs
+}
 
 if ($Publish) {
     $module = Get-Module $output/Sixel.psd1 -ListAvailable

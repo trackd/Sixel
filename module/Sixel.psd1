@@ -16,7 +16,7 @@
     Display images in the terminal using various protocols
 
     ✔️ Sixel
-        - Gif support using ConvertTo-SixelGif with Audio support.
+        - Gif support using ConvertTo-SixelGif.
     ✔️ Inline Image Protocol
         - Supported by VSCode, xterm2, WezTerm, and others.
     ✔️ Kitty Graphics Protocol
@@ -46,7 +46,6 @@
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
             0.4.0 - Added support for Windows Powershell 5.1, added parameter -Stream as input.
-            0.3.2 - Added support for Audio in ConvertTo-SixelGif.
             0.3.1 - Added GIF support, added Ascii art using halfblock cells.
             0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.
             0.2.0 - Added better scaling, changes -Width to use cell width instead.

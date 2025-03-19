@@ -8,3 +8,4 @@ output
 test_alc.ps1
 testimages.ps1
 testimages/*
+testdata/*
