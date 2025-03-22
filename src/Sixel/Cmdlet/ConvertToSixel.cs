@@ -76,8 +76,23 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       {
         case "Path":
           {
-            var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
-            imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+            if (Path.Length > 4096)
+            {
+              if (Path.StartsWith("data:image/png;base64,"))
+              {
+                Path = Path.AsSpan(Path.IndexOf(",") + 1).ToString();
+              }
+              if (!BHelper.IsBase64String(Path))
+              {
+                throw new ArgumentException("The provided Base64 string is invalid.");
+              }
+              imageStream = new MemoryStream(Convert.FromBase64String(Path));
+            }
+            else
+            {
+              var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
+              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+            }
             break;
           }
         case "Url":
