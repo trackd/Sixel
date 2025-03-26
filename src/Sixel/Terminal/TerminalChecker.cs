@@ -28,6 +28,7 @@ public static class TerminalChecker
                         Terminal = terminal,
                         Protocol = protocol
                     };
+                    // Console.WriteLine($"Detected terminal: {terminal} ({string.Join(", ", protocol)}) from TERM_PROGRAM={value}");
                     break;
                 }
             }
@@ -41,51 +42,44 @@ public static class TerminalChecker
                         Terminal = _terminal,
                         Protocol = protocol
                     };
+                    // Console.WriteLine($"Detected terminal: {_terminal} ({string.Join(", ", protocol)}) from {key}={value}");
                     break;
                 }
             }
         }
 
         // Then check VT capabilities and override protocol if supported
-        if (Compatibility._terminalSupportsKitty ?? false)
+        if (Compatibility.TerminalSupportsKitty())
         {
-            return new TerminalInfo
-            {
+            // Console.WriteLine($"Detected terminal: Kitty Graphics Protocol from VT capabilities.");
+            return new TerminalInfo {
                 Terminal = envTerminalInfo?.Terminal ?? Terminals.Kitty,
-                Protocol = ImageProtocol.KittyGraphicsProtocol
-            };
+                Protocol = envTerminalInfo?.Protocol != null
+                    ? (envTerminalInfo.Protocol.Contains(ImageProtocol.KittyGraphicsProtocol)
+                        ? envTerminalInfo.Protocol
+                        : [ImageProtocol.KittyGraphicsProtocol, .. envTerminalInfo.Protocol])
+                    : [ImageProtocol.KittyGraphicsProtocol]
+                        };
         }
 
-        if (Compatibility._terminalSupportsSixel ?? false)
+        if (Compatibility.TerminalSupportsSixel())
         {
-            return new TerminalInfo
-            {
+            // Console.WriteLine($"Detected terminal: Sixel from VT capabilities.");
+            return new TerminalInfo {
                 Terminal = envTerminalInfo?.Terminal ?? Terminals.MicrosoftTerminal,
-                Protocol = ImageProtocol.Sixel
+                Protocol = envTerminalInfo?.Protocol != null
+                    ? (envTerminalInfo.Protocol.Contains(ImageProtocol.Sixel)
+                        ? envTerminalInfo.Protocol
+                        : [ImageProtocol.Sixel, .. envTerminalInfo.Protocol])
+                    : [ImageProtocol.Sixel]
             };
         }
-
+        // Console.WriteLine($"No VT response, using from enviroment variable: {envTerminalInfo?.Terminal}");
         // Return environment-detected terminal or fallback to unknown
         return envTerminalInfo ?? new TerminalInfo
         {
             Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.Blocks
-        };
-    }
-    internal static TerminalInfo CheckTerminal(Terminals terminal)
-    {
-        if (Helpers.SupportedProtocol.TryGetValue(terminal, out var protocol))
-        {
-            return new TerminalInfo
-            {
-                Terminal = terminal,
-                Protocol = protocol
-            };
-        }
-        return new TerminalInfo
-        {
-            Terminal = Terminals.unknown,
-            Protocol = ImageProtocol.Blocks
+            Protocol = [ImageProtocol.Blocks]
         };
     }
 }

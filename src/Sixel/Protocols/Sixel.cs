@@ -17,7 +17,7 @@ public static class Sixel
   /// <param name="frame">The frame to convert.</param>
   /// <param name="returnCursorToTopLeft">Whether to return the cursor to the top left after rendering the image.</param>
   /// <returns>The Sixel string.</returns>
-  public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
+  public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0)
   {
     // get image size in characters
     var cellSize = Compatibility.GetCellSize();

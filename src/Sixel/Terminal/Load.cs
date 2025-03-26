@@ -13,11 +13,14 @@ public static class Load
   /// implement type <T> to allow for more image types..
   public static string? ConsoleImage(ImageProtocol imageProtocol, Stream imageStream, int maxColors, int width, bool Force)
   {
+    /// this is a guess at the protocol based on the enviroment variables and VT responses.
+    /// imageProtocol is the chosen protocol.
+    ImageProtocol[] autoProtocol = Compatibility.GetTerminalInfo().Protocol ?? [];
     if (imageProtocol == ImageProtocol.Sixel)
     {
-      if (Compatibility.TerminalSupportsSixel() == false && Force == false)
+      if (!autoProtocol.Contains(ImageProtocol.Sixel) && Compatibility.TerminalSupportsSixel() == false && Force == false)
       {
-        throw new InvalidOperationException("Terminal does not support sixel, override with -Force (Windows Terminal needs Preview release for Sixel Support)");
+        throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
       }
       using var _image = Image.Load<Rgba32>(imageStream);
       // if (_image.Frames.Count > 1)
@@ -30,7 +33,7 @@ public static class Load
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
-      if (Compatibility.TerminalSupportsKitty() == false && Force == false)
+      if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && Compatibility.TerminalSupportsKitty() == false && Force == false)
       {
         throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
       }
@@ -44,8 +47,12 @@ public static class Load
       return Protocols.KittyGraphics.ImageToKitty(imageStream);
       // return ImageToKitty(imageStream);
     }
-    if (imageProtocol == ImageProtocol.InlineImageProtocol || imageProtocol == ImageProtocol.iTerm2)
+    if (imageProtocol == ImageProtocol.InlineImageProtocol)
     {
+      if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && Force == false)
+      {
+        throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
+      }
       return Protocols.InlineImage.ImageToInline(imageStream, width);
     }
     if (imageProtocol == ImageProtocol.Blocks)

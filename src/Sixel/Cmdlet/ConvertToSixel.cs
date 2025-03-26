@@ -11,9 +11,16 @@ namespace Sixel.Cmdlet;
 public sealed class ConvertSixelCmdlet : PSCmdlet
 {
   [Parameter(
+      HelpMessage = "InputObject from Pipeline",
+      Mandatory = true,
+      ValueFromPipeline = true,
+      ParameterSetName = "InputObject"
+)]
+  [ValidateNotNullOrEmpty]
+  public string InputObject { get; set; } = null!;
+  [Parameter(
         HelpMessage = "A path to a local image to convert to sixel.",
         Mandatory = true,
-        ValueFromPipeline = true,
         ValueFromPipelineByPropertyName = true,
         Position = 0,
         ParameterSetName = "Path"
@@ -65,7 +72,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [Parameter(
         HelpMessage = "Choose ImageProtocol to use for conversion."
   )]
-  public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol;
+  public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol?.FirstOrDefault() ?? ImageProtocol.Blocks;
 
   protected override void ProcessRecord()
   {
@@ -74,27 +81,33 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       Stream? imageStream = null;
       switch (ParameterSetName)
       {
-        case "Path":
+        case "InputObject":
           {
-            if (Path.Length > 4096)
+            if (InputObject.Length > 1024)
             {
-              if (Path.StartsWith("data:image/png;base64,"))
+              // assume it's a base64 encoded image
+              // if it starts with "data:image/png;base64," then remove that part
+              if (InputObject.StartsWith("data:image/png;base64,"))
               {
-                Path = Path.AsSpan(Path.IndexOf(",") + 1).ToString();
+                // Length of "data:image/png;base64," = 22
+                InputObject = InputObject.Substring(22);
               }
-              if (!BHelper.IsBase64String(Path))
-              {
-                throw new ArgumentException("The provided Base64 string is invalid.");
-              }
-              imageStream = new MemoryStream(Convert.FromBase64String(Path));
+              imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
             }
             else
+            {
+              /// assume it's a path to a file
+              var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InputObject);
+              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+            }
+            break;
+          }
+        case "Path":
             {
               var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
               imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
             }
             break;
-          }
         case "Url":
           {
             using var client = new HttpClient();
