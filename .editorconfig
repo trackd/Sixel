@@ -1,0 +1,21 @@
+# Set severity for all analyzers that are enabled by default (https://docs.microsoft.com/en-us/visualstudio/code-quality/use-roslyn-analyzers?view=vs-2022#set-rule-severity-of-multiple-analyzer-rules-at-once-in-an-editorconfig-file)
+dotnet_analyzer_diagnostic.category-roslynator.severity = default|none|silent|suggestion|warning|error
+
+# Enable/disable all analyzers by default
+# NOTE: This option can be used only in .roslynatorconfig file
+roslynator_analyzers.enabled_by_default = true #|false
+
+# Set severity for a specific analyzer
+# dotnet_diagnostic.<ANALYZER_ID>.severity = default|none|silent|suggestion|warning|error
+
+# Enable/disable all refactorings
+roslynator_refactorings.enabled = true #|false
+
+# Enable/disable specific refactoring
+# roslynator_refactoring.<REFACTORING_NAME>.enabled = true|false
+
+# Enable/disable all compiler diagnostic fixes
+roslynator_compiler_diagnostic_fixes.enabled = true #|false
+
+# Enable/disable specific compiler diagnostic fix
+# roslynator_compiler_diagnostic_fix.<COMPILER_DIAGNOSTIC_ID>.enabled = true|false

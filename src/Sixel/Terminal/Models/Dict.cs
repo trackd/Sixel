@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Sixel.Terminal.Models;
 
-internal partial class Helpers
+internal sealed partial class Helpers
 {
   /// <summary>
   ///  mapping of terminals to the image protocol they support.

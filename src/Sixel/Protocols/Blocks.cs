@@ -1,13 +1,9 @@
 ﻿using Sixel.Terminal;
-using Sixel.Terminal.Models;
-using System;
 using System.Text;
-using System.Linq;
-using System.Numerics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
+using Sixel.Terminal.Models;
 
 namespace Sixel.Protocols;
 
@@ -66,7 +62,8 @@ public static class Blocks
         {
 
             // Move the cursor back to the top left of the image.
-            _buffer.Append($"{Constants.ESC}[{size.Height}A");
+            _buffer.Append($"{Constants.ESC}[{size.Height}A".AsSpan());
+            // _buffer.Append(char[] { Constants.ESC, '[', size.Height, 'A' }); ;
         }
         return _buffer.ToString();
     }
@@ -84,21 +81,21 @@ public static class Blocks
         {
             // Only bottom pixel is opaque, use lower half block
             var bottomRgb = BlendPixels(bottom);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m");
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
         else if (bottomTransparent)
         {
             // Only top pixel is opaque, use upper half block
             var topRgb = BlendPixels(top);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m");
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
         else
         {
             // Both pixels are opaque, set foreground and background colors, use upper half block
             var topRgb = BlendPixels(top);
             var bottomRgb = BlendPixels(bottom);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m");
-            _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m");
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m".AsSpan());
+            _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
     }
 

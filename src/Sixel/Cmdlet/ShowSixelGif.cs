@@ -40,7 +40,7 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "ShowSixelGif", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ShowSixelGifCmdlet", ErrorCategory.NotSpecified, null));
     }
   }
 }

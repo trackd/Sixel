@@ -1,5 +1,4 @@
-using System.Collections.Generic;
-
+#if NET472
 namespace Sixel.Terminal.Models
 {
     internal static class KeyValuePairExtensions
@@ -11,3 +10,4 @@ namespace Sixel.Terminal.Models
         }
     }
 }
+#endif

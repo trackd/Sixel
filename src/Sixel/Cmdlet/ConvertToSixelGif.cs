@@ -118,13 +118,13 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
         //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
         // }
         // else {
-        WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
+        WriteObject(GifToSixel.ConvertGif(imageStream, MaxColors, Width, LoopCount));
         // }
       }
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "SixelGifError", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ConvertSixelGifCmdlet", ErrorCategory.NotSpecified, null));
     }
   }
 }

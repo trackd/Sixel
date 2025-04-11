@@ -1,34 +1,31 @@
 ﻿using System.Runtime.InteropServices;
 
 namespace Sixel.Terminal;
-internal class VTWriter : IDisposable
+internal sealed class VTWriter : IDisposable
 {
-  private readonly TextWriter? _writer = null;
-  private readonly FileStream? _windowsStream = null;
-  private readonly bool _customwriter = false;
-  private bool _disposed;
+  private readonly TextWriter? _writer;
+    private readonly FileStream? _windowsStream;
+    private readonly bool _customwriter;
+    private bool _disposed;
 
   public VTWriter()
   {
     bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     bool isRedirected = Console.IsOutputRedirected;
-#if NET472
     if (isWindows && !isRedirected)
     {
+#if NET472
       _windowsStream = new FileStream(NativeMethods.OpenConOut(), FileAccess.Write);
       _writer = new StreamWriter(_windowsStream);
       _customwriter = true;
-    }
 #else
-    if (isWindows && !isRedirected)
-    {
       // Open the Windows stream to CONOUT$, for better performance..
       // Console.Write is too slow for gifs.
       _windowsStream = File.OpenWrite("CONOUT$");
       _writer = new StreamWriter(_windowsStream);
       _customwriter = true;
-    }
 #endif
+    }
   }
 
   public void Write(string text)
@@ -55,7 +52,7 @@ internal class VTWriter : IDisposable
     }
   }
 
-  protected virtual void Dispose(bool disposing)
+  private void Dispose(bool disposing)
   {
     if (!_disposed && _customwriter)
     {

@@ -13,7 +13,7 @@ namespace Sixel.Protocols;
 
 public static class GifToSixel {
 
-  public static SixelGif LoadGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
+  public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
   {
     using var image = Image.Load<Rgba32>(imageStream);
     // if (AudioFile != null)

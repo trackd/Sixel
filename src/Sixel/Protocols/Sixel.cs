@@ -15,7 +15,6 @@ public static class Sixel
   /// <param name="cellWidth">The width of the cell in terminal cells.</param>
   /// <param name="maxColors">The Max colors of the image.</param>
   /// <param name="frame">The frame to convert.</param>
-  /// <param name="returnCursorToTopLeft">Whether to return the cursor to the top left after rendering the image.</param>
   /// <returns>The Sixel string.</returns>
   public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0)
   {
@@ -64,15 +63,17 @@ public static class Sixel
         var pixelRow = accessor.GetRowSpan(y);
         // The value of 1 left-shifted by the remainder of the current row divided by 6 gives the correct sixel character offset from the empty sixel char for each row.
         // See the description of s...s for more detail on the sixel format https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.2.1
+
+        // modulus trick from https://github.com/sxyazi/yazi/blob/main/yazi-adapter/src/sixel.rs (MIT)
         var c = (char)(Constants.SixelTransparent + (1 << (y % 6)));
         var lastColor = -1;
         var repeatCounter = 0;
         foreach (ref var pixel in pixelRow)
         {
-
-          // The colors can be added to the palette and interleaved with the sixel data so long as the color is defined before it is used.
           if (!palette.TryGetValue(pixel, out var colorIndex))
           {
+            // The colors can be added to the palette and interleaved with the sixel data so long as the color is defined before it is used.
+            // for compatibility testing im not doing this at the moment.
             colorIndex = colorCounter++;
             palette[pixel] = colorIndex;
             sixel.AddColorToPalette(pixel, colorIndex);

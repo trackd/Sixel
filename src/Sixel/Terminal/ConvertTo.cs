@@ -5,7 +5,7 @@ using Sixel.Protocols;
 
 namespace Sixel.Terminal;
 
-public static class Load
+public static class ConvertTo
 {
   /// <summary>
   /// Load an image and convert it to a terminal compatible format.
@@ -23,13 +23,7 @@ public static class Load
         throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
       }
       using var _image = Image.Load<Rgba32>(imageStream);
-      // if (_image.Frames.Count > 1)
-      // {
-      // move it here?
-      //   return Protocols.GifToSixel.LoadGif(imageStream, maxColors, width, 3);
-      // }
       return Protocols.Sixel.ImageToSixel(_image, maxColors, width);
-      // return ImageToSixel(_image, maxColors, width);
     }
     if (imageProtocol == ImageProtocol.KittyGraphicsProtocol)
     {
@@ -41,11 +35,9 @@ public static class Load
       {
         // we need to resize the image to the target width
         using var _image = Image.Load<Rgba32>(imageStream);
-        return Protocols.KittyGraphics.ImageToKitty(_image, width);
-        // return ImageToKitty(_image, width);
+        return KittyGraphics.ImageToKitty(_image, width);
       }
-      return Protocols.KittyGraphics.ImageToKitty(imageStream);
-      // return ImageToKitty(imageStream);
+      return KittyGraphics.ImageToKitty(imageStream);
     }
     if (imageProtocol == ImageProtocol.InlineImageProtocol)
     {
@@ -53,12 +45,12 @@ public static class Load
       {
         throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
       }
-      return Protocols.InlineImage.ImageToInline(imageStream, width);
+      return InlineImage.ImageToInline(imageStream, width);
     }
     if (imageProtocol == ImageProtocol.Blocks)
     {
         using var _image = Image.Load<Rgba32>(imageStream);
-        return Protocols.Blocks.ImageToBlocks(_image, width);
+        return Blocks.ImageToBlocks(_image, width);
     }
       return null;
   }

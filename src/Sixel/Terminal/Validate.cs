@@ -1,7 +1,7 @@
 ﻿using System.Management.Automation;
 namespace Sixel.Terminal;
 
-class ValidateTerminalWidth : ValidateArgumentsAttribute
+internal sealed class ValidateTerminalWidth : ValidateArgumentsAttribute
 {
   /// <summary>
   /// Validates that the requested Width is not greater than the terminal width.
@@ -9,7 +9,7 @@ class ValidateTerminalWidth : ValidateArgumentsAttribute
   protected override void Validate(object arguments, EngineIntrinsics engineIntrinsics)
   {
     var requestedWidth = (int)arguments;
-    var hostWidth = engineIntrinsics.Host.UI.RawUI.WindowSize.Width;
+    var hostWidth = Console.WindowWidth;
     if (requestedWidth > hostWidth)
     {
       throw new ValidationMetadataException($"{requestedWidth} width is greater than terminal width ({hostWidth}).");

@@ -1,5 +1,5 @@
 using Sixel.Terminal.Models;
-using System.Diagnostics;
+using System.Globalization;
 
 namespace Sixel.Terminal;
 
@@ -50,7 +50,10 @@ public static class Compatibility
       c = Console.ReadKey(true).KeyChar;
       response += c;
     } while (c != 'c' && Console.KeyAvailable);
-
+    // Disable win32-input mode
+    // Console.Write($"{Constants.ESC}[?9001l");
+    // Request a DSR-OS report to unblock the input thread
+    // Console.Write($"{Constants.ESC}[5n");
     return response;
   }
 
@@ -74,8 +77,10 @@ public static class Compatibility
       var parts = response.Split(';', 't');
       _cellSize = new CellSize
       {
-        PixelWidth = int.Parse(parts[2]),
-        PixelHeight = int.Parse(parts[1])
+        PixelWidth = int.Parse(parts[2],NumberStyles.Number,
+          CultureInfo.InvariantCulture),
+        PixelHeight = int.Parse(parts[1],NumberStyles.Number,
+          CultureInfo.InvariantCulture)
       };
     }
     catch

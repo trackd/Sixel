@@ -83,11 +83,11 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       {
         case "InputObject":
           {
-            if (InputObject.Length > 1024)
+            if (InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
               // if it starts with "data:image/png;base64," then remove that part
-              if (InputObject.StartsWith("data:image/png;base64,"))
+              if (InputObject.StartsWith("data:image/png;base64,", StringComparison.OrdinalIgnoreCase))
               {
                 // Length of "data:image/png;base64," = 22
                 InputObject = InputObject.Substring(22);
@@ -132,7 +132,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       using (imageStream)
       {
         WriteObject(
-        Load.ConsoleImage(
+        ConvertTo.ConsoleImage(
               Protocol,
               imageStream,
               MaxColors,
@@ -142,7 +142,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "SixelError", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ConvertSixelCmdlet", ErrorCategory.NotSpecified, null));
     }
   }
 }
