@@ -160,7 +160,10 @@ public static class Compatibility
     {
       return _terminalSupportsSixel.Value;
     }
-    _terminalSupportsSixel = GetControlSequenceResponse("[c").Contains(";4;");
+
+    var response = GetControlSequenceResponse("[c");
+    _terminalSupportsSixel = response.Contains(";4;") || response.Contains(";4c");
+
     return _terminalSupportsSixel.Value;
   }
 
