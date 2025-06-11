@@ -1,7 +1,7 @@
-﻿using System.Text;
-using Sixel.Terminal;
-using System.Globalization;
+﻿using Sixel.Terminal;
 using Sixel.Terminal.Models;
+using System.Text;
+using System.Globalization;
 
 namespace Sixel.Protocols;
 
@@ -10,7 +10,7 @@ public static class InlineImage
   /// <summary>
   /// Converts an image to an inline image protocol string.
   /// </summary>
-  internal static string ImageToInline(Stream image, int width = 0)
+  internal static string ImageToInline(Stream image, ImageSize imageSize)
   {
     byte[] imageBytes;
     if (image.CanSeek)
@@ -45,14 +45,15 @@ public static class InlineImage
     }
     var base64Image = Convert.ToBase64String(imageBytes).AsSpan();
     string size = imageBytes.Length.ToString(CultureInfo.InvariantCulture);
-    string widthString = width > 0 ? $"width={width};" : "width=auto;";
+    string widthString = imageSize.CellWidth > 0 ? $"width={imageSize.CellWidth};" : "width=auto;";
+    string heightString = imageSize.CellHeight > 0 ? $"height={imageSize.CellHeight};" : "height=auto;";
     StringBuilder iip = new();
     iip.Append(Constants.HideCursor)
         .Append(Constants.InlineImageStart)
         .Append("1337;File=inline=1;")
         .Append("size=" + size + ";")
         .Append(widthString)
-        .Append("height=auto;")
+        .Append(heightString)
         .Append("preserveAspectRatio=1;")
         .Append("doNotMoveCursor=1:")
         .Append(base64Image)
@@ -60,7 +61,7 @@ public static class InlineImage
         .Append(Constants.ShowCursor);
     return iip.ToString();
   }
-  internal static string ImageToInlinev1(Stream image, int width = 0)
+  internal static string ImageToInlinev1(Stream image, int width = 0, int height = 0)
   {
     using var ms = new MemoryStream();
     image.CopyTo(ms);
@@ -68,12 +69,13 @@ public static class InlineImage
     var base64Image = Convert.ToBase64String(imageBytes).AsSpan();
     string size = imageBytes.Length.ToString(CultureInfo.InvariantCulture);
     string widthString = width > 0 ? $"width={width};" : "width=auto;";
+    string heightString = height > 0 ? $"height={height};" : "height=auto;";
     var iip = new StringBuilder();
     iip.Append(Constants.InlineImageStart)
       .Append("1337;File=inline=1;")
       .Append("size=" + size + ";")
       .Append(widthString)
-      .Append("height=auto;")
+      .Append(heightString)
       .Append("preserveAspectRatio=1:")
       .Append(base64Image)
       .Append(Constants.InlineImageEnd);

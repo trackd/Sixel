@@ -1,23 +1,23 @@
 using System.Management.Automation;
+using System.Net.Http;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using System.Net.Http;
 
 namespace Sixel.Cmdlet;
 
 [Cmdlet(VerbsData.ConvertTo, "Sixel", DefaultParameterSetName = "Path")]
-[Alias("cts", "ConvertTo-InlineImage","ConvertTo-KittyImage")]
+[Alias("cts", "ConvertTo-InlineImage", "ConvertTo-KittyImage")]
 [OutputType(typeof(string))]
 public sealed class ConvertSixelCmdlet : PSCmdlet
 {
   [Parameter(
-      HelpMessage = "InputObject from Pipeline",
+      HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
       Mandatory = true,
       ValueFromPipeline = true,
       ParameterSetName = "InputObject"
-)]
+  )]
   [ValidateNotNullOrEmpty]
-  public string InputObject { get; set; } = null!;
+  public string? InputObject { get; set; }
   [Parameter(
         HelpMessage = "A path to a local image to convert to sixel.",
         Mandatory = true,
@@ -27,18 +27,19 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   )]
   [ValidateNotNullOrEmpty]
   [Alias("FullName")]
-  public string Path { get; set; } = null!;
+  public string? Path { get; set; }
 
   [Parameter(
         HelpMessage = "A URL of the image to download and convert to sixel.",
         Mandatory = true,
         ValueFromPipeline = true,
         ValueFromPipelineByPropertyName = true,
+        Position = 0,
         ParameterSetName = "Url"
   )]
   [ValidateNotNullOrEmpty]
   [Alias("Uri")]
-  public Uri Url { get; set; } = null!;
+  public Uri? Url { get; set; }
 
   [Parameter(
         HelpMessage = "A stream of the image to convert to sixel.",
@@ -49,8 +50,8 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
         ParameterSetName = "Stream"
   )]
   [ValidateNotNullOrEmpty]
-  [Alias("FileStream", "InputStream", "ImageStream", "ContentStream")]
-  public Stream Stream { get; set; } = null!;
+  [Alias("RawContentStream", "FileStream", "InputStream", "ImageStream", "ContentStream")]
+  public Stream? Stream { get; set; }
 
   [Parameter(
         HelpMessage = "The maximum number of colors to use in the image."
@@ -64,6 +65,13 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [ValidateTerminalWidth()]
   public int Width { get; set; }
 
+
+  [Parameter(
+        HelpMessage = "Height of the image in character cells, the width will be scaled to maintain aspect ratio."
+  )]
+  [ValidateTerminalHeight()]
+  public int Height { get; set; }
+
   [Parameter(
         HelpMessage = "Force the command to attempt to output sixel data even if the terminal does not support sixel."
   )]
@@ -72,21 +80,21 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [Parameter(
         HelpMessage = "Choose ImageProtocol to use for conversion."
   )]
-  public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol?.FirstOrDefault() ?? ImageProtocol.Blocks;
+  // public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol?.FirstOrDefault() ?? ImageProtocol.Blocks;
+  public ImageProtocol Protocol { get; set; } = ImageProtocol.Auto;
 
   protected override void ProcessRecord()
   {
+    Stream? imageStream = null;
     try
     {
-      Stream? imageStream = null;
       switch (ParameterSetName)
       {
         case "InputObject":
           {
-            if (InputObject.Length > 512)
+            if (InputObject is not null && InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
-              // if it starts with "data:image/png;base64," then remove that part
               if (InputObject.StartsWith("data:image/png;base64,", StringComparison.OrdinalIgnoreCase))
               {
                 // Length of "data:image/png;base64," = 22
@@ -103,11 +111,11 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             break;
           }
         case "Path":
-            {
-              var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
-              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
-            }
-            break;
+          {
+            var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
+            imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+          }
+          break;
         case "Url":
           {
             using var client = new HttpClient();
@@ -119,7 +127,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
           }
         case "Stream":
           {
-            if (Stream.Position != 0)
+            if (Stream is not null && Stream.Position != 0)
             {
               // if something has already read the stream, reset it.. maybe risky
               Stream.Position = 0;
@@ -128,21 +136,36 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             break;
           }
       }
-      if (imageStream is null) return;
-      using (imageStream)
+      if (imageStream is null)
       {
-        WriteObject(
-        ConvertTo.ConsoleImage(
-              Protocol,
-              imageStream,
-              MaxColors,
-              Width,
-              Force.IsPresent));
+        return;
       }
+
+      (ImageSize size, string image) = ConvertTo.ConsoleImage(
+        Protocol,
+        imageStream,
+        MaxColors,
+        Width,
+        Height,
+        Force.IsPresent
+      );
+      /// add the ImageSize as noteproperty on the string object
+      var wrappedImage = PSObject.AsPSObject(image);
+      // wrappedImage.Properties.Add(new PSNoteProperty("Width", size.CellWidth));
+      // wrappedImage.Properties.Add(new PSNoteProperty("Height", size.CellHeight));
+      wrappedImage.Properties.Add(new PSNoteProperty("ImageSize", size));
+      WriteObject(wrappedImage);
     }
     catch (Exception ex)
     {
       WriteError(new ErrorRecord(ex, "ConvertSixelCmdlet", ErrorCategory.NotSpecified, null));
+    }
+    finally
+    {
+      if (ParameterSetName != "Stream" && imageStream is not null)
+      {
+        imageStream.Dispose();
+      }
     }
   }
 }

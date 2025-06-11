@@ -38,7 +38,7 @@ internal partial class Helpers
         {
             return _terminal;
         }
-        if (Enum.TryParse<Terminals>(str, true, out _terminal))
+        if (Enum.TryParse(str, true, out _terminal))
         {
             return _terminal;
         }

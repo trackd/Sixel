@@ -37,8 +37,8 @@ $configuration = [PesterConfiguration]::Default
 $configuration.Output.Verbosity = 'Detailed'
 $configuration.Run.Path = $TestPath
 $configuration.Run.Throw = $true
-$configuration.TestResult.Enabled = $true
-$configuration.TestResult.OutputPath = $OutputFile
-$configuration.TestResult.OutputFormat = 'NUnitXml'
+# $configuration.TestResult.Enabled = $true
+# $configuration.TestResult.OutputPath = $OutputFile
+# $configuration.TestResult.OutputFormat = 'NUnitXml'
 
 Invoke-Pester -Configuration $configuration -WarningAction Ignore

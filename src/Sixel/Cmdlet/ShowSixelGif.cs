@@ -29,14 +29,13 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet
     try
     {
       if (Gif is null) return;
-      CancellationTokenSource cts = new CancellationTokenSource();
+      CancellationTokenSource CancellationToken = new();
       // Handle Ctrl+C
-      Console.CancelKeyPress += (sender, args) =>
-      {
+      Console.CancelKeyPress += (sender, args) => {
         args.Cancel = true;
-        cts.Cancel();
+        CancellationToken.Cancel();
       };
-      GifToSixel.PlaySixelGif(Gif, cts.Token);
+      GifToSixel.PlaySixelGif(Gif, CancellationToken.Token);
     }
     catch (Exception ex)
     {

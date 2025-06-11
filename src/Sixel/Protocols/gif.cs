@@ -20,51 +20,31 @@ public static class GifToSixel {
     // {
     //   return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
     // }
-    return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount);
+    var imageSize = SizeHelper.GetResizedCharacterCellSize(image, cellWidth, 0);
+
+    return ConvertGifToSixel(image, imageSize, maxColors, LoopCount);
   }
 
-  private static SixelGif ConvertGifToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int LoopCount, string? AudioPath = null)
+  private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors, int LoopCount, string? AudioPath = null)
   {
-    var cellSize = Compatibility.GetCellSize();
-    var targetSize = SizeHelper.GetTerminalImageSize(image.Width, image.Height, cellWidth);
-
-    image.Mutate(ctx =>
-    {
-      var targetPixelWidth = targetSize.Width * cellSize.PixelWidth;
-      var targetPixelHeight = targetSize.Height * cellSize.PixelHeight;
-
-      if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
-      {
-        ctx.Resize(new ResizeOptions
-        {
-          Size = new Size(targetPixelWidth, targetPixelHeight),
-          Sampler = KnownResamplers.Bicubic,
-          PremultiplyAlpha = false
-        });
-      }
-
-      ctx.Quantize(new OctreeQuantizer(new QuantizerOptions
-      {
-        MaxColors = maxColors,
-      }));
-    });
-
-    var metadata = image.Frames.RootFrame.Metadata.GetGifMetadata();
-    int frameCount = image.Frames.Count;
+    // Use Resizer to handle resizing and quantization
+    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, true);
+    var metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
+    int frameCount = resizedImage.Frames.Count;
 
     var gif = new SixelGif()
     {
-        Sixel = new List<string>(),
+        Sixel = [],
         Delay = metadata?.FrameDelay * 10 ?? 1000,
         LoopCount = LoopCount,
-        Height = targetSize.Height,
-        Width = targetSize.Width,
+        Height = imageSize.CellHeight,
+        Width = imageSize.CellWidth,
         // Audio = AudioPath
     };
 
     for (int i = 0; i < frameCount; i++)
     {
-        var targetFrame = image.Frames[i];
+        var targetFrame = resizedImage.Frames[i];
         gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
     }
     return gif;

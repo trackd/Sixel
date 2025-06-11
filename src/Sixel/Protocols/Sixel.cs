@@ -1,4 +1,5 @@
 ﻿using Sixel.Terminal;
+using Sixel.Terminal.Models;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -6,6 +7,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
+
 public static class Sixel
 {
   /// <summary>
@@ -13,42 +15,25 @@ public static class Sixel
   /// </summary>
   /// <param name="image">The image to convert.</param>
   /// <param name="cellWidth">The width of the cell in terminal cells.</param>
+  /// <param name="cellHeight">The height of the image in terminal cells (optional).</param>
   /// <param name="maxColors">The Max colors of the image.</param>
   /// <param name="frame">The frame to convert.</param>
-  /// <returns>The Sixel string.</returns>
-  public static string ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int frame = 0)
+  /// <returns>A tuple containing the image size and the Sixel string.</returns>
+  // public static (ImageSize imageSize, string sixelString) ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int cellHeight)
+  // {
+  //   // Use Resizer to handle resizing and quantization
+  //   var (imageSize, resizedImage) = Resizer.ResizeToCharacterCells(image, maxColors, cellWidth, cellHeight, true);
+  //   var targetFrame = resizedImage.Frames[0];
+  //   return (imageSize, FrameToSixelString(targetFrame));
+  // }
+  public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors)
   {
-    // get image size in characters
-    var cellSize = Compatibility.GetCellSize();
-    // get the image size in console characters
-    var imageSize = SizeHelper.GetTerminalImageSize(image.Width, image.Height, cellWidth);
-
-    image.Mutate(ctx =>
-    {
-      // Some math to get the target size in pixels and reverse it to cell height that it will consume.
-      var targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
-      var targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
-
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
-        {
-        // Resize the image to the target size
-        ctx.Resize(new ResizeOptions()
-        {
-          // https://en.wikipedia.org/wiki/Bicubic_interpolation
-          // quality goes Bicubic > Bilinear > NearestNeighbor
-          Sampler = KnownResamplers.Bicubic,
-          Size = new(targetPixelWidth, targetPixelHeight),
-          PremultiplyAlpha = false,
-        });
-      }
-      // Sixel supports 256 colors max
-      ctx.Quantize(new OctreeQuantizer(new() {
-        MaxColors = maxColors,
-      }));
-    });
-    var targetFrame = image.Frames[frame];
+    // Use Resizer to handle resizing and quantization
+    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, true);
+    var targetFrame = resizedImage.Frames[0];
     return FrameToSixelString(targetFrame);
   }
+
   internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
     var sixelBuilder = new StringBuilder();
@@ -65,7 +50,7 @@ public static class Sixel
         // See the description of s...s for more detail on the sixel format https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.2.1
 
         // modulus trick from https://github.com/sxyazi/yazi/blob/main/yazi-adapter/src/sixel.rs (MIT)
-        var c = (char)(Constants.SixelTransparent + (1 << (y % 6)));
+        var c = (char)('?' + (1 << (y % 6)));
         var lastColor = -1;
         var repeatCounter = 0;
         foreach (ref var pixel in pixelRow)
@@ -121,19 +106,20 @@ public static class Sixel
   {
     // rgb 0-255 needs to be translated to 0-100 for sixel.
     var (r, g, b) = (
-        (int)pixel.R * 100 / 255,
-        (int)pixel.G * 100 / 255,
-        (int)pixel.B * 100 / 255
+        pixel.R * 100 / 255,
+        pixel.G * 100 / 255,
+        pixel.B * 100 / 255
     );
 
-    sixelBuilder.Append(Constants.SixelColorStart)
-                .Append(colorIndex)
-                .Append(Constants.SixelColorParam)
-                .Append(r)
-                .Append(Constants.Divider)
-                .Append(g)
-                .Append(Constants.Divider)
-                .Append(b);
+    sixelBuilder
+    .Append(Constants.SixelColorStart)
+    .Append(colorIndex)
+    .Append(Constants.SixelColorParam)
+    .Append(r)
+    .Append(Constants.Divider)
+    .Append(g)
+    .Append(Constants.Divider)
+    .Append(b);
   }
   private static void AppendSixel(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel)
   {
@@ -145,18 +131,20 @@ public static class Sixel
     if (repeatCounter <= 1)
     {
       // single entry
-      sixelBuilder.Append(Constants.SixelColorStart)
-                  .Append(colorIndex)
-                  .Append(sixel);
+      sixelBuilder
+      .Append(Constants.SixelColorStart)
+      .Append(colorIndex)
+      .Append(sixel);
     }
     else
     {
       // add repeats
-      sixelBuilder.Append(Constants.SixelColorStart)
-                  .Append(colorIndex)
-                  .Append(Constants.SixelRepeat)
-                  .Append(repeatCounter)
-                  .Append(sixel);
+      sixelBuilder
+      .Append(Constants.SixelColorStart)
+      .Append(colorIndex)
+      .Append(Constants.SixelRepeat)
+      .Append(repeatCounter)
+      .Append(sixel);
     }
   }
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
@@ -176,11 +164,12 @@ public static class Sixel
 
   private static void StartSixel(this StringBuilder sixelBuilder, int width, int height)
   {
-    sixelBuilder.Append(Constants.SixelStart)
-                .Append(Constants.SixelRaster)
-                .Append(width)
-                .Append(Constants.Divider)
-                .Append(height)
-                .Append(Constants.SixelTransparentColor);
+    sixelBuilder
+    .Append(Constants.SixelStart)
+    .Append(Constants.SixelRaster)
+    .Append(width)
+    .Append(Constants.Divider)
+    .Append(height)
+    .Append(Constants.SixelTransparentColor);
   }
 }

@@ -3,5 +3,5 @@
 public class TerminalInfo
 {
   public Terminals Terminal { get; set; }
-  public ImageProtocol[]? Protocol { get; set; }
+  public ImageProtocol[] Protocol { get; set; } = new ImageProtocol[] { ImageProtocol.Blocks };
 }
