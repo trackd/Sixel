@@ -1,4 +1,5 @@
 ﻿namespace Sixel.Terminal.Models;
+
 using System.Collections.Generic;
 internal partial class Helpers
 {
@@ -18,7 +19,7 @@ internal partial class Helpers
             { Terminals.Iterm2, "ITERM_SESSION_ID" },
             { Terminals.WezTerm, "WEZTERM_CONFIG_FILE" },
             { Terminals.Ghostty, "GHOSTTY_RESOURCES_DIR" },
-            { Terminals.VSCode, "TERM_PROGRAM" },
+            { Terminals.VSCode, "VSCODE_GIT_ASKPASS_MAIN" },
             { Terminals.Mintty, "MINTTY" },
             { Terminals.Alacritty, "ALACRITTY_LOG" }
         };
@@ -31,10 +32,9 @@ internal partial class Helpers
             }
         }
     }
-    internal static Terminals? GetTerminal(string str)
+    internal static Terminals GetTerminal(string str)
     {
-        Terminals _terminal;
-        if (_reverseLookup.TryGetValue(str, out _terminal))
+        if (_reverseLookup.TryGetValue(str, out Terminals _terminal))
         {
             return _terminal;
         }
@@ -42,14 +42,14 @@ internal partial class Helpers
         {
             return _terminal;
         }
-        return null;
+        return Terminals.unknown;
     }
-    internal static string? GetEnvironmentVariable(Terminals terminal)
+    internal static string GetEnvironmentVariable(Terminals terminal)
     {
         if (_lookup.TryGetValue(terminal, out var _envVar))
         {
             return _envVar;
         }
-        return null;
+        return "TERM_PROGRAM";
     }
 }

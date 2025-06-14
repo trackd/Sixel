@@ -3,6 +3,8 @@ using Sixel.Terminal.Models;
 using Sixel.Protocols;
 using System.Management.Automation;
 using System.Net.Http;
+using System.Text.RegularExpressions;
+
 
 namespace Sixel.Cmdlet;
 
@@ -94,12 +96,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
             if (InputObject is not null && InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
-              // if it starts with "data:image/png;base64," then remove that part
-              if (InputObject.StartsWith("data:image/png;base64,", StringComparison.OrdinalIgnoreCase))
-              {
-                // Length of "data:image/png;base64," = 22
-                InputObject = InputObject.Substring(22);
-              }
+              InputObject = Regex.Replace(InputObject, @"^data:image/\w+;base64,", "", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
               imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
             }
             else

@@ -11,10 +11,21 @@ public static class Blocks
 {
     public static string ImageToBlocks(Image<Rgba32> image, ImageSize imageSize)
     {
-        var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, 0, false);
-        var targetFrame = resizedImage.Frames[0];
+        // Resize the image directly to character cell dimensions (not pixel dimensions)
+        image.Mutate(ctx =>
+        {
+            ctx.Resize(new ResizeOptions
+            {
+                // *2 because each cell is 2 pixels high for blocks
+                Size = new Size(imageSize.CellWidth, imageSize.CellHeight * 2),
+                Sampler = KnownResamplers.NearestNeighbor, // Better for preserving sharp transparency edges
+                PremultiplyAlpha = false
+            });
+        });
+        var targetFrame = image.Frames[0];
         return ProcessFrame(targetFrame);
     }
+
     internal static string ProcessFrame(ImageFrame<Rgba32> frame)
     {
         var _buffer = new StringBuilder();
@@ -70,24 +81,13 @@ public static class Blocks
             _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
     }
-
     private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor)
     {
-        // If no background color is provided, use the console background color
-        // if (_backgroundColor == default)
-        // {
-        //     _backgroundColor = GetConsoleBackgroundColor();
-        // }
-        // fast path for fully transparent pixels
-        if (pixel.A == 0)
-        {
-            return (pixel.R, pixel.G, pixel.B);
-        }
         // If pixel is fully transparent, return the background color
-        // if (IsTransparent(pixel))
-        // {
-        //     return (_backgroundColor.R, _backgroundColor.G, _backgroundColor.B);
-        // }
+        if (IsTransparent(pixel))
+        {
+            return (_backgroundColor.R, _backgroundColor.G, _backgroundColor.B);
+        }
 
         float amount = pixel.A / 255f;
 
@@ -96,8 +96,23 @@ public static class Blocks
         byte b = (byte)(pixel.B * amount + (_backgroundColor.B * (1 - amount)));
 
         return (r, g, b);
+    }    private static bool IsTransparent(Rgba32 pixel)
+    {
+        // Calculate luminance for better edge artifact detection
+        float luminance = (0.299f * pixel.R + 0.587f * pixel.G + 0.114f * pixel.B) / 255f;
+
+        // Consider pixels transparent if:
+        // 1. Alpha is very low (traditional transparency)
+        // 2. Alpha is low and pixel is very dark (common resizing artifacts)
+        // 3. Alpha is moderate and luminance is extremely low (aggressive edge artifact removal)
+        // 4. Alpha is low and color is close to pure black (black edge artifacts)
+        // 5. Very aggressive: moderately transparent with low luminance (catches most edge cases)
+        return pixel.A < 8 ||
+               (pixel.A < 32 && luminance < 0.15f) ||
+               (pixel.A < 64 && pixel.R < 12 && pixel.G < 12 && pixel.B < 12) ||
+               (pixel.A < 128 && luminance < 0.05f) ||
+               (pixel.A < 240 && luminance < 0.01f);
     }
-    private static bool IsTransparent(Rgba32 pixel) => pixel.A < 5;
     private static Rgba32 GetConsoleBackgroundColor()
     {
         var color = Console.BackgroundColor switch {

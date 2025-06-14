@@ -1,7 +1,9 @@
-using System.Management.Automation;
-using System.Net.Http;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
+using System.Management.Automation;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+
 
 namespace Sixel.Cmdlet;
 
@@ -80,7 +82,6 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   [Parameter(
         HelpMessage = "Choose ImageProtocol to use for conversion."
   )]
-  // public ImageProtocol Protocol { get; set; } = Compatibility.GetTerminalInfo().Protocol?.FirstOrDefault() ?? ImageProtocol.Blocks;
   public ImageProtocol Protocol { get; set; } = ImageProtocol.Auto;
 
   protected override void ProcessRecord()
@@ -95,11 +96,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             if (InputObject is not null && InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
-              if (InputObject.StartsWith("data:image/png;base64,", StringComparison.OrdinalIgnoreCase))
-              {
-                // Length of "data:image/png;base64," = 22
-                InputObject = InputObject.Substring(22);
-              }
+              InputObject = Regex.Replace(InputObject, @"^data:image/\w+;base64,", "", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
               imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
             }
             else

@@ -12,8 +12,10 @@ public static class Resizer
     /// Resizes an image to fit within the specified terminal character cell dimensions.
     /// </summary>
     /// <param name="image">The image to resize.</param>
+    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
     /// <param name="RequestedWidth">The target width in terminal character cells.</param>
     /// <param name="RequestedHeight">The target height in terminal character cells (optional).</param>
+    /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
     /// <returns>tuple of ImageSize and resized Image stream.</returns>
     public static (ImageSize Size, Image<Rgba32> ConsoleImage) ResizeToCharacterCells(
         Image<Rgba32> image,
@@ -67,6 +69,15 @@ public static class Resizer
         }
         return (newSize, image);
     }
+    /// <summary>
+    /// Resizes an image to fit within the specified terminal character cell dimensions.
+    /// This method is used when the image size is already known and does not need to be calculated.
+    /// </summary>
+    /// <param name="image">The image to resize.</param>
+    /// <param name="imageSize">The target size in terminal character cells.</param>
+    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
+    /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
+    /// <returns>The resized image.</returns>
     public static Image<Rgba32> ResizeToCharacterCells(
     Image<Rgba32> image,
     ImageSize imageSize,
@@ -106,5 +117,4 @@ public static class Resizer
         }
         return image;
     }
-
 }
