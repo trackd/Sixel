@@ -6,6 +6,9 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides methods to resize images to fit within terminal character cell dimensions, with optional color quantization.
+/// </summary>
 public static class Resizer
 {
     /// <summary>
@@ -33,19 +36,23 @@ public static class Resizer
         // if (reqWidth == 0 && reqHeight == 0)
         // {
         //     var currentSize = SizeHelper.ConvertToCharacterCells(image.Width, image.Height);
-        //     return (currentSize, image);
-        // }
+        //     return (currentSize, image);        // }
 
         var newSize = SizeHelper.GetResizedCharacterCellSize(image.Width, image.Height, reqWidth, reqHeight);
+
+        // Calculate pixel dimensions from cell dimensions
+        int targetPixelWidth = newSize.Width * cellSize.PixelWidth;
+        int targetPixelHeight = newSize.Height * cellSize.PixelHeight;
+
         // Only resize if the target size is different
-        if (image.Width != newSize.PixelWidth || image.Height != newSize.PixelHeight)
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
         {
             image.Mutate(ctx =>
             {
                 ctx.Resize(new ResizeOptions()
                 {
                     Sampler = KnownResamplers.Bicubic,
-                    Size = new(newSize.PixelWidth, newSize.PixelHeight),
+                    Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
                 if (quantize)
@@ -74,26 +81,31 @@ public static class Resizer
     /// This method is used when the image size is already known and does not need to be calculated.
     /// </summary>
     /// <param name="image">The image to resize.</param>
-    /// <param name="imageSize">The target size in terminal character cells.</param>
-    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
+    /// <param name="imageSize">The target size in terminal character cells.</param>    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
     /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
     /// <returns>The resized image.</returns>
     public static Image<Rgba32> ResizeToCharacterCells(
-    Image<Rgba32> image,
-    ImageSize imageSize,
-    int maxColors,
-    bool quantize = false
-)
+        Image<Rgba32> image,
+        ImageSize imageSize,
+        int maxColors,
+        bool quantize = false
+    )
     {
+        var cellSize = Compatibility.GetCellSize();
+
+        // Calculate pixel dimensions from cell dimensions
+        int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
+        int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+
         // Only resize if the target size is different
-        if (image.Width != imageSize.PixelWidth || image.Height != imageSize.PixelHeight)
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
         {
             image.Mutate(ctx =>
             {
                 ctx.Resize(new ResizeOptions()
                 {
                     Sampler = KnownResamplers.Bicubic,
-                    Size = new(imageSize.PixelWidth, imageSize.PixelHeight),
+                    Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
                 if (quantize)

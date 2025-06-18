@@ -3,6 +3,9 @@ using System.Globalization;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides methods and cached properties for detecting terminal compatibility, supported protocols, and cell/window sizes.
+/// </summary>
 public static class Compatibility
 {
   /// <summary>

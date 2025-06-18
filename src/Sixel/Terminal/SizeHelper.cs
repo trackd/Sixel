@@ -4,6 +4,9 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides methods for converting and resizing image dimensions to terminal character cell sizes.
+/// </summary>
 public static class SizeHelper
 {
     /// <summary>
@@ -44,7 +47,7 @@ public static class SizeHelper
         var cellWidth = (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth);
         var cellHeight = (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight);
 
-        return new ImageSize(cellWidth, cellHeight, cellWidth * cellSize.PixelWidth, cellHeight * cellSize.PixelHeight);
+        return new ImageSize(cellWidth, cellHeight);
     }
 
     /// <summary>
@@ -55,9 +58,7 @@ public static class SizeHelper
         var cellSize = Compatibility.GetCellSize();
         return new ImageSize(
             (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth),
-            (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight),
-            pixelWidth,
-            pixelHeight
+            (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight)
         );
     }
 
@@ -66,7 +67,6 @@ public static class SizeHelper
     /// </summary>
     public static ImageSize GetCharacterCellSize(Image<Rgba32> image)
         => GetCharacterCellSize(image.Width, image.Height);
-
     /// <summary>
     /// Gets the resized size in terminal character cells for an image, given max width/height constraints.
     /// Maintains aspect ratio. If both are null, returns the current size.
@@ -75,53 +75,46 @@ public static class SizeHelper
     {
         var cellSize = Compatibility.GetCellSize();
 
-        // override the maxCellWidth and maxCellHeight if they are bigger than the terminal window size.
-        int WindowWidth = Console.WindowWidth - 2;
-        int WindowHeight = Console.WindowHeight - 2;
-        if (maxCellHeight > WindowHeight)
+        // natural cell size for the image
+        int naturalCellW = Math.Max(1, (int)Math.Ceiling((double)pixelWidth / cellSize.PixelWidth));
+        int naturalCellH = Math.Max(1, (int)Math.Ceiling((double)pixelHeight / cellSize.PixelHeight));
+
+        // clamp cell dimensions to window
+        int windowWidth = Console.WindowWidth - 2;
+        int windowHeight = Console.WindowHeight - 2;
+        int maxCellsW = maxCellWidth > 0 ? Math.Min(maxCellWidth, windowWidth) : windowWidth;
+        int maxCellsH = maxCellHeight > 0 ? Math.Min(maxCellHeight, windowHeight) : windowHeight;
+
+        // scale to fit max with aspect ratio
+        double scaleW = (double)maxCellsW / naturalCellW;
+        double scaleH = (double)maxCellsH / naturalCellH;
+        // dont upscale
+        double scale = Math.Min(1.0, Math.Min(scaleW, scaleH));
+
+        int cellW = Math.Max(1, (int)Math.Floor(naturalCellW * scale));
+        int cellH = Math.Max(1, (int)Math.Floor(naturalCellH * scale));
+
+        // sixel boundary adjustments
+        int pixelH = cellH * cellSize.PixelHeight;
+        // round down to nearest 6
+        int sixelAlignedPixelH = pixelH - (pixelH % 6);
+        if (sixelAlignedPixelH <= 0) sixelAlignedPixelH = 6;
+        int finalCellH = Math.Max(1, sixelAlignedPixelH / cellSize.PixelHeight);
+
+        // maybe just bad math from me, but vscode and wezterm doesnt render properly.
+        var termInfo = Compatibility.GetTerminalInfo();
+        if ((termInfo.Terminal == Terminals.VSCode || termInfo.Terminal == Terminals.WezTerm) && finalCellH > 1)
         {
-            maxCellHeight = WindowHeight;
-        }
-        if (maxCellWidth > WindowWidth)
-        {
-            maxCellWidth = WindowWidth;
-        }
-        // If no constraints, match old logic: just floor to cell size, no Sixel rounding here
-        if (maxCellWidth == 0 && maxCellHeight == 0)
-        {
-            int adjustedCellW = Math.Max(1, (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth));
-            int adjustedCellH = Math.Max(1, (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight));
-            int adjustedPixelWidth = adjustedCellW * cellSize.PixelWidth;
-            int adjustedPixelHeight = adjustedCellH * cellSize.PixelHeight;
-            return new ImageSize(adjustedCellW, adjustedCellH, adjustedPixelWidth, adjustedPixelHeight);
+            // need -1 cell height
+            finalCellH--;
+            // sixel boundary
+            int adjustedPixelH = finalCellH * cellSize.PixelHeight;
+            adjustedPixelH -= adjustedPixelH % 6;
+            if (adjustedPixelH <= 0) adjustedPixelH = 6;
+            finalCellH = Math.Max(1, adjustedPixelH / cellSize.PixelHeight);
         }
 
-        // If only one constraint is given, the other is unconstrained (int.MaxValue), so aspect ratio is always preserved
-        // The scale is chosen so that neither dimension exceeds its constraint, and aspect ratio is always correct
-
-        // Calculate the pixel bounding box
-        int maxPixelWidth = maxCellWidth > 0 ? maxCellWidth * cellSize.PixelWidth : int.MaxValue;
-        int maxPixelHeight = maxCellHeight > 0 ? maxCellHeight * cellSize.PixelHeight : int.MaxValue;
-
-        // Scale to fit within the pixel bounding box, preserving aspect ratio
-        double scale = Math.Min((double)maxPixelWidth / pixelWidth, (double)maxPixelHeight / pixelHeight);
-
-        if (scale > 1.0)
-        {
-            // Don't upscale
-            scale = 1.0;
-        }
-        int newPixelWidth = (int)Math.Round(pixelWidth * scale);
-        int newPixelHeight = (int)Math.Round(pixelHeight * scale);
-
-        // No Sixel rounding here; just preserve aspect and bounding box
-
-        int newCellW = Math.Max(1, (int)Math.Floor((double)newPixelWidth / cellSize.PixelWidth));
-        int newCellH = Math.Max(1, (int)Math.Floor((double)newPixelHeight / cellSize.PixelHeight));
-        // Prevent upscaling: clamp to original cell size
-        newCellW = Math.Min(newCellW, (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth));
-        newCellH = Math.Min(newCellH, (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight));
-        return new ImageSize(newCellW, newCellH, newPixelWidth, newPixelHeight);
+        return new ImageSize(cellW, finalCellH);
     }
 
     /// <summary>
@@ -175,3 +168,4 @@ public static class SizeHelper
     }
 }
 /// </summary>
+///

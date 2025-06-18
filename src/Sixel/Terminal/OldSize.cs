@@ -2,6 +2,9 @@
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides legacy logic for calculating terminal image sizes based on cell and pixel dimensions.
+/// </summary>
 public static class SizeOld
 {
   public static Size GetTerminalImageSize(int Width, int Height, int? maxWidth = null)

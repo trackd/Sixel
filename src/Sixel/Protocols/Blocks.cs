@@ -17,7 +17,7 @@ public static class Blocks
             ctx.Resize(new ResizeOptions
             {
                 // *2 because each cell is 2 pixels high for blocks
-                Size = new Size(imageSize.CellWidth, imageSize.CellHeight * 2),
+                Size = new Size(imageSize.Width, imageSize.Height * 2),
                 Sampler = KnownResamplers.NearestNeighbor, // Better for preserving sharp transparency edges
                 PremultiplyAlpha = false
             });

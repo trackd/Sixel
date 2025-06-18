@@ -14,18 +14,8 @@ public static class Sixel
   /// Converts an image to a Sixel string.
   /// </summary>
   /// <param name="image">The image to convert.</param>
-  /// <param name="cellWidth">The width of the cell in terminal cells.</param>
-  /// <param name="cellHeight">The height of the image in terminal cells (optional).</param>
+  /// <param name="imageSize">The size of the image in character cells.</param>
   /// <param name="maxColors">The Max colors of the image.</param>
-  /// <param name="frame">The frame to convert.</param>
-  /// <returns>A tuple containing the image size and the Sixel string.</returns>
-  // public static (ImageSize imageSize, string sixelString) ImageToSixel(Image<Rgba32> image, int maxColors, int cellWidth, int cellHeight)
-  // {
-  //   // Use Resizer to handle resizing and quantization
-  //   var (imageSize, resizedImage) = Resizer.ResizeToCharacterCells(image, maxColors, cellWidth, cellHeight, true);
-  //   var targetFrame = resizedImage.Frames[0];
-  //   return (imageSize, FrameToSixelString(targetFrame));
-  // }
   public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors)
   {
     // Use Resizer to handle resizing and quantization
@@ -33,7 +23,6 @@ public static class Sixel
     var targetFrame = resizedImage.Frames[0];
     return FrameToSixelString(targetFrame);
   }
-
   internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
     var sixelBuilder = new StringBuilder();

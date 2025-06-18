@@ -7,6 +7,9 @@ using System.Runtime.Loader;
 
 namespace Sixel.Shared;
 
+/// <summary>
+/// Utility methods for shared assembly and type information operations.
+/// </summary>
 internal class SharedUtil
 {
   public static void AddAssemblyInfo(Type type, Dictionary<string, object> data)

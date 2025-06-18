@@ -1,7 +1,7 @@
 namespace Sixel.Terminal;
 
 /// <summary>
-/// Sixel terminal compatibility helpers.
+/// Contains constant values and helpers for Sixel terminal compatibility and encoding.
 /// </summary>
 internal static class Constants
 {
@@ -158,4 +158,25 @@ internal static class Constants
     /// https://github.com/hackerb9/lsix/blob/master/README.md
     /// </summary>
     // internal const string DECSDM = $"{ESC}[?80L";
+
+    /// <summary>
+    /// https://contour-terminal.org/vt-extensions/synchronized-output/#feature-detection
+    /// this is the sequence to enable synchronized output in a terminal.
+    /// </summary>
+    internal const string DECBSU = $"{ESC}[?2026h";
+    /// <summary>
+    /// https://contour-terminal.org/vt-extensions/synchronized-output/#feature-detection
+    /// this is the sequence to disable synchronized output in a terminal.
+    /// </summary>
+    internal const string DECESU = $"{ESC}[?2026l";
+    /// <summary>
+    /// query if the terminal supports synchronized output.
+    /// Use CSI ? 2026 $ p to query the state of the (DEC) mode 2026.
+    /// This works for any private mode number.
+    /// If you get nothing back (DECRQM not implemented at all)
+    /// or you get back a CSI ? 2026 ; 0 $ y
+    /// then synchronized output is not supported.
+    /// See DECRQM (request) and DECRPM (response) for more details.
+    /// </summary>
+    internal const string DECRQM2026 = $"{ESC}[?2026$p";
 }

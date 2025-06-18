@@ -1,6 +1,10 @@
 ﻿using Sixel.Terminal.Models;
 
 namespace Sixel.Terminal;
+/// <summary>
+/// Helper methods for selecting the best supported terminal image protocol.
+/// not in use at the moment
+/// </summary>
 public static class ImageProtocolHelper
 {
   public static ImageProtocol GetBestSupported(ImageProtocol supported)

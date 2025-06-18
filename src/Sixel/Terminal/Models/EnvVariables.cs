@@ -1,7 +1,7 @@
 ﻿namespace Sixel.Terminal.Models;
 
 using System.Collections.Generic;
-internal partial class Helpers
+public partial class Helpers
 {
     /// <summary>
     /// mapping of environment variables to terminal.
@@ -22,6 +22,7 @@ internal partial class Helpers
             { Terminals.VSCode, "VSCODE_GIT_ASKPASS_MAIN" },
             { Terminals.Mintty, "MINTTY" },
             { Terminals.Alacritty, "ALACRITTY_LOG" }
+            // { Terminals.unknown, "TERM_PROGRAM" }
         };
         _reverseLookup = new Dictionary<string, Terminals>(StringComparer.OrdinalIgnoreCase);
         foreach (var (terminal, envVar) in _lookup)
@@ -32,7 +33,17 @@ internal partial class Helpers
             }
         }
     }
-    internal static Terminals GetTerminal(string str)
+    public static string[] GetEnvironmentVariables()
+    {
+        var envVars = new string[_lookup.Count];
+        int i = 0;
+        foreach (var envVar in _lookup.Values)
+        {
+            envVars[i++] = envVar;
+        }
+        return envVars;
+    }
+    public static Terminals GetTerminal(string str)
     {
         if (_reverseLookup.TryGetValue(str, out Terminals _terminal))
         {
@@ -44,7 +55,7 @@ internal partial class Helpers
         }
         return Terminals.unknown;
     }
-    internal static string GetEnvironmentVariable(Terminals terminal)
+    public static string GetEnvironmentVariable(Terminals terminal)
     {
         if (_lookup.TryGetValue(terminal, out var _envVar))
         {

@@ -1,6 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 
 namespace Sixel.Terminal;
+/// <summary>
+/// Provides optimized writing to the terminal
+/// handling platform-specific output streams for improved performance
+/// used for rendering gifs on Windows.
+/// </summary>
 internal sealed class VTWriter : IDisposable
 {
   private readonly TextWriter? _writer;

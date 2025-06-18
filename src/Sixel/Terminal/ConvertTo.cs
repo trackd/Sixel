@@ -7,6 +7,9 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides methods to load and convert images to terminal-compatible formats using various image protocols.
+/// </summary>
 public static class ConvertTo
 {
     /// <summary>
@@ -45,7 +48,6 @@ public static class ConvertTo
             else
                 protocol = ImageProtocol.Blocks;
         }
-
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
         var imageSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);

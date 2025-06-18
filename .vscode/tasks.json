@@ -1,0 +1,47 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "pwsh",
+      "type": "shell",
+      "args": [
+        "-File",
+        "${workspaceFolder}/tools/vsbuild.ps1"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "update docs",
+      "command": "pwsh",
+      "type": "shell",
+      "args": [
+        "-Command",
+        "${workspaceFolder}/tools/docs.ps1"
+      ],
+      "problemMatcher": [],
+      "dependsOn": [
+        "build"
+      ]
+    },
+    {
+      "label": "test",
+      "command": "pwsh",
+      "type": "shell",
+      "args": [
+        "-File",
+        "${workspaceFolder}/tests/Sixel.tests.ps1"
+      ],
+      "problemMatcher": [],
+      "dependsOn": [
+        "build"
+      ]
+    }
+  ]
+}

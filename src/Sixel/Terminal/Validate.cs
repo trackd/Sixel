@@ -7,6 +7,9 @@ using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Argument validation attribute to ensure the requested terminal width does not exceed the actual terminal width.
+/// </summary>
 internal sealed class ValidateTerminalWidth : ValidateArgumentsAttribute
 {
   /// <summary>
@@ -22,6 +25,9 @@ internal sealed class ValidateTerminalWidth : ValidateArgumentsAttribute
     }
   }
 }
+/// <summary>
+/// Argument validation attribute to ensure the requested terminal height does not exceed the actual terminal height.
+/// </summary>
 internal sealed class ValidateTerminalHeight : ValidateArgumentsAttribute
 {
   /// <summary>

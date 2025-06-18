@@ -67,7 +67,14 @@ $sb = {
     & $tools/Pester.ps1 -TestPath $TestPath -OutputFile $reportFile
 }
 
-if ($PSVersionTable.PSEdition -eq 'Core') {
+if ((Get-Process -Id $pid).CommandLine -match '-NoExit') {
+    # detect when launched from vscode launch settings
+    Write-Host "Running tests in current session"
+    . $sb $testargs
+    ConvertTo-Sixel .\assets\cog.png -Protocol Sixel
+}
+elseif ($PSVersionTable.PSEdition -eq 'Core') {
+    Write-Host "Running tests in a new pwsh"
     pwsh -NoProfile -Command $sb -args $testargs
 }
 else {

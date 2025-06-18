@@ -45,8 +45,8 @@ public static class InlineImage
     }
     var base64Image = Convert.ToBase64String(imageBytes).AsSpan();
     string size = imageBytes.Length.ToString(CultureInfo.InvariantCulture);
-    string widthString = imageSize.CellWidth > 0 ? $"width={imageSize.CellWidth};" : "width=auto;";
-    string heightString = imageSize.CellHeight > 0 ? $"height={imageSize.CellHeight};" : "height=auto;";
+    string widthString = imageSize.Width > 0 ? $"width={imageSize.Width};" : "width=auto;";
+    string heightString = imageSize.Height > 0 ? $"height={imageSize.Height};" : "height=auto;";
     StringBuilder iip = new();
     iip.Append(Constants.HideCursor)
         .Append(Constants.InlineImageStart)

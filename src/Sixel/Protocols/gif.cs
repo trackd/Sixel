@@ -9,8 +9,13 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
+
+
 namespace Sixel.Protocols;
 
+/// <summary>
+/// Provides methods to convert GIF images to Sixel format for terminal display, including resizing and optional audio support.
+/// </summary>
 public static class GifToSixel {
 
   public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
@@ -20,11 +25,56 @@ public static class GifToSixel {
     // {
     //   return ConvertGifToSixel(image, maxColors, cellWidth, LoopCount, AudioFile);
     // }
-    var imageSize = SizeHelper.GetResizedCharacterCellSize(image, cellWidth, 0);
+    // Fix: Don't pass maxCellHeight: 0, let it calculate proper height based on width constraint
+    var imageSize = SizeHelper.GetResizedCharacterCellSize(image, cellWidth, maxCellHeight: int.MaxValue);
 
     return ConvertGifToSixel(image, imageSize, maxColors, LoopCount);
   }
 
+  // old resizing logic, evaluating new..
+  private static SixelGif ConvertGifToSixelv1(Image<Rgba32> image, int cellWidth, int maxColors, int LoopCount, string? AudioPath = null)
+  {
+    var cellSize = Compatibility.GetCellSize();
+    var targetSize = SizeOld.GetTerminalImageSize(image.Width, image.Height, cellWidth);
+
+    image.Mutate(ctx => {
+      var targetPixelWidth = targetSize.Width * cellSize.PixelWidth;
+      var targetPixelHeight = targetSize.Height * cellSize.PixelHeight;
+
+      if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
+      {
+        ctx.Resize(new ResizeOptions {
+          Size = new Size(targetPixelWidth, targetPixelHeight),
+          Sampler = KnownResamplers.Bicubic,
+          PremultiplyAlpha = false
+        });
+      }
+
+      ctx.Quantize(new OctreeQuantizer(new QuantizerOptions {
+        MaxColors = maxColors,
+      }));
+    });
+    var metadata = image.Frames.RootFrame.Metadata.GetGifMetadata();
+    int frameCount = image.Frames.Count;
+
+    var gif = new SixelGif() {
+      Sixel = [],
+      Delay = metadata?.FrameDelay * 10 ?? 1000,
+      LoopCount = LoopCount,
+      Height = targetSize.Height,
+      Width = targetSize.Width,
+      // Audio = AudioPath
+    };
+
+    for (int i = 0; i < frameCount; i++)
+    {
+      var targetFrame = image.Frames[i];
+      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
+    }
+    return gif;
+  }
+
+  // current resizing logic, using Resizer
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors, int LoopCount, string? AudioPath = null)
   {
     // Use Resizer to handle resizing and quantization
@@ -32,20 +82,19 @@ public static class GifToSixel {
     var metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
     int frameCount = resizedImage.Frames.Count;
 
-    var gif = new SixelGif()
-    {
-        Sixel = [],
-        Delay = metadata?.FrameDelay * 10 ?? 1000,
-        LoopCount = LoopCount,
-        Height = imageSize.CellHeight,
-        Width = imageSize.CellWidth,
-        // Audio = AudioPath
+    var gif = new SixelGif() {
+      Sixel = [],
+      Delay = metadata?.FrameDelay * 10 ?? 1000,
+      LoopCount = LoopCount,
+      Height = imageSize.Height,
+      Width = imageSize.Width,
+      // Audio = AudioPath
     };
 
     for (int i = 0; i < frameCount; i++)
     {
-        var targetFrame = resizedImage.Frames[i];
-        gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
+      var targetFrame = resizedImage.Frames[i];
+      gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
     }
     return gif;
   }
