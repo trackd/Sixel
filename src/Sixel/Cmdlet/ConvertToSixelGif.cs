@@ -154,7 +154,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "ConvertSixelGifCmdlet", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ConvertSixelGifCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));
     }
     finally
     {
