@@ -50,7 +50,7 @@ The `ConvertTo-Sixel` converts an image to display in the console.
 PS C:\> ConvertTo-Sixel -Url 'https://imgs.xkcd.com/comics/git_commit.png'
 ```
 
-Converts the xkcd to sixel  
+Converts the xkcd.  
 
 ### -------------------------- EXAMPLE 2 --------------------------
 
@@ -58,13 +58,13 @@ Converts the xkcd to sixel
 PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
 ```
 
-Converts a local file to sixel format  
+Converts a local file.  
 
 ## PARAMETERS
 
 ### -Path
 
-A path to a local image to convert to sixel.  
+A path to a local image.  
 
 ```yaml
 Type: String
@@ -80,7 +80,7 @@ Accept wildcard characters: False
 
 ### -Url
 
-A URL of the image to download and convert to sixel.  
+A URL of the image.  
 
 ```yaml
 Type: Uri
@@ -101,7 +101,7 @@ A stream of an image.
 ```yaml
 Type: Stream
 Parameter Sets: Stream
-Aliases: FileStream, InputStream, ImageStream, ContentStream
+Aliases: RawContentStream, FileStream, InputStream, ContentStream
 
 Required: True
 Position: Named
@@ -112,7 +112,7 @@ Accept wildcard characters: False
 
 ### -InputObject
 
-InputObject from Pipeline, can be filepath or base64 encoded image.  
+InputObject from Pipeline, can be filepath or base64 encoded string of an image.  
 
 ```yaml
 Type: String
@@ -218,7 +218,7 @@ Accept wildcard characters: False
 
 ### System.String
 
-Path, url, Stream of an image file  
+Path, url, Base64 String, Stream of an image file  
 
 ## OUTPUTS
 

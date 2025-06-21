@@ -24,7 +24,7 @@ public static class KittyGraphics
   public static string ImageToKitty(Image<Rgba32> image, ImageSize imageSize)
   {
     // Use Resizer to handle resizing
-    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, 0, false);
+    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, 0);
     // convert the resized image to base64
     using MemoryStream? ms = new();
     resizedImage.SaveAsPng(ms);

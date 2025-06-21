@@ -53,7 +53,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
         ParameterSetName = "Stream"
   )]
   [ValidateNotNullOrEmpty]
-  [Alias("RawContentStream", "FileStream", "InputStream", "ImageStream", "ContentStream")]
+  [Alias("RawContentStream", "FileStream", "InputStream", "ContentStream")]
   public Stream? Stream { get; set; }
 
   [Parameter(
@@ -96,7 +96,13 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
             if (InputObject is not null && InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
-              InputObject = Regex.Replace(InputObject, @"^data:image/\w+;base64,", "", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+              InputObject = Regex.Replace(
+                InputObject,
+                @"^data:image/\w+;base64,",
+                string.Empty,
+                RegexOptions.IgnoreCase,
+                TimeSpan.FromSeconds(1)
+              );
               imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
             }
             else

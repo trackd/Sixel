@@ -100,7 +100,7 @@ A stream of an image.
 ```yaml
 Type: Stream
 Parameter Sets: Stream
-Aliases: FileStream, InputStream, ImageStream, ContentStream
+Aliases: RawContentStream, FileStream, InputStream, ContentStream
 
 Required: True
 Position: Named

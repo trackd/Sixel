@@ -20,7 +20,7 @@ public static class Resizer
     /// <param name="RequestedHeight">The target height in terminal character cells (optional).</param>
     /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
     /// <returns>tuple of ImageSize and resized Image stream.</returns>
-    public static (ImageSize Size, Image<Rgba32> ConsoleImage) ResizeToCharacterCells(
+    public static (ImageSize Size, Image<Rgba32> ConsoleImage) OldResizeToCharacterCells(
         Image<Rgba32> image,
         int maxColors,
         int? RequestedWidth,
@@ -82,13 +82,11 @@ public static class Resizer
     /// </summary>
     /// <param name="image">The image to resize.</param>
     /// <param name="imageSize">The target size in terminal character cells.</param>    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
-    /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
     /// <returns>The resized image.</returns>
     public static Image<Rgba32> ResizeToCharacterCells(
         Image<Rgba32> image,
         ImageSize imageSize,
-        int maxColors,
-        bool quantize = false
+        int maxColors
     )
     {
         var cellSize = Compatibility.GetCellSize();
@@ -104,11 +102,13 @@ public static class Resizer
             {
                 ctx.Resize(new ResizeOptions()
                 {
+                    // https://en.wikipedia.org/wiki/Bicubic_interpolation
+                    // quality goes Bicubic > Bilinear > NearestNeighbor
                     Sampler = KnownResamplers.Bicubic,
                     Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
-                if (quantize)
+                if (maxColors > 0)
                 {
                     ctx.Quantize(new OctreeQuantizer(new()
                     {
@@ -117,7 +117,7 @@ public static class Resizer
                 }
             });
         }
-        else if (quantize)
+        else if (maxColors > 0)
         {
             image.Mutate(ctx =>
             {

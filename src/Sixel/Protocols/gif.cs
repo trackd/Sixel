@@ -1,9 +1,9 @@
-﻿using Sixel.Terminal;
-using Sixel.Terminal.Models;
-using System;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading;
-using System.IO;
+using Sixel.Terminal;
+using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -16,7 +16,8 @@ namespace Sixel.Protocols;
 /// <summary>
 /// Provides methods to convert GIF images to Sixel format for terminal display, including resizing and optional audio support.
 /// </summary>
-public static class GifToSixel {
+public static class GifToSixel
+{
 
   public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount, string? AudioFile = null)
   {
@@ -78,7 +79,7 @@ public static class GifToSixel {
   private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors, int LoopCount, string? AudioPath = null)
   {
     // Use Resizer to handle resizing and quantization
-    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, true);
+    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
     var metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
     int frameCount = resizedImage.Frames.Count;
 
@@ -105,11 +106,32 @@ public static class GifToSixel {
     var writer = new VTWriter();
     // add 1 row padding before the gif.
     writer.Write(Environment.NewLine);
-    // hack to remove the padding from the formatter
-    // the formatter adds 2 lines of padding at the end.
-    int height = gif.Height - 1;
+    int height;
     // GifAudio? audio = null;
-
+    // this is pretty annoying and hacky, need to find a better solution..
+    var termInfo = Compatibility.GetTerminalInfo();
+    if (termInfo.Terminal == Terminals.VSCode || termInfo.Terminal == Terminals.WezTerm)
+    {
+      // VSCode and WezTerm need 1 less row for the gif to display correctly.
+      // temporary workaround..
+      // gif.height is used for replacing each frame.
+      // height is used for moving the cursor back to the bottom of the gif after playback.
+      // 5.1 formatter adds more lines than 7.4+.
+      gif.Height--;
+#if NET472
+      height = gif.Height - 2;
+#else
+      height = gif.Height - 1;
+#endif
+    }
+    else
+    {
+#if NET472
+      height = gif.Height - 3;
+#else
+      height = gif.Height - 2;
+#endif
+    }
     try
     {
       // if (gif.Audio != null)

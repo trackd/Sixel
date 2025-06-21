@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 namespace Sixel.Cmdlet;
 
 [Cmdlet(VerbsData.ConvertTo, "Sixel", DefaultParameterSetName = "Path")]
-[Alias("cts", "ConvertTo-InlineImage", "ConvertTo-KittyImage")]
+[Alias("cts")]
 [OutputType(typeof(string))]
 public sealed class ConvertSixelCmdlet : PSCmdlet
 {
@@ -52,7 +52,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
         ParameterSetName = "Stream"
   )]
   [ValidateNotNullOrEmpty]
-  [Alias("RawContentStream", "FileStream", "InputStream", "ImageStream", "ContentStream")]
+  [Alias("RawContentStream", "FileStream", "InputStream", "ContentStream")]
   public Stream? Stream { get; set; }
 
   [Parameter(
@@ -75,12 +75,12 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
   public int Height { get; set; }
 
   [Parameter(
-        HelpMessage = "Force the command to attempt to output sixel data even if the terminal does not support sixel."
+        HelpMessage = "Force the command to attempt to output image data even if the terminal does not support the protocol selected."
   )]
   public SwitchParameter Force { get; set; }
 
   [Parameter(
-        HelpMessage = "Choose ImageProtocol to use for conversion."
+        HelpMessage = "Choose ImageProtocol to output."
   )]
   public ImageProtocol Protocol { get; set; } = ImageProtocol.Auto;
 
@@ -96,7 +96,13 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             if (InputObject is not null && InputObject.Length > 512)
             {
               // assume it's a base64 encoded image
-              InputObject = Regex.Replace(InputObject, @"^data:image/\w+;base64,", "", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+              InputObject = Regex.Replace(
+                InputObject,
+                @"^data:image/\w+;base64,",
+                string.Empty,
+                RegexOptions.IgnoreCase,
+                TimeSpan.FromSeconds(1)
+              );
               imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
             }
             else
@@ -118,6 +124,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
             using var client = new HttpClient();
             var response = client.GetAsync(Url).Result;
             response.EnsureSuccessStatusCode();
+            // below doesn't work in net472, use ReadAsStreamAsync.
             // imageStream = response.Content.ReadAsStream();
             imageStream = response.Content.ReadAsStreamAsync().Result;
             break;
@@ -126,7 +133,8 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
           {
             if (Stream is not null && Stream.Position != 0)
             {
-              // if something has already read the stream, reset it.. maybe risky
+              // if something has already read the stream, reset it.
+              // maybe this should be a parameter?
               Stream.Position = 0;
             }
             imageStream = Stream;
@@ -148,17 +156,20 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
       );
       /// add the ImageSize as noteproperty on the string object
       var wrappedImage = PSObject.AsPSObject(image);
-      // wrappedImage.Properties.Add(new PSNoteProperty("Width", size.CellWidth));
-      // wrappedImage.Properties.Add(new PSNoteProperty("Height", size.CellHeight));
-      wrappedImage.Properties.Add(new PSNoteProperty("ImageSize", size));
+      // add individual properties for width and height or just one property for size?
+      wrappedImage.Properties.Add(new PSNoteProperty("Width", size.Width));
+      wrappedImage.Properties.Add(new PSNoteProperty("Height", size.Height));
+      // wrappedImage.Properties.Add(new PSNoteProperty("ImageSize", size));
       WriteObject(wrappedImage);
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "ConvertSixelCmdlet", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ConvertSixelCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));
     }
     finally
     {
+      // if someone passes a Stream object, we should not dispose it.
+      // that breaks Invoke-Webrequest etc. trackd/sixel#23
       if (ParameterSetName != "Stream" && imageStream is not null)
       {
         imageStream.Dispose();

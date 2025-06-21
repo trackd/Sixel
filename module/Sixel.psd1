@@ -4,7 +4,7 @@
 
 @{
     RootModule             = 'Sixel.psm1'
-    ModuleVersion          = '0.4.0'
+    ModuleVersion          = '0.5.0'
     CompatiblePSEditions   = @('Desktop', 'Core')
     PowerShellVersion      = '5.1'
     DotNetFrameworkVersion = '4.7.2'
@@ -20,11 +20,11 @@
     ✔️ Inline Image Protocol
         - Supported by VSCode, xterm2, WezTerm, and others.
     ✔️ Kitty Graphics Protocol
-        - Supported by Kitty terminal.
+        - Supported by Kitty terminal and WezTerm (newer versions)
     ✔️ Block cells
         - Fallback to block cells if no image protocol is supported.
 
-    Note: Sixel requires Windows Terminal v1.22+ or VSCode Insiders.
+    Note: Sixel requires Windows Terminal v1.22+ or VSCode 1.102+.
 '
     CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
     AliasesToExport        = 'cts', 'gif'
@@ -45,6 +45,7 @@
             ProjectUri   = 'https://github.com/trackd/Sixel'
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
+            0.5.0 - Refactor, cleanup, bugfixes with terminal detection and stream.
             0.4.0 - Added support for Windows Powershell 5.1, added parameter -Stream as input.
             0.3.1 - Added GIF support, added Ascii art using halfblock cells.
             0.2.5 - bugfix, cleanup, added experimental support for inline image protocol and Kitty Graphics Protocol.

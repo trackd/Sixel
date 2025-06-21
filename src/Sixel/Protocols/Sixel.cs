@@ -19,7 +19,7 @@ public static class Sixel
   public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors)
   {
     // Use Resizer to handle resizing and quantization
-    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, true);
+    var resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
     var targetFrame = resizedImage.Frames[0];
     return FrameToSixelString(targetFrame);
   }
@@ -138,17 +138,20 @@ public static class Sixel
   }
   private static void AppendCarriageReturn(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SixelDECGCR);
+    sixelBuilder
+    .Append(Constants.SixelDECGCR);
   }
 
   private static void AppendNextLine(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.SixelDECGNL);
+    sixelBuilder
+    .Append(Constants.SixelDECGNL);
   }
 
   private static void AppendExitSixel(this StringBuilder sixelBuilder)
   {
-    sixelBuilder.Append(Constants.ST);
+    sixelBuilder
+    .Append(Constants.ST);
   }
 
   private static void StartSixel(this StringBuilder sixelBuilder, int width, int height)

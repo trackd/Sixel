@@ -101,18 +101,40 @@ public static class SizeHelper
         if (sixelAlignedPixelH <= 0) sixelAlignedPixelH = 6;
         int finalCellH = Math.Max(1, sixelAlignedPixelH / cellSize.PixelHeight);
 
-        // maybe just bad math from me, but vscode and wezterm doesnt render properly.
-        var termInfo = Compatibility.GetTerminalInfo();
-        if ((termInfo.Terminal == Terminals.VSCode || termInfo.Terminal == Terminals.WezTerm) && finalCellH > 1)
-        {
-            // need -1 cell height
-            finalCellH--;
-            // sixel boundary
-            int adjustedPixelH = finalCellH * cellSize.PixelHeight;
-            adjustedPixelH -= adjustedPixelH % 6;
-            if (adjustedPixelH <= 0) adjustedPixelH = 6;
-            finalCellH = Math.Max(1, adjustedPixelH / cellSize.PixelHeight);
-        }
+        return new ImageSize(cellW, finalCellH);
+    }
+    /// <summary>
+    /// Testing some other variants of resizing logic.
+    /// </summary>
+    public static ImageSize GetResizedCharacterCellSizeTest(int pixelWidth, int pixelHeight, int maxCellWidth, int maxCellHeight)
+    {
+        var cellSize = Compatibility.GetCellSize();
+
+        // natural cell size for the image
+        int naturalCellW = (int)Math.Round((double)pixelWidth / cellSize.PixelWidth);
+        int naturalCellH = (int)Math.Round((double)pixelHeight / cellSize.PixelHeight);
+
+        // clamp cell dimensions to window
+        int windowWidth = Console.WindowWidth - 2;
+        int windowHeight = Console.WindowHeight - 2;
+        int maxCellsW = maxCellWidth > 0 ? Math.Min(maxCellWidth, windowWidth) : windowWidth;
+        int maxCellsH = maxCellHeight > 0 ? Math.Min(maxCellHeight, windowHeight) : windowHeight;
+
+        // scale to fit max with aspect ratio
+        double scaleW = Math.Round((double)maxCellsW / naturalCellW);
+        double scaleH = Math.Round((double)maxCellsH / naturalCellH);
+        // dont upscale
+        double scale = Math.Min(1.0, Math.Min(scaleW, scaleH));
+
+        int cellW = Math.Max(1, (int)Math.Round(naturalCellW * scale));
+        int cellH = Math.Max(1, (int)Math.Round(naturalCellH * scale));
+
+        // sixel boundary adjustments
+        int pixelH = cellH * cellSize.PixelHeight;
+        // round down to nearest 6
+        int sixelAlignedPixelH = pixelH - (pixelH % 6);
+        if (sixelAlignedPixelH <= 0) sixelAlignedPixelH = 6;
+        int finalCellH = Math.Max(1, (int)Math.Round((double)sixelAlignedPixelH / cellSize.PixelHeight));
 
         return new ImageSize(cellW, finalCellH);
     }

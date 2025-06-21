@@ -20,6 +20,22 @@
       "console": "externalTerminal",
     },
     {
+      "name": "PowerShell Build and Import Module",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "pwsh",
+      "args": [
+        "-NoExit",
+        "-NoProfile",
+        "-Command",
+        "& ./tools/vsbuild.ps1 ;",
+        "Import-Module ./output/Sixel.psd1"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "externalTerminal",
+    },
+    {
       "name": "PowerShell Launch Current File",
       "type": "PowerShell",
       "request": "launch",
