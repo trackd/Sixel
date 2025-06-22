@@ -17,14 +17,15 @@
 
     ✔️ Sixel
         - Gif support using ConvertTo-SixelGif.
-    ✔️ Inline Image Protocol
+    ✔️ Inline Image Protocol (iterm2, "1337")
         - Supported by VSCode, xterm2, WezTerm, and others.
     ✔️ Kitty Graphics Protocol
         - Supported by Kitty terminal and WezTerm (newer versions)
     ✔️ Block cells
         - Fallback to block cells if no image protocol is supported.
 
-    Note: Sixel requires Windows Terminal v1.22+ or VSCode 1.102+.
+    Note: Sixel requires Windows Terminal v1.22+ or VSCode 1.101+.
+    VSCode requires "Enable Images", "Windows Enable Conpty", "Windows Use Conpty Dll" enabled.
 '
     CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
     AliasesToExport        = 'cts', 'gif'

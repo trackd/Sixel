@@ -15,7 +15,10 @@ Install-PSResource Sixel
 ## Requirements
 
 This module supports Powershell version 5.1 & 7.4.  
+
 Windows Terminal supports Sixel from version 1.22.  
+
+VSCode 1.101+, also requires "Enable Images","Windows Enable Conpty", "Windows Use Conpty Dll" enabled.  
 
 There is an example sixel file in the ./assets folder that can be used for testing  
 
