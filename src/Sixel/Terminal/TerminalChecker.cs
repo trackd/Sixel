@@ -104,7 +104,7 @@ public static class TerminalChecker
         }
 
         // 4. VT/ANSI fallback: autodetect Kitty/Sixel support and augment protocol list
-        var protocolList = new List<ImageProtocol>(detectedProtocols);
+        List<ImageProtocol>? protocolList = [.. detectedProtocols];
         bool kittySupported = Compatibility.TerminalSupportsKitty();
         bool sixelSupported = Compatibility.TerminalSupportsSixel();
         if (kittySupported && !protocolList.Contains(ImageProtocol.KittyGraphicsProtocol))
