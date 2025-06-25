@@ -1,6 +1,7 @@
 ﻿namespace Sixel.Terminal.Models;
+
 using System.Collections.Generic;
-internal partial class Helpers
+public partial class Helpers
 {
     /// <summary>
     /// mapping of environment variables to terminal.
@@ -18,9 +19,10 @@ internal partial class Helpers
             { Terminals.Iterm2, "ITERM_SESSION_ID" },
             { Terminals.WezTerm, "WEZTERM_CONFIG_FILE" },
             { Terminals.Ghostty, "GHOSTTY_RESOURCES_DIR" },
-            { Terminals.VSCode, "TERM_PROGRAM" },
+            { Terminals.VSCode, "VSCODE_GIT_ASKPASS_MAIN" },
             { Terminals.Mintty, "MINTTY" },
             { Terminals.Alacritty, "ALACRITTY_LOG" }
+            // { Terminals.unknown, "TERM_PROGRAM" }
         };
         _reverseLookup = new Dictionary<string, Terminals>(StringComparer.OrdinalIgnoreCase);
         foreach (var (terminal, envVar) in _lookup)
@@ -31,25 +33,34 @@ internal partial class Helpers
             }
         }
     }
-    internal static Terminals? GetTerminal(string str)
+    public static string[] GetEnvironmentVariables()
     {
-        Terminals _terminal;
-        if (_reverseLookup.TryGetValue(str, out _terminal))
+        var envVars = new string[_lookup.Count];
+        int i = 0;
+        foreach (var envVar in _lookup.Values)
         {
-            return _terminal;
+            envVars[i++] = envVar;
         }
-        if (Enum.TryParse<Terminals>(str, true, out _terminal))
-        {
-            return _terminal;
-        }
-        return null;
+        return envVars;
     }
-    internal static string? GetEnvironmentVariable(Terminals terminal)
+    public static Terminals GetTerminal(string str)
+    {
+        if (_reverseLookup.TryGetValue(str, out Terminals _terminal))
+        {
+            return _terminal;
+        }
+        if (Enum.TryParse(str, true, out _terminal))
+        {
+            return _terminal;
+        }
+        return Terminals.unknown;
+    }
+    public static string GetEnvironmentVariable(Terminals terminal)
     {
         if (_lookup.TryGetValue(terminal, out var _envVar))
         {
             return _envVar;
         }
-        return null;
+        return "TERM_PROGRAM";
     }
 }

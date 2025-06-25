@@ -1,7 +1,8 @@
 namespace Sixel.Terminal.Models;
 
+
 /// <summary>
-/// Represents the size of a cell in pixels for sixel rendering.
+/// Represents the size of a terminal cell in pixels for Sixel rendering.
 /// </summary>
 public class CellSize
 {

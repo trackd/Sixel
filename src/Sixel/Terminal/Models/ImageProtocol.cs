@@ -7,9 +7,9 @@
 [Flags]
 public enum ImageProtocol
 {
-  Blocks = 0,
-  Sixel = 1,
+  Auto = 0,
+  Blocks = 1,
   InlineImageProtocol = 2,
-  iTerm2 = 4, // Alias for InlineImageProtocol
+  Sixel = 4,
   KittyGraphicsProtocol = 8
-};
+}

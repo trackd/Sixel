@@ -15,6 +15,7 @@ public enum Terminals
   VSCode,
   Mintty,
   Alacritty,
+  Rio,
   xterm,
   mlterm,
   unknown

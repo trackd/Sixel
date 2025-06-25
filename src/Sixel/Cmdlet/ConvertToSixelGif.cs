@@ -3,6 +3,8 @@ using Sixel.Terminal.Models;
 using Sixel.Protocols;
 using System.Management.Automation;
 using System.Net.Http;
+using System.Text.RegularExpressions;
+
 
 namespace Sixel.Cmdlet;
 
@@ -12,39 +14,47 @@ namespace Sixel.Cmdlet;
 public sealed class ConvertSixelGifCmdlet : PSCmdlet
 {
   [Parameter(
-        HelpMessage = "A path to a local gif to convert to a sixel object.",
+      HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
+      Mandatory = true,
+      ValueFromPipeline = true,
+      ParameterSetName = "InputObject"
+  )]
+  [ValidateNotNullOrEmpty]
+  public string? InputObject { get; set; }
+  [Parameter(
+        HelpMessage = "A path to a local gif to convert to sixelgif.",
         Mandatory = true,
-        ValueFromPipeline = true,
         ValueFromPipelineByPropertyName = true,
         Position = 0,
         ParameterSetName = "Path"
   )]
   [ValidateNotNullOrEmpty]
   [Alias("FullName")]
-  public string Path { get; set; } = null!;
+  public string? Path { get; set; }
 
   [Parameter(
-        HelpMessage = "An URL of the gif to download and convert to a sixel object.",
+        HelpMessage = "A URL of the gif to download and convert to sixelgif.",
         Mandatory = true,
         ValueFromPipeline = true,
         ValueFromPipelineByPropertyName = true,
+        Position = 0,
         ParameterSetName = "Url"
   )]
   [ValidateNotNullOrEmpty]
   [Alias("Uri")]
-  public Uri Url { get; set; } = null!;
+  public Uri? Url { get; set; }
 
   [Parameter(
-      HelpMessage = "A stream of the gif to convert to a sixel object.",
-      Mandatory = true,
-      ValueFromPipeline = true,
-      ValueFromPipelineByPropertyName = true,
-      Position = 0,
-      ParameterSetName = "Stream"
-)]
+        HelpMessage = "A stream of the gif to convert to sixelgif.",
+        Mandatory = true,
+        ValueFromPipeline = true,
+        ValueFromPipelineByPropertyName = true,
+        Position = 0,
+        ParameterSetName = "Stream"
+  )]
   [ValidateNotNullOrEmpty]
-  [Alias("FileStream", "InputStream", "ImageStream", "ContentStream")]
-  public Stream Stream { get; set; } = null!;
+  [Alias("RawContentStream", "FileStream", "InputStream", "ContentStream")]
+  public Stream? Stream { get; set; }
 
   [Parameter(
         HelpMessage = "The maximum number of colors to use in the image."
@@ -76,17 +86,39 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
   // public string? AudioPath { get; set; }
   protected override void ProcessRecord()
   {
+    Stream? imageStream = null;
     try
     {
-      Stream? imageStream = null;
       switch (ParameterSetName)
       {
+        case "InputObject":
+          {
+            if (InputObject is not null && InputObject.Length > 512)
+            {
+              // assume it's a base64 encoded image
+              InputObject = Regex.Replace(
+                InputObject,
+                @"^data:image/\w+;base64,",
+                string.Empty,
+                RegexOptions.IgnoreCase,
+                TimeSpan.FromSeconds(1)
+              );
+              imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
+            }
+            else
+            {
+              /// assume it's a path to a file
+              var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InputObject);
+              imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
+            }
+            break;
+          }
         case "Path":
           {
             var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path);
             imageStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read);
-            break;
           }
+          break;
         case "Url":
           {
             using var client = new HttpClient();
@@ -98,7 +130,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
           }
         case "Stream":
           {
-            if (Stream.Position != 0)
+            if (Stream is not null && Stream.Position != 0)
             {
               // if something has already read the stream, reset it.. maybe risky
               Stream.Position = 0;
@@ -107,24 +139,29 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
             break;
           }
       }
-
-      if (imageStream is null) return;
-
-      using (imageStream)
+      if (imageStream is null)
       {
-        // if (AudioPath is not null)
-        // {
-        //   var resolvedAudio = SessionState.Path.GetUnresolvedProviderPathFromPSPath(AudioPath);
-        //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
-        // }
-        // else {
-        WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount));
-        // }
+        return;
       }
+      // if (AudioPath is not null)
+      // {
+      //   var resolvedAudio = SessionState.Path.GetUnresolvedProviderPathFromPSPath(AudioPath);
+      //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
+      // }
+      // else {
+      WriteObject(GifToSixel.ConvertGif(imageStream, MaxColors, Width, LoopCount));
+      // }
     }
     catch (Exception ex)
     {
-      WriteError(new ErrorRecord(ex, "SixelGifError", ErrorCategory.NotSpecified, null));
+      WriteError(new ErrorRecord(ex, "ConvertSixelGifCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));
+    }
+    finally
+    {
+      if (ParameterSetName != "Stream" && imageStream is not null)
+      {
+        imageStream.Dispose();
+      }
     }
   }
 }

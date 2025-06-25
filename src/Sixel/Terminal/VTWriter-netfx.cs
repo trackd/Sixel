@@ -1,11 +1,13 @@
 ﻿#if NET472
-using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Contains P/Invoke methods for accessing native Windows console handles and related operations (NET472 only).
+/// used for rendering gifs on Windows in net472.
+/// </summary>
 internal static class NativeMethods
 {
     private const uint GENERIC_READ = 0x80000000;

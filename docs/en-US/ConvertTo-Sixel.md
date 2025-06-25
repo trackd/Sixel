@@ -9,31 +9,38 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts an image to Sixel, Kitty, InlineImage or Ascii Blocks as fallback.  
+Converts an image to Sixel, Kitty, InlineImage or Blocks.  
+To display in the console  
 
 ## SYNTAX
 
 ### Path (Default)
 
 ```powershell
-ConvertTo-Sixel [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel [-Path] <String> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
 ```
 
 ### Url
 
 ```powershell
-ConvertTo-Sixel -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel -Url <Uri> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
 ```
 
 ### Stream
 
 ```powershell
-ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
+```
+
+### InputObject
+
+```powershell
+ConvertTo-Sixel -InputObject <String> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
-The `ConvertTo-Sixel` takes an image and converts it to sixel  
+The `ConvertTo-Sixel` converts an image to display in the console.  
 
 ## EXAMPLES
 
@@ -43,7 +50,7 @@ The `ConvertTo-Sixel` takes an image and converts it to sixel
 PS C:\> ConvertTo-Sixel -Url 'https://imgs.xkcd.com/comics/git_commit.png'
 ```
 
-Converts the xkcd to sixel  
+Converts the xkcd.  
 
 ### -------------------------- EXAMPLE 2 --------------------------
 
@@ -51,13 +58,13 @@ Converts the xkcd to sixel
 PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
 ```
 
-Converts a local file to sixel format  
+Converts a local file.  
 
 ## PARAMETERS
 
 ### -Path
 
-A path to a local image to convert to sixel.  
+A path to a local image.  
 
 ```yaml
 Type: String
@@ -73,7 +80,7 @@ Accept wildcard characters: False
 
 ### -Url
 
-A URL of the image to download and convert to sixel.  
+A URL of the image.  
 
 ```yaml
 Type: Uri
@@ -94,7 +101,23 @@ A stream of an image.
 ```yaml
 Type: Stream
 Parameter Sets: Stream
-Aliases: FileStream, InputStream, ImageStream, ContentStream
+Aliases: RawContentStream, FileStream, InputStream, ContentStream
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -InputObject
+
+InputObject from Pipeline, can be filepath or base64 encoded string of an image.  
+
+```yaml
+Type: String
+Parameter Sets: InputObject
+Aliases: 
 
 Required: True
 Position: Named
@@ -105,8 +128,9 @@ Accept wildcard characters: False
 
 ### -MaxColors
 
-The maximum number of colors to use in the image.  
-Max is 256.  
+The maximum number of colors to use in a sixel image.  
+Max is 256 colors.  
+(only applicable to sixel protocol)  
 
 ```yaml
 Type: int
@@ -123,6 +147,25 @@ Accept wildcard characters: False
 ### -Width
 
 Width of the image in character cells, the height will be scaled to maintain aspect ratio.  
+
+if both Width and Height are given then it will clamp to the smaller.  
+
+```yaml
+Type: int
+Parameter Sets: (All)
+Aliases: CellWidth
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Height
+
+Height of the image in character cells, the width will be scaled to maintain aspect ratio.  
+if both Width and Height are given then it will clamp to the smaller.  
 
 ```yaml
 Type: int
@@ -166,7 +209,7 @@ Aliases:
 
 Required: False
 Position: Named
-Default value: None
+Default value: ImageProtocol.Auto
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -175,17 +218,16 @@ Accept wildcard characters: False
 
 ### System.String
 
-Path, url, Stream of an image file  
+Path, url, Base64 String, Stream of an image file  
 
 ## OUTPUTS
 
 ### System.String
 
-a sixel string  
+A sixel string  
 
 ## NOTES
 
 This will only work if your terminal supports sixel images.  
-Windows Terminal version 1.22 or newer  
 
 ## RELATED LINKS

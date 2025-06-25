@@ -8,6 +8,9 @@ using System.Runtime.Loader;
 
 namespace Sixel.Shared;
 
+/// <summary>
+/// Custom AssemblyLoadContext for isolating and resolving assemblies in .NET 5.0 or greater environments.
+/// </summary>
 public class LoadContext : AssemblyLoadContext
 {
     private static LoadContext? _instance;

@@ -1,76 +1,56 @@
 ﻿using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using System;
 using System.Text;
-using System.Linq;
-using System.Numerics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
 
 public static class Blocks
 {
-    private static Rgba32 _backgroundColor;
-    public static string ImageToBlocks(Image<Rgba32> image, int cellWidth, int frame = 0, bool returnCursorToTopLeft = false)
+    public static string ImageToBlocks(Image<Rgba32> image, ImageSize imageSize)
     {
-        _backgroundColor = GetConsoleBackgroundColor();
-        var cellSize = Compatibility.GetCellSize();
-        var maxWidth = Console.WindowWidth - 2;
-        var characterWidth = (int)Math.Ceiling((double)image.Width / cellSize.PixelWidth);
-        var characterHeight = (int)Math.Ceiling((double)image.Height / cellSize.PixelHeight);
-
-        if (cellWidth <= 0 || cellWidth > maxWidth)
-        {
-            cellWidth = Math.Min(characterWidth, maxWidth);
-        }
+        // Resize the image directly to character cell dimensions (not pixel dimensions)
         image.Mutate(ctx =>
         {
-            // Calculate target size in pixels based on character dimensions
-            var pixelHeight = (int)Math.Round((double)image.Height / image.Width * cellWidth);
             ctx.Resize(new ResizeOptions
             {
-                Size = new Size(cellWidth, pixelHeight),
-                Sampler = KnownResamplers.Bicubic,
+                // *2 because each cell is 2 pixels high for blocks
+                Size = new Size(imageSize.Width, imageSize.Height * 2),
+                Sampler = KnownResamplers.NearestNeighbor, // Better for preserving sharp transparency edges
                 PremultiplyAlpha = false
             });
         });
-        var size = new Size(image.Width, image.Height);
-        var targetFrame = image.Frames[frame];
-        return ProcessFrame(targetFrame, size, returnCursorToTopLeft);
+        var targetFrame = image.Frames[0];
+        return ProcessFrame(targetFrame);
     }
-    private static string ProcessFrame(ImageFrame<Rgba32> frame, Size size, bool returnCursorToTopLeft)
+
+    internal static string ProcessFrame(ImageFrame<Rgba32> frame)
     {
         var _buffer = new StringBuilder();
+        var _backgroundColor = GetConsoleBackgroundColor();
 
-        for (int y = 0; y < size.Height; y += 2)
+        for (int y = 0; y < frame.Height; y += 2)
         {
-            if (y + 1 >= size.Height)
+            if (y + 1 >= frame.Height)
             {
                 _buffer.AppendLine();
                 break;
             }
 
-            for (int x = 0; x < size.Width; x++)
+            for (int x = 0; x < frame.Width; x++)
             {
                 var topPixel = frame[x, y];
                 var bottomPixel = frame[x, y + 1];
 
-                _buffer.ProcessPixelPairs(topPixel, bottomPixel);
+                _buffer.ProcessPixelPairs(topPixel, bottomPixel, _backgroundColor);
             }
             _buffer.AppendLine();
         }
-        if (returnCursorToTopLeft)
-        {
-
-            // Move the cursor back to the top left of the image.
-            _buffer.Append($"{Constants.ESC}[{size.Height}A");
-        }
         return _buffer.ToString();
     }
-    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom)
+    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom, Rgba32 _backgroundColor)
     {
         bool topTransparent = IsTransparent(top);
         bool bottomTransparent = IsTransparent(bottom);
@@ -83,48 +63,59 @@ public static class Blocks
         else if (topTransparent)
         {
             // Only bottom pixel is opaque, use lower half block
-            var bottomRgb = BlendPixels(bottom);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m");
+            var bottomRgb = BlendPixels(bottom, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
         else if (bottomTransparent)
         {
             // Only top pixel is opaque, use upper half block
-            var topRgb = BlendPixels(top);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m");
+            var topRgb = BlendPixels(top, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
         else
         {
             // Both pixels are opaque, set foreground and background colors, use upper half block
-            var topRgb = BlendPixels(top);
-            var bottomRgb = BlendPixels(bottom);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m");
-            _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m");
+            var topRgb = BlendPixels(top, _backgroundColor);
+            var bottomRgb = BlendPixels(bottom, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m".AsSpan());
+            _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
     }
-
-    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel)
+    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor)
     {
-        // fast path for fully transparent pixels
-        if (pixel.A == 0)
+        // If pixel is fully transparent, return the background color
+        if (IsTransparent(pixel))
         {
-            return (pixel.R, pixel.G, pixel.B);
+            return (_backgroundColor.R, _backgroundColor.G, _backgroundColor.B);
         }
-        // var foregroundMultiplier = pixel.A / 255;
-        // var backgroundMultiplier = 100 - foregroundMultiplier;
-        // (byte)(pixel.R * foregroundMultiplier + _backgroundColor.R * backgroundMultiplier);
+
         float amount = pixel.A / 255f;
 
-        byte r = (byte)(pixel.R * amount + _backgroundColor.R * (1 - amount));
-        byte g = (byte)(pixel.G * amount + _backgroundColor.G * (1 - amount));
-        byte b = (byte)(pixel.B * amount + _backgroundColor.B * (1 - amount));
+        byte r = (byte)(pixel.R * amount + (_backgroundColor.R * (1 - amount)));
+        byte g = (byte)(pixel.G * amount + (_backgroundColor.G * (1 - amount)));
+        byte b = (byte)(pixel.B * amount + (_backgroundColor.B * (1 - amount)));
 
         return (r, g, b);
+    }    private static bool IsTransparent(Rgba32 pixel)
+    {
+        // Calculate luminance for better edge artifact detection
+        float luminance = (0.299f * pixel.R + 0.587f * pixel.G + 0.114f * pixel.B) / 255f;
+
+        // Consider pixels transparent if:
+        // 1. Alpha is very low (traditional transparency)
+        // 2. Alpha is low and pixel is very dark (common resizing artifacts)
+        // 3. Alpha is moderate and luminance is extremely low (aggressive edge artifact removal)
+        // 4. Alpha is low and color is close to pure black (black edge artifacts)
+        // 5. Very aggressive: moderately transparent with low luminance (catches most edge cases)
+        return pixel.A < 8 ||
+               (pixel.A < 32 && luminance < 0.15f) ||
+               (pixel.A < 64 && pixel.R < 12 && pixel.G < 12 && pixel.B < 12) ||
+               (pixel.A < 128 && luminance < 0.05f) ||
+               (pixel.A < 240 && luminance < 0.01f);
     }
-    private static bool IsTransparent(Rgba32 pixel) => pixel.A < 5;
     private static Rgba32 GetConsoleBackgroundColor()
     {
-        var color = Console.BackgroundColor switch
-        {
+        var color = Console.BackgroundColor switch {
             ConsoleColor.Black => Color.FromRgb(0, 0, 0),
             ConsoleColor.Blue => Color.FromRgb(0, 0, 170),
             ConsoleColor.Cyan => Color.FromRgb(0, 170, 170),
@@ -141,7 +132,7 @@ public static class Blocks
             ConsoleColor.Red => Color.FromRgb(170, 0, 0),
             ConsoleColor.White => Color.FromRgb(255, 255, 255),
             ConsoleColor.Yellow => Color.FromRgb(170, 170, 0),
-            _ => Color.FromRgb(0, 0, 0)
+            _ => Color.Transparent,
         };
         return color.ToPixel<Rgba32>();
     }

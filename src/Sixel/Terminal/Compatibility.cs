@@ -1,8 +1,11 @@
 using Sixel.Terminal.Models;
-using System.Diagnostics;
+using System.Globalization;
 
 namespace Sixel.Terminal;
 
+/// <summary>
+/// Provides methods and cached properties for detecting terminal compatibility, supported protocols, and cell/window sizes.
+/// </summary>
 public static class Compatibility
 {
   /// <summary>
@@ -26,16 +29,6 @@ public static class Compatibility
   private static TerminalInfo? _terminalInfo;
 
   /// <summary>
-  /// Window size in pixels
-  /// </summary>
-  // private static WindowSizePixels? _windowSizePixels;
-
-  /// <summary>
-  /// Window size in characters
-  /// </summary>
-  // private static WindowSizeCharacters? _windowSizeCharacters;
-
-  /// <summary>
   /// Get the response to a control sequence.
   /// </summary>
   public static string GetControlSequenceResponse(string controlSequence)
@@ -43,14 +36,12 @@ public static class Compatibility
     char? c;
     var response = string.Empty;
 
-    // Console.Write($"{Constants.ESC}{controlSequence}{Constants.ST}");
     Console.Write($"{Constants.ESC}{controlSequence}");
     do
     {
       c = Console.ReadKey(true).KeyChar;
       response += c;
     } while (c != 'c' && Console.KeyAvailable);
-
     return response;
   }
 
@@ -62,7 +53,7 @@ public static class Compatibility
   /// <returns>The number of pixel sixels that will fit in a single character cell.</returns>
   public static CellSize GetCellSize()
   {
-    if (_cellSize != null)
+    if (_cellSize is not null)
     {
       return _cellSize;
     }
@@ -74,8 +65,10 @@ public static class Compatibility
       var parts = response.Split(';', 't');
       _cellSize = new CellSize
       {
-        PixelWidth = int.Parse(parts[2]),
-        PixelHeight = int.Parse(parts[1])
+        PixelWidth = int.Parse(parts[2],NumberStyles.Number,
+          CultureInfo.InvariantCulture),
+        PixelHeight = int.Parse(parts[1],NumberStyles.Number,
+          CultureInfo.InvariantCulture)
       };
     }
     catch
@@ -91,63 +84,6 @@ public static class Compatibility
   }
 
   /// <summary>
-  /// Get the window size in pixels
-  /// </summary>
-  /// <returns>WindowSizePixels</returns>
-  // public static WindowSizePixels GetWindowSizePixels()
-  // {
-  //   // this class should be able to re-run, people can resize the terminal
-  //   // so should not cache the result.. hopefully this is not too slow
-  //   var response14 = GetControlSequenceResponse("[14t");
-  //   try
-  //   {
-  //     var parts14 = response14.Split(';', 't');
-  //     _windowSizePixels = new WindowSizePixels
-  //     {
-  //       PixelWidth = int.Parse(parts14[2]),
-  //       PixelHeight = int.Parse(parts14[1]),
-  //     };
-  //   }
-  //   catch
-  //   {
-  //     _windowSizePixels = new WindowSizePixels
-  //     {
-  //       PixelWidth = 0,
-  //       PixelHeight = 0
-  //     };
-  //   }
-  //   return _windowSizePixels;
-  // }
-
-  /// <summary>
-  /// Get the window size in characters
-  /// </summary>
-  /// <returns>WindowSizeCharacters</returns>
-  // public static WindowSizeCharacters GetWindowSizeCharacters()
-  // {
-  //   // this class should be able to re-run, people can resize the terminal
-  //   // so should not cache the result.. hopefully this is not too slow
-  //   var response18 = GetControlSequenceResponse("[18t");
-  //   try
-  //   {
-  //     var parts18 = response18.Split(';', 't');
-  //     _windowSizeCharacters = new WindowSizeCharacters
-  //     {
-  //       CharacterWidth = int.Parse(parts18[2]),
-  //       CharacterHeight = int.Parse(parts18[1]),
-  //     };
-  //   }
-  //   catch {
-  //     _windowSizeCharacters = new WindowSizeCharacters
-  //     {
-  //       CharacterWidth = 0,
-  //       CharacterHeight = 0
-  //     };
-  //   }
-  //   return _windowSizeCharacters;
-  // }
-
-  /// <summary>
   /// Check if the terminal supports sixel graphics.
   /// This is done by sending the terminal a Device Attributes request.
   /// If the terminal responds with a response that contains ";4;" then it supports sixel graphics.
@@ -160,7 +96,8 @@ public static class Compatibility
     {
       return _terminalSupportsSixel.Value;
     }
-    _terminalSupportsSixel = GetControlSequenceResponse("[c").Contains(";4;");
+    var response = GetControlSequenceResponse("[c");
+    _terminalSupportsSixel = response.Contains(";4;") || response.Contains(";4c");
     return _terminalSupportsSixel.Value;
   }
 
@@ -177,7 +114,6 @@ public static class Compatibility
       return _terminalSupportsKitty.Value;
     }
     string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ST}{Constants.ESC}[c";
-    // string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ESC}\\";
     _terminalSupportsKitty = GetControlSequenceResponse(kittyTest).Contains(";OK");
     return _terminalSupportsKitty.Value;
   }

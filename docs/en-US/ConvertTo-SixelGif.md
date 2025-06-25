@@ -33,6 +33,12 @@ ConvertTo-SixelGif -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopC
 ConvertTo-SixelGif -Stream <stream> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
+### InputObject
+
+```powershell
+ConvertTo-SixelGif -InputObject <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+```
+
 ## DESCRIPTION
 
 The `ConvertTo-SixelGif` takes a gif and converts it to sixel animation  
@@ -94,7 +100,7 @@ A stream of an image.
 ```yaml
 Type: Stream
 Parameter Sets: Stream
-Aliases: FileStream, InputStream, ImageStream, ContentStream
+Aliases: RawContentStream, FileStream, InputStream, ContentStream
 
 Required: True
 Position: Named

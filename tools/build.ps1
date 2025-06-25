@@ -20,6 +20,22 @@ $output = Join-Path $reporoot 'output'
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
 }
+$csproj = Get-ChildItem -File -Include *.csproj -Recurse -Path $reporoot
+$ModuleFile = Import-PowerShellDataFile -Path (Join-Path $reporoot 'Module' 'Sixel.psd1')
+$newVersion = '<Version>{0}</Version>' -f $ModuleFile.ModuleVersion.ToString()
+
+foreach ($project in $csproj) {
+    $Content = Get-Content $project.FullName -Raw
+    # update <Version> tag in csproj file to match Module version
+    if ($Content -match $newVersion) {
+        # Write-Host "Version already set to $newVersion in $($project.Name)"
+        continue
+    }
+    $Content = $Content -replace '<Version>.*</Version>', $newVersion
+    Write-Host "Updating version to $newVersion in $($project.Name)"
+    Set-Content -Path $project.FullName -Value $Content -Force
+}
+
 Invoke-ModuleBuilder -Path $reporoot
 
 $docspath = Join-Path $output 'en-US'
@@ -51,7 +67,14 @@ $sb = {
     & $tools/Pester.ps1 -TestPath $TestPath -OutputFile $reportFile
 }
 
-if ($PSVersionTable.PSEdition -eq 'Core') {
+if ((Get-Process -Id $pid).CommandLine -match '-NoExit') {
+    # detect when launched from vscode launch settings
+    Write-Host "Running tests in current session"
+    . $sb $testargs
+    ConvertTo-Sixel .\assets\cog.png -Protocol Sixel
+}
+elseif ($PSVersionTable.PSEdition -eq 'Core') {
+    Write-Host "Running tests in a new pwsh"
     pwsh -NoProfile -Command $sb -args $testargs
 }
 else {

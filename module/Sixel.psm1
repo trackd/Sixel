@@ -36,6 +36,13 @@ else {
         $modPath = [Path]::Combine($PSScriptRoot, 'bin', 'net472', "$moduleName.dll")
         &$importModule -Name $modPath -ErrorAction Stop -PassThru
     }
+    $registerEngineEventSplat = @{
+        SourceIdentifier = ([System.Management.Automation.PsEngineEvent]::Exiting)
+        Action           = {
+            $appDomain.remove_AssemblyResolve($resolver)
+        }
+    }
+    Register-EngineEvent @registerEngineEventSplat
 }
 
 if ($isReload) {
@@ -53,12 +60,3 @@ if ($isReload) {
         $addExportedCmdlet.Invoke($ExecutionContext.SessionState.Module, @(, $cmd))
     }
 }
-
-$OnRemove = {
-    $appDomain.remove_AssemblyResolve($resolver)
-}
-$registerEngineEventSplat = @{
-    SourceIdentifier = ([System.Management.Automation.PsEngineEvent]::Exiting)
-    Action           = $OnRemove
-}
-Register-EngineEvent @registerEngineEventSplat
