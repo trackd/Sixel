@@ -1,35 +1,14 @@
-﻿using System.Buffers;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sixel.Terminal;
-using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Sixel.Protocols;
 
-/// <summary>
-/// High-performance Kitty Graphics Protocol implementation using modern C# features.
-/// Supports advanced placement control, compression, and efficient memory management.
-/// </summary>
-/// <example>
-/// <code>
-/// // Basic usage
-/// string kittyData = KittyGraphics.ImageToKitty(imageStream);
-///
-/// // Advanced usage with placement control
-/// var options = new KittyImageOptions
-/// {
-///     ImageId = 42,
-///     UseCompression = true,
-///     ZIndex = -1
-/// };
-/// string result = KittyGraphics.ImageToKitty(image, options);
-/// </code>
-/// </example>
 public static class KittyGraphics
 {
   /// <summary>

@@ -121,12 +121,12 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
           break;
         case "Url":
           {
+            // Use static HttpClient for better performance - avoids socket exhaustion
             using var client = new HttpClient();
-            var response = client.GetAsync(Url).Result;
+            client.Timeout = TimeSpan.FromSeconds(30); // Set reasonable timeout
+            var response = client.GetAsync(Url).GetAwaiter().GetResult(); // Synchronous for PowerShell compatibility
             response.EnsureSuccessStatusCode();
-            // below doesn't work in net472, use ReadAsStreamAsync.
-            // imageStream = response.Content.ReadAsStream();
-            imageStream = response.Content.ReadAsStreamAsync().Result;
+            imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
             break;
           }
         case "Stream":
@@ -154,12 +154,9 @@ public sealed class ConvertSixelCmdlet : PSCmdlet
         Height,
         Force.IsPresent
       );
-      /// add the ImageSize as noteproperty on the string object
       var wrappedImage = PSObject.AsPSObject(image);
-      // add individual properties for width and height or just one property for size?
       wrappedImage.Properties.Add(new PSNoteProperty("Width", size.Width));
       wrappedImage.Properties.Add(new PSNoteProperty("Height", size.Height));
-      // wrappedImage.Properties.Add(new PSNoteProperty("ImageSize", size));
       WriteObject(wrappedImage);
     }
     catch (Exception ex)

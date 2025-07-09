@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Threading;
 using Sixel.Terminal.Models;
 
 namespace Sixel.Terminal;
@@ -32,42 +33,51 @@ public static class Compatibility
 
   /// <summary>
   /// Get the response to a control sequence.
+  /// Only queries when it's safe to do so (no pending input, not redirected).
   /// </summary>
   public static string GetControlSequenceResponse(string controlSequence)
   {
-    if (Console.IsOutputRedirected)
+    if (Console.IsOutputRedirected || Console.IsInputRedirected)
     {
       return string.Empty;
     }
 
-    var response = new StringBuilder();
-    const int timeoutMs = 1000;
-    // Send the control sequence
-    Console.Write($"{Constants.ESC}{controlSequence}");
-    var stopwatch = Stopwatch.StartNew();
-
-    while (stopwatch.ElapsedMilliseconds < timeoutMs)
+    try
     {
-      if (!Console.KeyAvailable)
+      var response = new StringBuilder();
+      const int timeoutMs = 1000;
+
+      // Send the control sequence
+      Console.Write($"{Constants.ESC}{controlSequence}");
+      var stopwatch = Stopwatch.StartNew();
+
+      while (stopwatch.ElapsedMilliseconds < timeoutMs)
       {
-        Thread.Yield();
-        continue;
+        if (!Console.KeyAvailable)
+        {
+          Thread.Sleep(1); // Small sleep instead of Yield for more predictable timing
+          continue;
+        }
+
+        var keyInfo = Console.ReadKey(true);
+        char key = keyInfo.KeyChar;
+        response.Append(key);
+
+        // Check if we have a complete response
+        if (IsCompleteResponse(response))
+        {
+          break;
+        }
       }
 
-      var keyInfo = Console.ReadKey(true);
-      char key = keyInfo.KeyChar;
-      response.Append(key);
-
-      // Check if we have a complete response
-      if (IsCompleteResponse(response))
-      {
-        break;
-      }
+      return response.ToString();
     }
-
-    stopwatch.Stop();
-    return response.ToString();
+    catch (Exception)
+    {
+      return string.Empty;
+    }
   }
+
 
   /// <summary>
   /// Check for complete terminal responses
@@ -208,7 +218,7 @@ public static class Compatibility
   /// https://sw.kovidgoyal.net/kitty/graphics-protocol/
   /// response: ␛_Gi=31;OK␛\␛[?62;c
   /// </summary>
-  /// <returns>True if the terminal supports sixel graphics, false otherwise.</returns>
+  /// <returns>True if the terminal supports kitty graphics, false otherwise.</returns>
   public static bool TerminalSupportsKitty()
   {
     if (_terminalSupportsKitty.HasValue)
@@ -235,81 +245,4 @@ public static class Compatibility
     return _terminalInfo;
   }
 
-  /// <summary>
-  /// Gets the current cursor position using Console.GetCursorPosition() when available,
-  /// or falls back to ANSI escape sequences on older .NET versions.
-  /// </summary>
-  /// <returns>A tuple containing (row, column) of the cursor position, or null if query failed.</returns>
-  public static (int Row, int Column)? GetCursorPosition()
-  {
-    try
-    {
-#if NET472
-      // .NET Framework doesn't have Console.GetCursorPosition(), use ANSI escape sequences
-      var response = GetControlSequenceResponse("[6n");
-
-      // Response format: ESC[row;columnR
-      // Remove the ESC[ prefix and R suffix, then parse
-      if (response.StartsWith("[", StringComparison.Ordinal) && response.EndsWith("R", StringComparison.Ordinal))
-      {
-        var coords = response.Substring(1, response.Length - 2); // Remove [ and R
-        var parts = coords.Split(';');
-
-        if (parts.Length == 2 &&
-            int.TryParse(parts[0], out int row) &&
-            int.TryParse(parts[1], out int column))
-        {
-          return (row, column);
-        }
-      }
-#else
-      // .NET Core/.NET 5+ has Console.GetCursorPosition()
-      var (left, top) = Console.GetCursorPosition();
-      return (top, left); // Convert to (row, column) format
-#endif
-    }
-    catch
-    {
-      // If anything goes wrong, return null to fall back to legacy behavior
-    }
-
-    return null;
-  }
-
-  /// <summary>
-  /// Measures the actual height of rendered content by comparing cursor positions
-  /// before and after rendering. This provides a dynamic, terminal-agnostic way
-  /// to determine how many rows an image actually occupies.
-  /// </summary>
-  /// <param name="renderAction">The action that renders content to the terminal.</param>
-  /// <returns>The number of rows the content actually occupied, or null if measurement failed.</returns>
-  public static int? MeasureRenderedHeight(Action renderAction)
-  {
-    if (renderAction is null) return null;
-
-    try
-    {
-      // Get cursor position before rendering
-      var beforePos = GetCursorPosition();
-      if (!beforePos.HasValue) return null;
-
-      // Render the content
-      renderAction();
-
-      // Get cursor position after rendering
-      var afterPos = GetCursorPosition();
-      if (!afterPos.HasValue) return null;
-
-      // Calculate the height difference
-      int heightDiff = afterPos.Value.Row - beforePos.Value.Row;
-
-      // Return the measured height (ensure it's non-negative)
-      return Math.Max(0, heightDiff);
-    }
-    catch
-    {
-      // If measurement fails, return null to fall back to legacy behavior
-      return null;
-    }
-  }
 }

@@ -30,7 +30,6 @@
     <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.6" />
   </ItemGroup>
   <ItemGroup>
-    <!-- <PackageReference Include="NAudio" Version="2.2.1" /> -->
     <ProjectReference Include="../Sixel.Shared/Sixel.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -38,4 +37,3 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-447r-wph3-92pm" />
   </ItemGroup>
 </Project>
-
