@@ -17,7 +17,7 @@ public static class SizeHelper
     /// <returns>Image size in terminal character cells.</returns>
     public static ImageSize ConvertToCharacterCells(Image<Rgba32> image)
     {
-        return ConvertToCharacterCells(image.Width, image.Height);
+        return GetCharacterCellSize(image.Width, image.Height);
     }
 
     /// <summary>
@@ -29,25 +29,7 @@ public static class SizeHelper
     public static ImageSize ConvertToCharacterCells(Stream imageStream)
     {
         using var image = Image.Load<Rgba32>(imageStream);
-        return ConvertToCharacterCells(image.Width, image.Height);
-    }
-
-    /// <summary>
-    /// Converts pixel dimensions to terminal character cells.
-    /// Does not apply any constraints, just converts the natural size.
-    /// </summary>
-    /// <param name="pixelWidth">Width in pixels.</param>
-    /// <param name="pixelHeight">Height in pixels.</param>
-    /// <returns>Dimensions in terminal character cells.</returns>
-    public static ImageSize ConvertToCharacterCells(int pixelWidth, int pixelHeight)
-    {
-        var cellSize = Compatibility.GetCellSize();
-
-        // Calculate natural dimensions in cells (rounded down to ensure fit)
-        var cellWidth = (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth);
-        var cellHeight = (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight);
-
-        return new ImageSize(cellWidth, cellHeight);
+        return GetCharacterCellSize(image.Width, image.Height);
     }
 
     /// <summary>
@@ -57,8 +39,8 @@ public static class SizeHelper
     {
         var cellSize = Compatibility.GetCellSize();
         return new ImageSize(
-            (int)Math.Floor((double)pixelWidth / cellSize.PixelWidth),
-            (int)Math.Floor((double)pixelHeight / cellSize.PixelHeight)
+            (int)Math.Ceiling((double)pixelWidth / cellSize.PixelWidth),
+            (int)Math.Ceiling((double)pixelHeight / cellSize.PixelHeight)
         );
     }
 
@@ -69,79 +51,42 @@ public static class SizeHelper
         => GetCharacterCellSize(image.Width, image.Height);
     /// <summary>
     /// Gets the resized size in terminal character cells for an image, given max width/height constraints.
-    /// Maintains aspect ratio. If both are null, returns the current size.
+    /// Maintains aspect ratio and ensures proper sixel alignment (multiples of 6 pixels).
     /// </summary>
     public static ImageSize GetResizedCharacterCellSize(int pixelWidth, int pixelHeight, int maxCellWidth, int maxCellHeight)
     {
         var cellSize = Compatibility.GetCellSize();
 
-        // natural cell size for the image
-        int naturalCellW = Math.Max(1, (int)Math.Ceiling((double)pixelWidth / cellSize.PixelWidth));
-        int naturalCellH = Math.Max(1, (int)Math.Ceiling((double)pixelHeight / cellSize.PixelHeight));
+        // Calculate natural cell dimensions
+        var naturalSize = GetCharacterCellSize(pixelWidth, pixelHeight);
 
-        // clamp cell dimensions to window
+        // Apply window constraints
         int windowWidth = Console.WindowWidth - 2;
         int windowHeight = Console.WindowHeight - 2;
         int maxCellsW = maxCellWidth > 0 ? Math.Min(maxCellWidth, windowWidth) : windowWidth;
         int maxCellsH = maxCellHeight > 0 ? Math.Min(maxCellHeight, windowHeight) : windowHeight;
 
-        // scale to fit max with aspect ratio
-        double scaleW = (double)maxCellsW / naturalCellW;
-        double scaleH = (double)maxCellsH / naturalCellH;
-        // dont upscale
-        double scale = Math.Min(1.0, Math.Min(scaleW, scaleH));
+        // Calculate scale to fit within constraints while maintaining aspect ratio
+        double scaleW = (double)maxCellsW / naturalSize.Width;
+        double scaleH = (double)maxCellsH / naturalSize.Height;
+        double scale = Math.Min(scaleW, scaleH); // Allow upscaling within terminal bounds
 
-        int cellW = Math.Max(1, (int)Math.Floor(naturalCellW * scale));
-        int cellH = Math.Max(1, (int)Math.Floor(naturalCellH * scale));
+        // Apply scaling
+        int cellW = Math.Max(1, (int)Math.Floor(naturalSize.Width * scale));
+        int cellH = Math.Max(1, (int)Math.Floor(naturalSize.Height * scale));
 
-        // sixel boundary adjustments
-        int pixelH = cellH * cellSize.PixelHeight;
-        // round down to nearest 6
-        int sixelAlignedPixelH = pixelH - (pixelH % 6);
-        if (sixelAlignedPixelH <= 0) sixelAlignedPixelH = 6;
-        int finalCellH = Math.Max(1, sixelAlignedPixelH / cellSize.PixelHeight);
+        // Calculate the pixel height and round UP to the nearest multiple of 6
+        int targetPixelH = cellH * cellSize.PixelHeight;
+        int sixelAlignedPixelH = (targetPixelH + 5) / 6 * 6; // Round up to multiple of 6
 
-        return new ImageSize(cellW, finalCellH);
-    }
-    /// <summary>
-    /// Testing some other variants of resizing logic.
-    /// </summary>
-    public static ImageSize GetResizedCharacterCellSizeTest(int pixelWidth, int pixelHeight, int maxCellWidth, int maxCellHeight)
-    {
-        var cellSize = Compatibility.GetCellSize();
-
-        // natural cell size for the image
-        int naturalCellW = (int)Math.Round((double)pixelWidth / cellSize.PixelWidth);
-        int naturalCellH = (int)Math.Round((double)pixelHeight / cellSize.PixelHeight);
-
-        // clamp cell dimensions to window
-        int windowWidth = Console.WindowWidth - 2;
-        int windowHeight = Console.WindowHeight - 2;
-        int maxCellsW = maxCellWidth > 0 ? Math.Min(maxCellWidth, windowWidth) : windowWidth;
-        int maxCellsH = maxCellHeight > 0 ? Math.Min(maxCellHeight, windowHeight) : windowHeight;
-
-        // scale to fit max with aspect ratio
-        double scaleW = Math.Round((double)maxCellsW / naturalCellW);
-        double scaleH = Math.Round((double)maxCellsH / naturalCellH);
-        // dont upscale
-        double scale = Math.Min(1.0, Math.Min(scaleW, scaleH));
-
-        int cellW = Math.Max(1, (int)Math.Round(naturalCellW * scale));
-        int cellH = Math.Max(1, (int)Math.Round(naturalCellH * scale));
-
-        // sixel boundary adjustments
-        int pixelH = cellH * cellSize.PixelHeight;
-        // round down to nearest 6
-        int sixelAlignedPixelH = pixelH - (pixelH % 6);
-        if (sixelAlignedPixelH <= 0) sixelAlignedPixelH = 6;
-        int finalCellH = Math.Max(1, (int)Math.Round((double)sixelAlignedPixelH / cellSize.PixelHeight));
+        // Convert back to cells, ensuring we have at least 1 cell
+        int finalCellH = Math.Max(1, (int)Math.Ceiling((double)sixelAlignedPixelH / cellSize.PixelHeight));
 
         return new ImageSize(cellW, finalCellH);
     }
-
     /// <summary>
     /// Gets the resized size in terminal character cells for an image, given max width/height constraints.
-    /// Maintains aspect ratio. If both are null, returns the current size.
+    /// Maintains aspect ratio and ensures proper sixel alignment (multiples of 6 pixels).
     /// </summary>
     public static ImageSize GetResizedCharacterCellSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
         => GetResizedCharacterCellSize(image.Width, image.Height, maxCellWidth, maxCellHeight);

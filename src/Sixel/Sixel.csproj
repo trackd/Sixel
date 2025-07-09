@@ -4,7 +4,7 @@
     <TargetFrameworks>net472;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--<AllowUnsafeBlocks>true</AllowUnsafeBlocks> -->
     <LangVersion>13.0</LangVersion>
     <Version>0.5.0</Version>
     <AnalysisMode>Recommended</AnalysisMode>
