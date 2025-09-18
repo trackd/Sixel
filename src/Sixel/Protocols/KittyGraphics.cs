@@ -6,6 +6,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Sixel.Protocols;
+
 public static class KittyGraphics
 {
   /// <summary>

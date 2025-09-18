@@ -3,8 +3,6 @@ using Sixel.Terminal.Models;
 using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Protocols;
 
@@ -25,9 +23,11 @@ public static class Sixel
   }
   internal static string FrameToSixelString(ImageFrame<Rgba32> frame)
   {
-    var sixelBuilder = new StringBuilder();
-    var sixel = new StringBuilder();
-    var palette = new Dictionary<Rgba32, int>();
+    // Pre-allocate StringBuilder with estimated capacity for better performance
+    var estimatedSize = frame.Width * frame.Height / 4; // Rough estimate based on compression
+    var sixelBuilder = new StringBuilder(estimatedSize);
+    var sixel = new StringBuilder(estimatedSize / 2);
+    var palette = new Dictionary<Rgba32, int>(256); // Pre-size for typical max colors
     var colorCounter = 1;
     sixel.StartSixel(frame.Width, frame.Height);
     frame.ProcessPixelRows(accessor =>

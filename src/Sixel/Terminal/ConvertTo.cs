@@ -50,7 +50,19 @@ public static class ConvertTo
         }
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
-        var imageSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
+
+        // For Sixel and Blocks: use natural sizing if no constraints, otherwise apply constraints
+        ImageSize constrainedSize;
+        if (width == 0 && height == 0)
+        {
+            // No constraints specified - use natural image size
+            constrainedSize = SizeHelper.ConvertToCharacterCells(image);
+        }
+        else
+        {
+            // Constraints specified - apply resizing logic
+            constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
+        }
 
         // Use the resolved protocol for all logic below
         switch (protocol)
@@ -60,14 +72,21 @@ public static class ConvertTo
                 {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                return (imageSize, Protocols.Sixel.ImageToSixel(image, imageSize, maxColors));
+                // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
+                var resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
+                var finalSize = SizeHelper.GetCharacterCellSize(resized);
+                var frame = resized.Frames[0];
+                var data = Protocols.Sixel.FrameToSixelString(frame);
+                return (finalSize, data);
 
             case ImageProtocol.KittyGraphicsProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force)
                 {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
-                return (imageSize, KittyGraphics.ImageToKitty(image, imageSize));
+                // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
+                var kittySize = constrainedSize;
+                return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force)
@@ -75,10 +94,12 @@ public static class ConvertTo
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
                 }
                 imageStream.Position = 0;
-                return (imageSize, InlineImage.ImageToInline(imageStream, imageSize));
+                // Pass raw width/height to InlineImage - 0 values become "auto"
+                var inlineSize = new ImageSize(width, height);
+                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
 
             case ImageProtocol.Blocks:
-                return (imageSize, Blocks.ImageToBlocks(image, imageSize));
+                return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));
 
             default:
                 throw new InvalidOperationException($"Unsupported image protocol: {protocol}");

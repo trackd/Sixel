@@ -78,12 +78,6 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
   )]
   [ValidateRange(1, 256)]
   public int LoopCount { get; set; } = 3;
-  // [Parameter(
-  //       HelpMessage = "The audio track to overlay the gif"
-  // )]
-  // [ValidateNotNullOrEmpty]
-  // [Alias("AudioFile")]
-  // public string? AudioPath { get; set; }
   protected override void ProcessRecord()
   {
     Stream? imageStream = null;
@@ -121,11 +115,12 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
           break;
         case "Url":
           {
+            // Use consistent HTTP client pattern with timeout
             using var client = new HttpClient();
-            var response = client.GetAsync(Url).Result;
+            client.Timeout = TimeSpan.FromSeconds(30);
+            var response = client.GetAsync(Url).GetAwaiter().GetResult();
             response.EnsureSuccessStatusCode();
-            // imageStream = response.Content.ReadAsStream();
-            imageStream = response.Content.ReadAsStreamAsync().Result;
+            imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
             break;
           }
         case "Stream":
@@ -143,14 +138,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet
       {
         return;
       }
-      // if (AudioPath is not null)
-      // {
-      //   var resolvedAudio = SessionState.Path.GetUnresolvedProviderPathFromPSPath(AudioPath);
-      //   WriteObject(GifToSixel.LoadGif(imageStream, MaxColors, Width, LoopCount, resolvedAudio));
-      // }
-      // else {
       WriteObject(GifToSixel.ConvertGif(imageStream, MaxColors, Width, LoopCount));
-      // }
     }
     catch (Exception ex)
     {
