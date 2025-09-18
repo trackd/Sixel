@@ -95,12 +95,12 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
 }
 Describe 'Sixel Module ConvertTo-SixelGif Tests' {
     It 'Should convert an image to SixelGif format' {
-        $test = ConvertTo-SixelGif -Path ([System.IO.Path]::Combine($imagePath, 'excited.gif')) -Width 10 -Force -LoopCount 1
+        $test = ConvertTo-SixelGif -Path ([System.IO.Path]::Combine($imagePath, 'excited.gif')) -Force -Width 30 -LoopCount 1
         $test | Should -Not -BeNullOrEmpty
         $test.GetType().FullName | Should -Be 'Sixel.Terminal.Models.SixelGif'
         $test.FrameCount | Should -Be 28
-        $test.Width | Should -Be 10
-        $test.Height | Should -Be 3
+        $test.Width | Should -Be 30
+        $test.Height | Should -Be 12
         $test.LoopCount | Should -Be 1
         $test.Delay | Should -Be 100
     }

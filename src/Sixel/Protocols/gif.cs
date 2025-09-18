@@ -36,12 +36,15 @@ public static class GifToSixel
     var metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
     int frameCount = resizedImage.Frames.Count;
 
+    // Derive final cell size from actual resized pixels to avoid drift vs. requested imageSize
+    var finalSize = SizeHelper.GetCharacterCellSize(resizedImage);
+
     var gif = new SixelGif() {
       Sixel = new List<string>(frameCount), // Pre-allocate capacity for better performance
       Delay = metadata?.FrameDelay * 10 ?? 1000,
       LoopCount = LoopCount,
-      Height = imageSize.Height,
-      Width = imageSize.Width,
+      Height = finalSize.Height,
+      Width = finalSize.Width,
     };
 
     // Pre-allocate and process frames efficiently

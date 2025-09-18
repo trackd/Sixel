@@ -70,23 +70,28 @@ public static class SizeHelper
             return new ImageSize(1, 1);
         }
 
-        // Determine terminal constraints in cells; avoid arbitrary -2 margins that can lead to mismatches/clipping.
-        int windowCellsW = Math.Max(1, Console.WindowWidth);
-        int windowCellsH = Math.Max(1, Console.WindowHeight);
-        int maxCellsW = maxCellWidth > 0 ? Math.Min(maxCellWidth, windowCellsW) : windowCellsW;
-        int maxCellsH = maxCellHeight > 0 ? Math.Min(maxCellHeight, windowCellsH) : windowCellsH;
+        // Treat 0 as "no constraint" instead of clamping to the current window size.
+        bool constrainW = maxCellWidth > 0;
+        bool constrainH = maxCellHeight > 0;
 
-        // Convert constraints to pixel budgets
-        int maxPixelsW = Math.Max(1, maxCellsW * cellSize.PixelWidth);
-        int maxPixelsH = Math.Max(1, maxCellsH * cellSize.PixelHeight);
+        // Convert constraints to pixel budgets; Infinity for unconstrained.
+        double maxPixelsW = constrainW ? (double)maxCellWidth * cellSize.PixelWidth : double.PositiveInfinity;
+        double maxPixelsH = constrainH ? (double)maxCellHeight * cellSize.PixelHeight : double.PositiveInfinity;
 
-        // Respect sixel: height budget should be multiple of 6 to ensure no overflow after alignment
-        int maxPixelsHAligned = Math.Max(6, (maxPixelsH / 6) * 6);
+        // Respect sixel: when height is constrained, align the pixel budget to a multiple of 6px.
+        if (constrainH)
+        {
+            maxPixelsH = Math.Max(6.0, Math.Floor(maxPixelsH / 6.0) * 6.0);
+        }
 
         // Compute scale in pixel space to preserve aspect ratio
-        double scaleW = (double)maxPixelsW / pixelWidth;
-        double scaleH = (double)maxPixelsHAligned / pixelHeight;
-        double scale = Math.Min(scaleW, scaleH); // allow up/down scaling within bounds
+        double scaleW = double.IsInfinity(maxPixelsW) ? double.PositiveInfinity : maxPixelsW / pixelWidth;
+        double scaleH = double.IsInfinity(maxPixelsH) ? double.PositiveInfinity : maxPixelsH / pixelHeight;
+        double scale = Math.Min(scaleW, scaleH);
+        if (double.IsInfinity(scale) || scale <= 0)
+        {
+            scale = 1.0; // No constraints provided
+        }
 
         // Scaled pixel size
         int scaledPixelW = Math.Max(1, (int)Math.Round(pixelWidth * scale));
@@ -99,9 +104,16 @@ public static class SizeHelper
         int cellW = Math.Max(1, (int)Math.Ceiling((double)scaledPixelW / cellSize.PixelWidth));
         int cellH = Math.Max(1, (int)Math.Ceiling((double)effectiveScaledPixelH / cellSize.PixelHeight));
 
-        // Clamp after rounding up to ensure we never exceed terminal bounds
-        cellW = Math.Min(cellW, maxCellsW);
-        cellH = Math.Min(cellH, maxCellsH);
+        // Clamp to explicit constraints only
+        if (constrainW)
+        {
+            cellW = Math.Min(cellW, maxCellWidth);
+        }
+
+        if (constrainH)
+        {
+            cellH = Math.Min(cellH, maxCellHeight);
+        }
 
         return new ImageSize(cellW, cellH);
     }

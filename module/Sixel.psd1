@@ -4,7 +4,7 @@
 
 @{
     RootModule             = 'Sixel.psm1'
-    ModuleVersion          = '0.5.0'
+    ModuleVersion          = '0.6.0'
     CompatiblePSEditions   = @('Desktop', 'Core')
     PowerShellVersion      = '5.1'
     DotNetFrameworkVersion = '4.7.2'

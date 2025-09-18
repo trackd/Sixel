@@ -72,7 +72,12 @@ public static class ConvertTo
                 {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                return (constrainedSize, Protocols.Sixel.ImageToSixel(image, constrainedSize, maxColors));
+                // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
+                var resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
+                var finalSize = SizeHelper.GetCharacterCellSize(resized);
+                var frame = resized.Frames[0];
+                var data = Protocols.Sixel.FrameToSixelString(frame);
+                return (finalSize, data);
 
             case ImageProtocol.KittyGraphicsProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force)
@@ -81,12 +86,7 @@ public static class ConvertTo
                 }
                 // Pass raw width/height to Kitty - it handles 0 values properly
                 var kittySize = new ImageSize(width, height);
-                var kittyOptions = new KittyGraphics.KittyImageOptions {
-                    CellWidth = width,
-                    CellHeight = height,
-                    UseCompression = true
-                };
-                return (kittySize, KittyGraphics.ImageToKitty(image, kittyOptions));
+                return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force)
