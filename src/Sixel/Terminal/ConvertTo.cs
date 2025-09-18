@@ -84,8 +84,8 @@ public static class ConvertTo
                 {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
-                // Pass raw width/height to Kitty - it handles 0 values properly
-                var kittySize = new ImageSize(width, height);
+                // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
+                var kittySize = constrainedSize;
                 return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
 
             case ImageProtocol.InlineImageProtocol:
