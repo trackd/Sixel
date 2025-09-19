@@ -49,8 +49,8 @@ public static class Resizer
         {
             image.Mutate(ctx => {
                 ctx.Resize(new ResizeOptions() {
-                    // Never crop; pad to requested size, anchoring content at top-left to preserve the left edge.
-                    // Mode = ResizeMode.Pad,
+                    // Pads the image to fit the bound of the container without resizing the original source.
+                    // When downscaling, performs the same functionality as Pad
                     Mode = ResizeMode.BoxPad,
                     Position = AnchorPositionMode.TopLeft,
                     PadColor = Color.Transparent,
