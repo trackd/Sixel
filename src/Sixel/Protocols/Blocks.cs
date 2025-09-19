@@ -16,9 +16,12 @@ public static class Blocks
         {
             ctx.Resize(new ResizeOptions
             {
+                Mode = ResizeMode.BoxPad,
+                Position = AnchorPositionMode.TopLeft,
+                PadColor = Color.Transparent,
                 // *2 because each cell is 2 pixels high for blocks
                 Size = new Size(imageSize.Width, imageSize.Height * 2),
-                Sampler = KnownResamplers.NearestNeighbor, // Better for preserving sharp transparency edges
+                Sampler = KnownResamplers.Bicubic, // Better for preserving sharp transparency edges
                 PremultiplyAlpha = false
             });
         });

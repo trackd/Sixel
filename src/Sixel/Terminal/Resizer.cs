@@ -47,18 +47,22 @@ public static class Resizer
         // Only resize if the target size is different
         if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
         {
-            image.Mutate(ctx =>
-            {
-                ctx.Resize(new ResizeOptions()
-                {
+            image.Mutate(ctx => {
+                ctx.Resize(new ResizeOptions() {
+                    // Pads the image to fit the bound of the container without resizing the original source.
+                    // When downscaling, performs the same functionality as Pad
+                    Mode = ResizeMode.BoxPad,
+                    Position = AnchorPositionMode.TopLeft,
+                    PadColor = Color.Transparent,
+                    // https://en.wikipedia.org/wiki/Bicubic_interpolation
+                    // quality goes Bicubic > Bilinear > NearestNeighbor
                     Sampler = KnownResamplers.Bicubic,
                     Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
                 if (quantize)
                 {
-                    ctx.Quantize(new OctreeQuantizer(new()
-                    {
+                    ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
                 }
@@ -66,10 +70,8 @@ public static class Resizer
         }
         else if (quantize)
         {
-            image.Mutate(ctx =>
-            {
-                ctx.Quantize(new OctreeQuantizer(new()
-                {
+            image.Mutate(ctx => {
+                ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,
                 }));
             });
@@ -98,10 +100,12 @@ public static class Resizer
         // Only resize if the target size is different
         if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
         {
-            image.Mutate(ctx =>
-            {
-                ctx.Resize(new ResizeOptions()
-                {
+            image.Mutate(ctx => {
+                ctx.Resize(new ResizeOptions() {
+                    // Never crop; pad to requested size, anchoring content at top-left to preserve the left edge.
+                    Mode = ResizeMode.BoxPad,
+                    Position = AnchorPositionMode.TopLeft,
+                    PadColor = Color.Transparent,
                     // https://en.wikipedia.org/wiki/Bicubic_interpolation
                     // quality goes Bicubic > Bilinear > NearestNeighbor
                     Sampler = KnownResamplers.Bicubic,
@@ -110,8 +114,7 @@ public static class Resizer
                 });
                 if (maxColors > 0)
                 {
-                    ctx.Quantize(new OctreeQuantizer(new()
-                    {
+                    ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
                 }
@@ -119,10 +122,8 @@ public static class Resizer
         }
         else if (maxColors > 0)
         {
-            image.Mutate(ctx =>
-            {
-                ctx.Quantize(new OctreeQuantizer(new()
-                {
+            image.Mutate(ctx => {
+                ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,
                 }));
             });

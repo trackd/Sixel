@@ -69,12 +69,12 @@ $sb = {
 
 if ((Get-Process -Id $pid).CommandLine -match '-NoExit') {
     # detect when launched from vscode launch settings
-    Write-Host "Running tests in current session"
+    Write-Host 'Running tests in current session'
     . $sb $testargs
     ConvertTo-Sixel .\assets\cog.png -Protocol Sixel
 }
 elseif ($PSVersionTable.PSEdition -eq 'Core') {
-    Write-Host "Running tests in a new pwsh"
+    Write-Host 'Running tests in a new pwsh'
     pwsh -NoProfile -Command $sb -args $testargs
 }
 else {
@@ -86,5 +86,5 @@ if ($Publish) {
     $module = Get-Module $output/Sixel.psd1 -ListAvailable
     $v = 'v' + $module.Version.ToString()
     Publish-PSResource -Path $output -ApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
-    gh release create $v --target prerelease --generate-notes --prerelease
+    gh release create $v --generate-notes #--prerelease --target prerelease
 }
