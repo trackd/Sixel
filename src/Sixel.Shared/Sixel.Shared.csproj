@@ -5,12 +5,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Sixel" />
   </ItemGroup>
 </Project>
+
 
 
