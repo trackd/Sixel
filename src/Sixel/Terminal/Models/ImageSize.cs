@@ -3,8 +3,7 @@
 /// <summary>
 /// Represents the size of an image in character cells.
 /// </summary>
-public readonly struct ImageSize(int Width, int Height)
-{
+public readonly struct ImageSize(int Width, int Height) {
     /// <summary>
     /// Gets the width of an image in character cells.
     /// </summary>

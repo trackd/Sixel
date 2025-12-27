@@ -9,8 +9,7 @@ namespace Sixel.Terminal;
 /// <summary>
 /// Provides methods to resize images to fit within terminal character cell dimensions, with optional color quantization.
 /// </summary>
-public static class Resizer
-{
+public static class Resizer {
     /// <summary>
     /// Resizes an image to fit within the specified terminal character cell dimensions.
     /// </summary>
@@ -26,9 +25,8 @@ public static class Resizer
         int? RequestedWidth,
         int? RequestedHeight,
         bool quantize = false
-    )
-    {
-        var cellSize = Compatibility.GetCellSize();
+    ) {
+        CellSize cellSize = Compatibility.GetCellSize();
         int reqWidth = (RequestedWidth > 0) ? RequestedWidth.Value : 0;
         int reqHeight = (RequestedHeight > 0) ? RequestedHeight.Value : 0;
 
@@ -38,15 +36,14 @@ public static class Resizer
         //     var currentSize = SizeHelper.ConvertToCharacterCells(image.Width, image.Height);
         //     return (currentSize, image);        // }
 
-        var newSize = SizeHelper.GetResizedCharacterCellSize(image.Width, image.Height, reqWidth, reqHeight);
+        ImageSize newSize = SizeHelper.GetResizedCharacterCellSize(image.Width, image.Height, reqWidth, reqHeight);
 
         // Calculate pixel dimensions from cell dimensions
         int targetPixelWidth = newSize.Width * cellSize.PixelWidth;
         int targetPixelHeight = newSize.Height * cellSize.PixelHeight;
 
         // Only resize if the target size is different
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
-        {
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
             image.Mutate(ctx => {
                 ctx.Resize(new ResizeOptions() {
                     // Pads the image to fit the bound of the container without resizing the original source.
@@ -60,16 +57,14 @@ public static class Resizer
                     Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
-                if (quantize)
-                {
+                if (quantize) {
                     ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
                 }
             });
         }
-        else if (quantize)
-        {
+        else if (quantize) {
             image.Mutate(ctx => {
                 ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,
@@ -89,17 +84,15 @@ public static class Resizer
         Image<Rgba32> image,
         ImageSize imageSize,
         int maxColors
-    )
-    {
-        var cellSize = Compatibility.GetCellSize();
+    ) {
+        CellSize cellSize = Compatibility.GetCellSize();
 
         // Calculate pixel dimensions from cell dimensions
         int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
         int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
 
         // Only resize if the target size is different
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight)
-        {
+        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
             image.Mutate(ctx => {
                 ctx.Resize(new ResizeOptions() {
                     // Never crop; pad to requested size, anchoring content at top-left to preserve the left edge.
@@ -112,16 +105,14 @@ public static class Resizer
                     Size = new(targetPixelWidth, targetPixelHeight),
                     PremultiplyAlpha = false,
                 });
-                if (maxColors > 0)
-                {
+                if (maxColors > 0) {
                     ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
                 }
             });
         }
-        else if (maxColors > 0)
-        {
+        else if (maxColors > 0) {
             image.Mutate(ctx => {
                 ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,

@@ -8,21 +8,15 @@ namespace Sixel.Shared;
 /// <summary>
 /// Provides assembly resolution logic for .NET Framework 4.7.2, enabling dynamic loading of dependencies from the module directory.
 /// </summary>
-public static class AssemblyResolver
-{
-  public static ResolveEventHandler ResolveHandler = new(Resolve);
+public static class AssemblyResolver {
+    public static ResolveEventHandler ResolveHandler = new(Resolve);
 
-  public static Assembly? Resolve(object? sender, ResolveEventArgs args)
-  {
-    AssemblyName asName = new(args.Name);
-    string asPath = Path.Combine(
-            Path.GetDirectoryName(typeof(AssemblyResolver).Assembly.Location),
-            $"{asName.Name}.dll");
-    if (File.Exists(asPath))
-    {
-        return Assembly.LoadFile(asPath);
+    public static Assembly? Resolve(object? sender, ResolveEventArgs args) {
+        AssemblyName asName = new(args.Name);
+        string asPath = Path.Combine(
+                Path.GetDirectoryName(typeof(AssemblyResolver).Assembly.Location),
+                $"{asName.Name}.dll");
+        return File.Exists(asPath) ? Assembly.LoadFile(asPath) : null;
     }
-    return null;
-  }
 }
 #endif

@@ -1,8 +1,8 @@
-﻿using Sixel.Terminal;
-using Sixel.Terminal.Models;
-using Sixel.Protocols;
-using System.Management.Automation;
+﻿using System.Management.Automation;
 using System.Threading;
+using Sixel.Protocols;
+using Sixel.Terminal;
+using Sixel.Terminal.Models;
 
 namespace Sixel.Cmdlet;
 
@@ -14,32 +14,28 @@ namespace Sixel.Cmdlet;
 
 [Cmdlet(VerbsCommon.Show, "SixelGif")]
 [OutputType(typeof(void))]
-public sealed class ShowSixelGifCmdlet : PSCmdlet
-{
-  [Parameter(
-    HelpMessage = "SixelGif object to play.",
-    Mandatory = true,
-    ValueFromPipeline = true,
-    Position = 0
-  )]
-  [ValidateNotNullOrEmpty]
-  public SixelGif? Gif { get; set; }
-  protected override void ProcessRecord()
-  {
-    try
-    {
-      if (Gif is null) return;
-      CancellationTokenSource CancellationToken = new();
-      // Handle Ctrl+C
-      Console.CancelKeyPress += (sender, args) => {
-        args.Cancel = true;
-        CancellationToken.Cancel();
-      };
-      GifToSixel.PlaySixelGif(Gif, CancellationToken.Token);
+public sealed class ShowSixelGifCmdlet : PSCmdlet {
+    [Parameter(
+      HelpMessage = "SixelGif object to play.",
+      Mandatory = true,
+      ValueFromPipeline = true,
+      Position = 0
+    )]
+    [ValidateNotNullOrEmpty]
+    public SixelGif? Gif { get; set; }
+    protected override void ProcessRecord() {
+        try {
+            if (Gif is null) return;
+            CancellationTokenSource CancellationToken = new();
+            // Handle Ctrl+C
+            Console.CancelKeyPress += (sender, args) => {
+                args.Cancel = true;
+                CancellationToken.Cancel();
+            };
+            GifToSixel.PlaySixelGif(Gif, CancellationToken.Token);
+        }
+        catch (Exception ex) {
+            WriteError(new ErrorRecord(ex, "ShowSixelGifCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));
+        }
     }
-    catch (Exception ex)
-    {
-      WriteError(new ErrorRecord(ex, "ShowSixelGifCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));
-    }
-  }
 }

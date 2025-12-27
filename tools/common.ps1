@@ -6,7 +6,7 @@ using namespace System.Runtime.InteropServices
 
 $ErrorActionPreference = 'Stop'
 
-Function Get-NugetAssembly {
+function Get-NugetAssembly {
     <#
     .SYNOPSIS
     Downloads the assembly.
@@ -54,10 +54,10 @@ Function Get-NugetAssembly {
 
     $archive = [System.IO.Compression.ZipFile]::Open(
         $targetFile,
-        "Read")
+        'Read')
     try {
         $archive.Entries | Where-Object {
-            $_.FullName -like "lib/*/*.dll"
+            $_.FullName -like 'lib/*/*.dll'
         } | ForEach-Object {
             $dllName = Split-Path -Path $_.FullName -Leaf
             $dllFolder = (Split-Path -Path $_.FullName -Parent).Substring(4)
@@ -80,7 +80,7 @@ Function Get-NugetAssembly {
     $assemblyFolder
 }
 
-Function Get-PowerShell {
+function Get-PowerShell {
     <#
     .SYNOPSIS
     Downloads the version of PowerShell specified.
@@ -103,7 +103,7 @@ Function Get-PowerShell {
         default {
             $err = [ErrorRecord]::new(
                 [Exception]::new("Unsupported archecture requests '$_'"),
-                "UnknownArch",
+                'UnknownArch',
                 [ErrorCategory]::InvalidArgument,
                 $_
             )
@@ -119,12 +119,12 @@ Function Get-PowerShell {
     if (-not $IsCoreCLR -or $IsWindows) {
         $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/PowerShell-$Version-win-$releaseArch.zip"
         $fileName = "pwsh-$Version.zip"
-        $nativeExt = ".exe"
+        $nativeExt = '.exe'
     }
     else {
         $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$Version/powershell-$Version-linux-$releaseArch.tar.gz"
         $fileName = "pwsh-$Version.tar.gz"
-        $nativeExt = ""
+        $nativeExt = ''
     }
 
     $targetFile = Join-Path $targetFolder $fileName
@@ -175,7 +175,7 @@ Function Get-PowerShell {
     $pwshFile
 }
 
-Function Get-BuildInfo {
+function Get-BuildInfo {
     <#
     .SYNOPSIS
     Gets the module build information.
@@ -196,7 +196,7 @@ Function Get-BuildInfo {
     $moduleName = $manifest.Name
     $moduleVersion = $manifest.Version
 
-    $dotnetSrc = [Path]::Combine($Path, "src", $moduleName)
+    $dotnetSrc = [Path]::Combine($Path, 'src', $moduleName)
     if (Test-Path -LiteralPath $dotnetSrc) {
         [xml]$csharpProjectInfo = Get-Content -Path ([Path]::Combine($dotnetSrc, '*.csproj'))
         $targetFrameworks = @(@($csharpProjectInfo.Project.PropertyGroup)[0].TargetFrameworks.Split(
@@ -208,17 +208,17 @@ Function Get-BuildInfo {
     }
 
     [Ordered]@{
-        ModuleName = $moduleName
-        Version = $moduleVersion
+        ModuleName       = $moduleName
+        Version          = $moduleVersion
         PowerShellSource = $moduleSrc
-        DotnetSource = $dotnetSrc
-        Configuration = "Release"
+        DotnetSource     = $dotnetSrc
+        Configuration    = 'Release'
         TargetFrameworks = $targetFrameworks
-        BuildDir = [Path]::Combine($Path, 'output', $build.ModuleName, $build.Version)
+        BuildDir         = [Path]::Combine($Path, 'output', $build.ModuleName, $build.Version)
     }
 }
 
-Function Invoke-ModuleBuilder {
+function Invoke-ModuleBuilder {
     <#
     .SYNOPSIS
     Builds the module.
@@ -234,14 +234,14 @@ Function Invoke-ModuleBuilder {
         $Path
     )
 
-    Write-Host "Getting build information"
+    Write-Host 'Getting build information'
     $Build = Get-BuildInfo -Path $Path
 
     if (-not (Test-Path -LiteralPath $Build.BuildDir)) {
         New-Item -Path $Build.BuildDir -ItemType Directory -Force | Out-Null
     }
 
-    Write-Host "Compiling Dotnet assemblies"
+    Write-Host 'Compiling Dotnet assemblies'
     Push-Location -LiteralPath $Build.DotnetSource
     try {
         $dotnetArgs = @(
@@ -253,6 +253,10 @@ Function Invoke-ModuleBuilder {
         )
 
         foreach ($framework in $Build.TargetFrameworks) {
+            [pscustomObject]@{
+                Framework = $framework
+                dotnetArgs = $dotnetArgs -join ', '
+            } | write-host -ForegroundColor Cyan
             dotnet @dotnetArgs --framework $framework
             if ($LASTEXITCODE) {
                 throw "Failed to compile code for $framework"
@@ -263,21 +267,21 @@ Function Invoke-ModuleBuilder {
         Pop-Location
     }
 
-    Write-Host "Build PowerShell module result"
-    Copy-Item -Path ([Path]::Combine($Build.PowerShellSource, "*")) -Destination $Build.BuildDir -Recurse
+    Write-Host 'Build PowerShell module result'
+    Copy-Item -Path ([Path]::Combine($Build.PowerShellSource, '*')) -Destination $Build.BuildDir -Recurse
 
     foreach ($framework in $Build.TargetFrameworks) {
-        $publishFolder = [Path]::Combine($Build.DotnetSource, "bin", $Build.Configuration, $framework, "publish")
-        $binFolder = [Path]::Combine($Build.BuildDir, "bin", $framework)
+        $publishFolder = [Path]::Combine($Build.DotnetSource, 'bin', $Build.Configuration, $framework, 'publish')
+        $binFolder = [Path]::Combine($Build.BuildDir, 'bin', $framework)
         if (-not (Test-Path -LiteralPath $binFolder)) {
             New-Item -Path $binFolder -ItemType Directory | Out-Null
         }
-        Copy-Item ([Path]::Combine($publishFolder, "*")) -Destination $binFolder -Recurse
+        Copy-Item ([Path]::Combine($publishFolder, '*')) -Destination $binFolder -Recurse
     }
 }
 
 if (-not $IsCoreCLR -or $IsWindows) {
-    Function Add-GacAssembly {
+    function Add-GacAssembly {
         [CmdletBinding()]
         param (
             [Parameter(Mandatory)]
@@ -299,7 +303,7 @@ if (-not $IsCoreCLR -or $IsWindows) {
             Invoke-Command @invokeParams -ScriptBlock {
                 $ErrorActionPreference = 'Stop'
 
-                [System.Reflection.Assembly]::LoadWithPartialName("System.EnterpriseServices") | Out-Null
+                [System.Reflection.Assembly]::LoadWithPartialName('System.EnterpriseServices') | Out-Null
                 $publish = [System.EnterpriseServices.Internal.Publish]::new()
                 $publish.GacInstall($args[0])
             } -ArgumentList $Path
@@ -309,7 +313,7 @@ if (-not $IsCoreCLR -or $IsWindows) {
         }
     }
 
-    Function Remove-GacAssembly {
+    function Remove-GacAssembly {
         [CmdletBinding()]
         param (
             [Parameter(Mandatory)]
@@ -331,7 +335,7 @@ if (-not $IsCoreCLR -or $IsWindows) {
             Invoke-Command @invokeParams -ScriptBlock {
                 $ErrorActionPreference = 'Stop'
 
-                [System.Reflection.Assembly]::LoadWithPartialName("System.EnterpriseServices") | Out-Null
+                [System.Reflection.Assembly]::LoadWithPartialName('System.EnterpriseServices') | Out-Null
                 $publish = [System.EnterpriseServices.Internal.Publish]::new()
                 $publish.GacRemove($args[0])
             } -ArgumentList $Path

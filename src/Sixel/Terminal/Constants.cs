@@ -3,8 +3,7 @@ namespace Sixel.Terminal;
 /// <summary>
 /// Contains constants, values and helpers for Sixel terminal compatibility and encoding.
 /// </summary>
-internal static class Constants
-{
+internal static class Constants {
     /// <summary>
     /// The character to use when entering a terminal escape code sequence.
     /// Optimized as char for better performance in StringBuilder operations.

@@ -8,15 +8,14 @@ namespace Sixel.Terminal;
 /// Contains P/Invoke methods for accessing native Windows console handles and related operations (NET472 only).
 /// used for rendering gifs on Windows in net472.
 /// </summary>
-internal static class NativeMethods
-{
+internal static class NativeMethods {
     private const uint GENERIC_READ = 0x80000000;
     private const uint GENERIC_WRITE = 0x40000000;
     private const uint FILE_SHARE_READ = 0x00000001;
     private const uint FILE_SHARE_WRITE = 0x00000002;
     private const uint OPEN_EXISTING = 3;
 
-    [DllImport("kernel32.dll", SetLastError = true, CharSet=CharSet.Unicode, ExactSpelling = true)]
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern SafeFileHandle CreateFileW(
         string lpFileName,
         uint dwDesiredAccess,
@@ -27,11 +26,9 @@ internal static class NativeMethods
         IntPtr hTemplateFile
     );
 
-    internal static SafeFileHandle OpenConOut()
-    {
+    internal static SafeFileHandle OpenConOut() {
         SafeFileHandle handle = CreateFileW("CONOUT$", GENERIC_WRITE, FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
-        if (handle.IsInvalid)
-        {
+        if (handle.IsInvalid) {
             int errorCode = Marshal.GetLastWin32Error();
             throw new IOException("Unable to open console output handle, error code: " + errorCode);
         }

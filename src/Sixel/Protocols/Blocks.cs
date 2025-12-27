@@ -1,21 +1,17 @@
-﻿using Sixel.Terminal;
+﻿using System.Text;
+using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Sixel.Protocols;
 
-public static class Blocks
-{
-    public static string ImageToBlocks(Image<Rgba32> image, ImageSize imageSize)
-    {
+public static class Blocks {
+    public static string ImageToBlocks(Image<Rgba32> image, ImageSize imageSize) {
         // Resize the image directly to character cell dimensions (not pixel dimensions)
-        image.Mutate(ctx =>
-        {
-            ctx.Resize(new ResizeOptions
-            {
+        image.Mutate(ctx => {
+            ctx.Resize(new ResizeOptions {
                 Mode = ResizeMode.BoxPad,
                 Position = AnchorPositionMode.TopLeft,
                 PadColor = Color.Transparent,
@@ -25,27 +21,23 @@ public static class Blocks
                 PremultiplyAlpha = false
             });
         });
-        var targetFrame = image.Frames[0];
+        ImageFrame<Rgba32> targetFrame = image.Frames[0];
         return ProcessFrame(targetFrame);
     }
 
-    internal static string ProcessFrame(ImageFrame<Rgba32> frame)
-    {
+    internal static string ProcessFrame(ImageFrame<Rgba32> frame) {
         var _buffer = new StringBuilder();
-        var _backgroundColor = GetConsoleBackgroundColor();
+        Rgba32 _backgroundColor = GetConsoleBackgroundColor();
 
-        for (int y = 0; y < frame.Height; y += 2)
-        {
-            if (y + 1 >= frame.Height)
-            {
+        for (int y = 0; y < frame.Height; y += 2) {
+            if (y + 1 >= frame.Height) {
                 _buffer.AppendLine();
                 break;
             }
 
-            for (int x = 0; x < frame.Width; x++)
-            {
-                var topPixel = frame[x, y];
-                var bottomPixel = frame[x, y + 1];
+            for (int x = 0; x < frame.Width; x++) {
+                Rgba32 topPixel = frame[x, y];
+                Rgba32 bottomPixel = frame[x, y + 1];
 
                 _buffer.ProcessPixelPairs(topPixel, bottomPixel, _backgroundColor);
             }
@@ -53,56 +45,49 @@ public static class Blocks
         }
         return _buffer.ToString();
     }
-    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom, Rgba32 _backgroundColor)
-    {
+    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom, Rgba32 _backgroundColor) {
         bool topTransparent = IsTransparent(top);
         bool bottomTransparent = IsTransparent(bottom);
 
-        if (topTransparent && bottomTransparent)
-        {
+        if (topTransparent && bottomTransparent) {
             // Both pixels are transparent
             _buffer.Append(' ');
         }
-        else if (topTransparent)
-        {
+        else if (topTransparent) {
             // Only bottom pixel is opaque, use lower half block
-            var bottomRgb = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m".AsSpan());
+            (byte R, byte G, byte B) = BlendPixels(bottom, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
-        else if (bottomTransparent)
-        {
+        else if (bottomTransparent) {
             // Only top pixel is opaque, use upper half block
-            var topRgb = BlendPixels(top, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
+            (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
-        else
-        {
+        else {
             // Both pixels are opaque, set foreground and background colors, use upper half block
-            var topRgb = BlendPixels(top, _backgroundColor);
-            var bottomRgb = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{topRgb.R};{topRgb.G};{topRgb.B}m".AsSpan());
+            (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
+            (byte R, byte G, byte B) bottomRgb = BlendPixels(bottom, _backgroundColor);
+            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m".AsSpan());
             _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
         }
     }
-    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor)
-    {
+    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor) {
         // If pixel is fully transparent, return the background color
-        if (IsTransparent(pixel))
-        {
+        if (IsTransparent(pixel)) {
             return (_backgroundColor.R, _backgroundColor.G, _backgroundColor.B);
         }
 
         float amount = pixel.A / 255f;
 
-        byte r = (byte)(pixel.R * amount + (_backgroundColor.R * (1 - amount)));
-        byte g = (byte)(pixel.G * amount + (_backgroundColor.G * (1 - amount)));
-        byte b = (byte)(pixel.B * amount + (_backgroundColor.B * (1 - amount)));
+        byte r = (byte)((pixel.R * amount) + (_backgroundColor.R * (1 - amount)));
+        byte g = (byte)((pixel.G * amount) + (_backgroundColor.G * (1 - amount)));
+        byte b = (byte)((pixel.B * amount) + (_backgroundColor.B * (1 - amount)));
 
         return (r, g, b);
-    }    private static bool IsTransparent(Rgba32 pixel)
-    {
+    }
+    private static bool IsTransparent(Rgba32 pixel) {
         // Calculate luminance for better edge artifact detection
-        float luminance = (0.299f * pixel.R + 0.587f * pixel.G + 0.114f * pixel.B) / 255f;
+        float luminance = ((0.299f * pixel.R) + (0.587f * pixel.G) + (0.114f * pixel.B)) / 255f;
 
         // Consider pixels transparent if:
         // 1. Alpha is very low (traditional transparency)
@@ -116,9 +101,8 @@ public static class Blocks
                (pixel.A < 128 && luminance < 0.05f) ||
                (pixel.A < 240 && luminance < 0.01f);
     }
-    private static Rgba32 GetConsoleBackgroundColor()
-    {
-        var color = Console.BackgroundColor switch {
+    private static Rgba32 GetConsoleBackgroundColor() {
+        Color color = Console.BackgroundColor switch {
             ConsoleColor.Black => Color.FromRgb(0, 0, 0),
             ConsoleColor.Blue => Color.FromRgb(0, 0, 170),
             ConsoleColor.Cyan => Color.FromRgb(0, 170, 170),

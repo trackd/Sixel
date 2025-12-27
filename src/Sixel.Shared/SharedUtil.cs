@@ -10,19 +10,17 @@ namespace Sixel.Shared;
 /// <summary>
 /// Utility methods for shared assembly and type information operations.
 /// </summary>
-internal class SharedUtil
-{
-  public static void AddAssemblyInfo(Type type, Dictionary<string, object> data)
-  {
-    Assembly asm = type.Assembly;
+internal class SharedUtil {
+    public static void AddAssemblyInfo(Type type, Dictionary<string, object> data) {
+        Assembly asm = type.Assembly;
 
-    data["Assembly"] = new Dictionary<string, object?>()
-        {
+        data["Assembly"] = new Dictionary<string, object?>()
+            {
             { "Name", asm.GetName().FullName },
 #if NET5_0_OR_GREATER
             { "ALC", AssemblyLoadContext.GetLoadContext(asm)?.Name },
 #endif
             { "Location", asm.Location }
         };
-  }
+    }
 }
