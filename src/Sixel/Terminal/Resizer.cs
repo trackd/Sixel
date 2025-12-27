@@ -19,7 +19,8 @@ public static class Resizer {
     /// <param name="RequestedHeight">The target height in terminal character cells (optional).</param>
     /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
     /// <returns>tuple of ImageSize and resized Image stream.</returns>
-    public static (ImageSize Size, Image<Rgba32> ConsoleImage) OldResizeToCharacterCells(
+    [Obsolete("Use ResizeToCharacterCells instead")]
+    internal static (ImageSize Size, Image<Rgba32> ConsoleImage) OldResizeToCharacterCells(
         Image<Rgba32> image,
         int maxColors,
         int? RequestedWidth,

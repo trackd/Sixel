@@ -31,40 +31,56 @@ public static class Compatibility {
     /// </summary>
     private static TerminalInfo? _terminalInfo;
 
+    /// <summary>
+    /// Get the response to a control sequence.
+    /// Only queries when it's safe to do so (no pending input, not redirected).
+    /// Retries up to 2 times with 500ms timeout each.
+    /// </summary>
     public static string GetControlSequenceResponse(string controlSequence) {
         if (Console.IsOutputRedirected || Console.IsInputRedirected) {
             return string.Empty;
         }
 
-        try {
-            var response = new StringBuilder();
-            const int timeoutMs = 1000;
+        const int timeoutMs = 500;
+        const int maxRetries = 2;
 
-            // Send the control sequence
-            Console.Write($"{Constants.ESC}{controlSequence}");
-            var stopwatch = Stopwatch.StartNew();
+        for (int retry = 0; retry < maxRetries; retry++) {
+            try {
+                var response = new StringBuilder();
 
-            while (stopwatch.ElapsedMilliseconds < timeoutMs) {
-                if (!Console.KeyAvailable) {
-                    Thread.Sleep(1); // Small sleep instead of Yield for more predictable timing
-                    continue;
+                // Send the control sequence
+                Console.Write($"{Constants.ESC}{controlSequence}");
+                var stopwatch = Stopwatch.StartNew();
+
+                while (stopwatch.ElapsedMilliseconds < timeoutMs) {
+                    if (!Console.KeyAvailable) {
+                        Thread.Sleep(1);
+                        continue;
+                    }
+
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                    char key = keyInfo.KeyChar;
+                    response.Append(key);
+
+                    // Check if we have a complete response
+                    if (IsCompleteResponse(response)) {
+                        return response.ToString();
+                    }
                 }
 
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                char key = keyInfo.KeyChar;
-                response.Append(key);
-
-                // Check if we have a complete response
-                if (IsCompleteResponse(response)) {
-                    break;
+                // If we got a partial response, return it
+                if (response.Length > 0) {
+                    return response.ToString();
                 }
             }
+            catch (Exception) {
+                if (retry == maxRetries - 1) {
+                    return string.Empty;
+                }
+            }
+        }
 
-            return response.ToString();
-        }
-        catch (Exception) {
-            return string.Empty;
-        }
+        return string.Empty;
     }
 
 

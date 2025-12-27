@@ -44,5 +44,6 @@ public partial class Helpers {
             ? _terminal
             : Enum.TryParse(str, true, out _terminal) ? _terminal : Terminals.unknown;
     }
-    public static string GetEnvironmentVariable(Terminals terminal) => _lookup.TryGetValue(terminal, out string? _envVar) ? _envVar : "TERM_PROGRAM";
+    public static string GetEnvironmentVariable(Terminals terminal)
+        => _lookup.TryGetValue(terminal, out string? _envVar) ? _envVar : "TERM_PROGRAM";
 }

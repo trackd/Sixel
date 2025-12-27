@@ -35,13 +35,13 @@ public static class ConvertTo {
         /// the parameter `imageProtocol` is the chosen protocol, we need to see if that is supported.
         ImageProtocol[] autoProtocol = Compatibility.GetTerminalInfo().Protocol;
 
-        // Improved: If Auto, select the best supported protocol by priority (Kitty > Sixel > Inline > Blocks)
+        // Improved: If Auto, select the best supported protocol by priority (Sixel > Kitty > Inline > Blocks)
         ImageProtocol protocol = imageProtocol;
         if (imageProtocol == ImageProtocol.Auto) {
-            protocol = autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol)
-                ? ImageProtocol.KittyGraphicsProtocol
-                : autoProtocol.Contains(ImageProtocol.Sixel)
+            protocol = autoProtocol.Contains(ImageProtocol.Sixel)
                 ? ImageProtocol.Sixel
+                : autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol)
+                ? ImageProtocol.KittyGraphicsProtocol
                 : autoProtocol.Contains(ImageProtocol.InlineImageProtocol)
                 ? ImageProtocol.InlineImageProtocol
                 : ImageProtocol.Blocks;
@@ -49,26 +49,10 @@ public static class ConvertTo {
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
 
-        // For Sixel and Blocks: default to a window-relative size when no constraints,
-        // otherwise apply explicit constraints. Always respect true cell size.
+        // For Sixel and Blocks: default to window-relative size via SizeHelper when unconstrained
         ImageSize constrainedSize;
         if (width == 0 && height == 0) {
-            ImageSize natural = SizeHelper.ConvertToCharacterCells(image);
-            bool hasConsole = !Console.IsOutputRedirected && !Console.IsInputRedirected;
-            if (hasConsole) {
-                int winCols = Math.Max(1, Console.WindowWidth);
-                int winRows = Math.Max(1, Console.WindowHeight);
-                int targetCols = Math.Max(1, (int)Math.Round(winCols * 0.6));
-                int targetRows = Math.Max(1, (int)Math.Round(winRows * 0.6));
-
-                // If natural is smaller than our window-relative target, upscale to target cells.
-                int applyW = natural.Width < targetCols ? targetCols : natural.Width;
-                int applyH = natural.Height < targetRows ? targetRows : natural.Height;
-                constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, applyW, applyH);
-            }
-            else {
-                constrainedSize = natural;
-            }
+            constrainedSize = SizeHelper.GetDefaultTerminalImageSize(image);
         }
         else {
             // Constraints specified - apply resizing logic
@@ -93,8 +77,7 @@ public static class ConvertTo {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
                 // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
-                ImageSize kittySize = constrainedSize;
-                return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
+                return (constrainedSize, KittyGraphics.ImageToKitty(image, constrainedSize));
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
@@ -103,7 +86,7 @@ public static class ConvertTo {
                 imageStream.Position = 0;
                 // Pass raw width/height to InlineImage - 0 values become "auto"
                 var inlineSize = new ImageSize(width, height);
-                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height, constrainedSize));
+                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
 
             case ImageProtocol.Blocks:
                 return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));

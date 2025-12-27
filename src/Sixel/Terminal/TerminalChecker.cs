@@ -19,12 +19,12 @@ public static class TerminalChecker {
         // 1. Explicit checks for VSCode/WezTerm with version logic
         if (env["TERM_PROGRAM_VERSION"] is string termProgramVersion && env["TERM_PROGRAM"] is string termProgram) {
             Terminals terminal = Helpers.GetTerminal(termProgram);
-            if (terminal == Terminals.VSCode && termProgramVersion != null) {
+            if (terminal is Terminals.VSCode && termProgramVersion is not null) {
                 int dashIdx = termProgramVersion.IndexOf('-');
 #if NET8_0_OR_GREATER
                 string versionPart = dashIdx > 0 ? termProgramVersion[..dashIdx] : termProgramVersion;
 #else
-// net472 cant do range syntax..
+                // net472 cant do range syntax..
                 string versionPart = dashIdx > 0 ? termProgramVersion.Substring(0, dashIdx) : termProgramVersion;
 #endif
                 if (Version.TryParse(versionPart, out Version? parsedVersion)) {
@@ -35,7 +35,7 @@ public static class TerminalChecker {
                     }
                 }
             }
-            else if (terminal == Terminals.WezTerm && termProgramVersion != null) {
+            else if (terminal is Terminals.WezTerm && termProgramVersion is not null) {
                 string[] parts = termProgramVersion.Split('-');
                 if (parts.Length > 0 && DateTime.TryParseExact(parts[0], "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out DateTime buildDate)) {
                     var minWezTermDate = new DateTime(2025, 3, 20);
@@ -46,16 +46,16 @@ public static class TerminalChecker {
                 }
             }
             // Fallback to supported protocol if not matched by version
-            if (detectedTerminal == Terminals.unknown && Helpers.SupportedProtocol.TryGetValue(terminal, out ImageProtocol[]? protocol)) {
+            if (detectedTerminal is Terminals.unknown && Helpers.SupportedProtocol.TryGetValue(terminal, out ImageProtocol[]? protocol)) {
                 detectedTerminal = terminal;
                 detectedProtocols = protocol;
             }
         }
 
         // 2. Check for other well-known env variables (e.g., WT_SESSION for Windows Terminal)
-        if (detectedTerminal == Terminals.unknown) {
+        if (detectedTerminal is Terminals.unknown) {
             foreach (string known in Helpers.GetEnvironmentVariables()) {
-                if (env[known] != null) {
+                if (env[known] is not null) {
                     Terminals terminal = Helpers.GetTerminal(known);
                     if (Helpers.SupportedProtocol.TryGetValue(terminal, out ImageProtocol[]? protocol)) {
                         detectedTerminal = terminal;
@@ -67,18 +67,18 @@ public static class TerminalChecker {
         }
 
         // 3. Fallback: scan all env vars for known terminal signatures
-        if (detectedTerminal == Terminals.unknown) {
+        if (detectedTerminal is Terminals.unknown) {
             foreach (DictionaryEntry item in env) {
                 string? key = item.Key?.ToString();
                 string? value = item.Value?.ToString();
-                if (key != null && Helpers.GetTerminal(key) is Terminals _terminal && _terminal != Terminals.unknown) {
+                if (key is not null && Helpers.GetTerminal(key) is Terminals _terminal && _terminal is not Terminals.unknown) {
                     if (Helpers.SupportedProtocol.TryGetValue(_terminal, out ImageProtocol[]? protocol)) {
                         detectedTerminal = _terminal;
                         detectedProtocols = protocol;
                         break;
                     }
                 }
-                if (value != null && Helpers.GetTerminal(value) is Terminals _terminal2 && _terminal2 != Terminals.unknown) {
+                if (value is not null && Helpers.GetTerminal(value) is Terminals _terminal2 && _terminal2 is not Terminals.unknown) {
                     if (Helpers.SupportedProtocol.TryGetValue(_terminal2, out ImageProtocol[]? protocol)) {
                         detectedTerminal = _terminal2;
                         detectedProtocols = protocol;

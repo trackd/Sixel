@@ -50,25 +50,31 @@ public static class Blocks {
         bool bottomTransparent = IsTransparent(bottom);
 
         if (topTransparent && bottomTransparent) {
-            // Both pixels are transparent
             _buffer.Append(' ');
         }
         else if (topTransparent) {
-            // Only bottom pixel is opaque, use lower half block
             (byte R, byte G, byte B) = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m{Constants.LowerHalfBlock}{Constants.ESC}[0m".AsSpan());
+            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
+                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
+                   .Append(Constants.LowerHalfBlock)
+                   .Append(Constants.ESC).Append("[0m");
         }
         else if (bottomTransparent) {
-            // Only top pixel is opaque, use upper half block
             (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
+            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
+                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
+                   .Append(Constants.UpperHalfBlock)
+                   .Append(Constants.ESC).Append("[0m");
         }
         else {
-            // Both pixels are opaque, set foreground and background colors, use upper half block
             (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
             (byte R, byte G, byte B) bottomRgb = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append($"{Constants.ESC}{Constants.VTFG}{R};{G};{B}m".AsSpan());
-            _buffer.Append($"{Constants.ESC}{Constants.VTBG}{bottomRgb.R};{bottomRgb.G};{bottomRgb.B}m{Constants.UpperHalfBlock}{Constants.ESC}[0m".AsSpan());
+            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
+                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
+                   .Append(Constants.ESC).Append(Constants.VTBG)
+                   .Append(bottomRgb.R).Append(';').Append(bottomRgb.G).Append(';').Append(bottomRgb.B).Append('m')
+                   .Append(Constants.UpperHalfBlock)
+                   .Append(Constants.ESC).Append("[0m");
         }
     }
     private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor) {
@@ -102,6 +108,9 @@ public static class Blocks {
                (pixel.A < 240 && luminance < 0.01f);
     }
     private static Rgba32 GetConsoleBackgroundColor() {
+        if (Console.IsOutputRedirected) {
+            return Color.Black.ToPixel<Rgba32>();
+        }
         Color color = Console.BackgroundColor switch {
             ConsoleColor.Black => Color.FromRgb(0, 0, 0),
             ConsoleColor.Blue => Color.FromRgb(0, 0, 170),

@@ -1,18 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net472;net8.0</TargetFrameworks>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <Version>0.7.0</Version>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net472;net8.0</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <Version>0.7.0</Version>
+        <AnalysisMode>Recommended</AnalysisMode>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <NoWarn>$(NoWarn);CA2211</NoWarn>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Sixel" />
-  </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Sixel" />
+    </ItemGroup>
 </Project>
-
-
-
-

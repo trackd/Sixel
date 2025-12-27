@@ -11,6 +11,7 @@ namespace Sixel.Cmdlet;
 [Alias("cts")]
 [OutputType(typeof(string))]
 public sealed class ConvertSixelCmdlet : PSCmdlet {
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     [Parameter(
         HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
         Mandatory = true,
@@ -20,66 +21,66 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
     [ValidateNotNullOrEmpty]
     public string? InputObject { get; set; }
     [Parameter(
-          HelpMessage = "A path to a local image to convert to sixel.",
-          Mandatory = true,
-          ValueFromPipelineByPropertyName = true,
-          Position = 0,
-          ParameterSetName = "Path"
+        HelpMessage = "A path to a local image to convert to sixel.",
+        Mandatory = true,
+        ValueFromPipelineByPropertyName = true,
+        Position = 0,
+        ParameterSetName = "Path"
     )]
     [ValidateNotNullOrEmpty]
     [Alias("FullName")]
     public string? Path { get; set; }
 
     [Parameter(
-          HelpMessage = "A URL of the image to download and convert to sixel.",
-          Mandatory = true,
-          ValueFromPipeline = true,
-          ValueFromPipelineByPropertyName = true,
-          Position = 0,
-          ParameterSetName = "Url"
+        HelpMessage = "A URL of the image to download and convert to sixel.",
+        Mandatory = true,
+        ValueFromPipeline = true,
+        ValueFromPipelineByPropertyName = true,
+        Position = 0,
+        ParameterSetName = "Url"
     )]
     [ValidateNotNullOrEmpty]
     [Alias("Uri")]
     public Uri? Url { get; set; }
 
     [Parameter(
-          HelpMessage = "A stream of the image to convert to sixel.",
-          Mandatory = true,
-          ValueFromPipeline = true,
-          ValueFromPipelineByPropertyName = true,
-          Position = 0,
-          ParameterSetName = "Stream"
+        HelpMessage = "A stream of the image to convert to sixel.",
+        Mandatory = true,
+        ValueFromPipeline = true,
+        ValueFromPipelineByPropertyName = true,
+        Position = 0,
+        ParameterSetName = "Stream"
     )]
     [ValidateNotNullOrEmpty]
     [Alias("RawContentStream", "FileStream", "InputStream", "ContentStream")]
     public Stream? Stream { get; set; }
 
     [Parameter(
-          HelpMessage = "The maximum number of colors to use in the image."
+        HelpMessage = "The maximum number of colors to use in the image."
     )]
     [ValidateRange(1, 256)]
     public int MaxColors { get; set; } = 256;
 
     [Parameter(
-          HelpMessage = "Width of the image in character cells, the height will be scaled to maintain aspect ratio."
+        HelpMessage = "Width of the image in character cells, the height will be scaled to maintain aspect ratio."
     )]
     [ValidateTerminalWidth()]
     public int Width { get; set; }
 
 
     [Parameter(
-          HelpMessage = "Height of the image in character cells, the width will be scaled to maintain aspect ratio."
+        HelpMessage = "Height of the image in character cells, the width will be scaled to maintain aspect ratio."
     )]
     [ValidateTerminalHeight()]
     public int Height { get; set; }
 
     [Parameter(
-          HelpMessage = "Force the command to attempt to output image data even if the terminal does not support the protocol selected."
+        HelpMessage = "Force the command to attempt to output image data even if the terminal does not support the protocol selected."
     )]
     public SwitchParameter Force { get; set; }
 
     [Parameter(
-          HelpMessage = "Choose ImageProtocol to output."
+        HelpMessage = "Choose ImageProtocol to output."
     )]
     public ImageProtocol Protocol { get; set; } = ImageProtocol.Auto;
 
@@ -91,11 +92,11 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                         if (InputObject is not null && InputObject.Length > 512) {
                             // assume it's a base64 encoded image
                             InputObject = Regex.Replace(
-                              InputObject,
-                              @"^data:image/\w+;base64,",
-                              string.Empty,
-                              RegexOptions.IgnoreCase,
-                              TimeSpan.FromSeconds(1)
+                                InputObject,
+                                @"^data:image/\w+;base64,",
+                                string.Empty,
+                                RegexOptions.IgnoreCase,
+                                TimeSpan.FromSeconds(1)
                             );
                             imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
                         }
@@ -112,18 +113,13 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                     }
                     break;
                 case "Url": {
-                        // Use static HttpClient for better performance - avoids socket exhaustion
-                        using var client = new HttpClient();
-                        client.Timeout = TimeSpan.FromSeconds(30); // Set reasonable timeout
-                        HttpResponseMessage response = client.GetAsync(Url).GetAwaiter().GetResult(); // Synchronous for PowerShell compatibility
+                        HttpResponseMessage response = _httpClient.GetAsync(Url).GetAwaiter().GetResult();
                         response.EnsureSuccessStatusCode();
                         imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
                         break;
                     }
                 case "Stream": {
-                        if (Stream is not null && Stream.Position != 0) {
-                            // if something has already read the stream, reset it.
-                            // maybe this should be a parameter?
+                        if (Stream is not null && Stream.CanSeek && Stream.Position != 0) {
                             Stream.Position = 0;
                         }
                         imageStream = Stream;
@@ -138,12 +134,12 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
             }
 
             (ImageSize size, string image) = ConvertTo.ConsoleImage(
-              Protocol,
-              imageStream,
-              MaxColors,
-              Width,
-              Height,
-              Force.IsPresent
+                Protocol,
+                imageStream,
+                MaxColors,
+                Width,
+                Height,
+                Force.IsPresent
             );
             var wrappedImage = PSObject.AsPSObject(image);
             wrappedImage.Properties.Add(new PSNoteProperty("Width", size.Width));

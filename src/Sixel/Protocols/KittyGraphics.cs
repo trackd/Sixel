@@ -40,17 +40,19 @@ public static class KittyGraphics {
                 sb.Append(Constants.KittyPos);
             }
             int remaining = base64Image.Length - pos;
-            string chunk = base64Image.Substring(pos, Math.Min(Constants.KittychunkSize, remaining));
-            pos += chunk.Length;
+            int chunkSize = Math.Min(Constants.KittychunkSize, remaining);
+            ReadOnlySpan<char> chunk = base64Image.AsSpan(pos, chunkSize);
+            pos += chunkSize;
             if (pos < base64Image.Length) {
                 sb.Append(Constants.KittyMore);
             }
             else {
                 sb.Append(Constants.KittyFinish);
             }
-            sb.Append(Constants.Divider)
-              .Append(chunk)
-              .Append(Constants.ST);
+            sb
+            .Append(Constants.Divider)
+            .Append(chunk)
+            .Append(Constants.ST);
         }
 
         return sb.ToString();
