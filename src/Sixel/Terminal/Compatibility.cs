@@ -31,9 +31,6 @@ public static class Compatibility {
     /// </summary>
     private static TerminalInfo? _terminalInfo;
 
-    public static CellSize GetEffectiveCellSize() => GetCellSize();
-    /// Only queries when it's safe to do so (no pending input, not redirected).
-    /// </summary>
     public static string GetControlSequenceResponse(string controlSequence) {
         if (Console.IsOutputRedirected || Console.IsInputRedirected) {
             return string.Empty;

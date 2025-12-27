@@ -21,13 +21,15 @@ public static class ConvertTo {
     /// <param name="height">The target height in character cells, or 0 to maintain aspect ratio.</param>
     /// <param name="Force">Whether to force conversion even if terminal doesn't support the protocol.</param>
     /// <returns>A tuple containing the image size and the converted image data.</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static (ImageSize Size, string Data) ConsoleImage(
-      ImageProtocol imageProtocol,
-      Stream imageStream,
-      int maxColors,
-      int width = 0,
-      int height = 0,
-      bool Force = false
+        ImageProtocol imageProtocol,
+        Stream imageStream,
+        int maxColors,
+        int width = 0,
+        int height = 0,
+        bool Force = false
     ) {
         /// this is a guess at the protocol based on the environment variables and VT responses.
         /// the parameter `imageProtocol` is the chosen protocol, we need to see if that is supported.
@@ -40,7 +42,9 @@ public static class ConvertTo {
                 ? ImageProtocol.KittyGraphicsProtocol
                 : autoProtocol.Contains(ImageProtocol.Sixel)
                 ? ImageProtocol.Sixel
-                : autoProtocol.Contains(ImageProtocol.InlineImageProtocol) ? ImageProtocol.InlineImageProtocol : ImageProtocol.Blocks;
+                : autoProtocol.Contains(ImageProtocol.InlineImageProtocol)
+                ? ImageProtocol.InlineImageProtocol
+                : ImageProtocol.Blocks;
         }
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
@@ -99,7 +103,7 @@ public static class ConvertTo {
                 imageStream.Position = 0;
                 // Pass raw width/height to InlineImage - 0 values become "auto"
                 var inlineSize = new ImageSize(width, height);
-                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
+                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height, constrainedSize));
 
             case ImageProtocol.Blocks:
                 return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));

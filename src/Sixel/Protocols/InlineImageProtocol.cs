@@ -9,7 +9,7 @@ public static class InlineImage {
     /// <summary>
     /// Converts an image to an inline image protocol string.
     /// </summary>
-    internal static string ImageToInline(Stream image, int width = 0, int height = 0) {
+    internal static string ImageToInline(Stream image, int width = 0, int height = 0, ImageSize? constrainedSize = null) {
         byte[] imageBytes;
         if (image.CanSeek) {
             // If the stream supports seeking, read it directly
@@ -42,18 +42,28 @@ public static class InlineImage {
         string widthString = width > 0 ? $"width={width};" : "width=auto;";
         string heightString = height > 0 ? $"height={height};" : "height=auto;";
         StringBuilder iip = new();
-        iip.Append(Constants.HideCursor)
-            .Append(Constants.InlineImageStart)
-            .Append("1337;File=inline=1;")
-            .Append("size=" + size + ";")
-            .Append(widthString)
-            .Append(heightString)
-            .Append("preserveAspectRatio=1:")
-            // .Append("preserveAspectRatio=1;")
-            // .Append("doNotMoveCursor=1:")
-            .Append(base64Image)
-            .Append(Constants.InlineImageEnd)
-            .Append(Constants.ShowCursor);
+        int consoleImageHeight = 0;
+        if (constrainedSize is not null) {
+            consoleImageHeight = constrainedSize.Value.Height;
+        }
+        /// hide cursor
+        iip.Append(Constants.HideCursor);
+        // Append newlines to move cursor down by image height
+        for (int i = 0; i < consoleImageHeight; i++) {
+            iip.Append(Environment.NewLine);
+        }
+        iip
+        .Append(Constants.InlineImageStart)
+        .Append("1337;File=inline=1;")
+        .Append("size=" + size + ";")
+        .Append(widthString)
+        .Append(heightString)
+        .Append("preserveAspectRatio=1:")
+        // .Append("preserveAspectRatio=1;")
+        // .Append("doNotMoveCursor=1:")
+        .Append(base64Image)
+        .Append(Constants.InlineImageEnd)
+        .Append(Constants.ShowCursor);
         return iip.ToString();
     }
 }
