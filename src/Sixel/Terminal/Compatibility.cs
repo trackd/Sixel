@@ -1,5 +1,7 @@
+using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Sixel.Terminal.Models;
@@ -205,6 +207,22 @@ public static class Compatibility {
     }
 
     /// <summary>
+    /// Returns an effective cell size that applies a scaling heuristic for HiDPI terminals while
+    /// preserving the reported cell size semantics.
+    /// </summary>
+    public static CellSize GetEffectiveCellSize() {
+        CellSize baseSize = GetCellSize();
+        double scale = GetCellScale(baseSize);
+
+        return Math.Abs(scale - 1.0) < double.Epsilon
+            ? baseSize
+            : new CellSize {
+                PixelWidth = Math.Max(1, (int)Math.Round(baseSize.PixelWidth * scale)),
+                PixelHeight = Math.Max(1, (int)Math.Round(baseSize.PixelHeight * scale))
+            };
+    }
+
+    /// <summary>
     /// Validates that cell size values are within reasonable bounds.
     /// Detects obviously wrong values like those from buggy terminal responses.
     /// </summary>
@@ -225,6 +243,25 @@ public static class Compatibility {
         double ratio = (double)height / width;
         return ratio is not (< 1.0 or > 4.0);
     }
+
+    private static double GetCellScale(CellSize cellSize) {
+        string? scaleEnv = Environment.GetEnvironmentVariable("SIXEL_CELL_SCALE");
+        if (!string.IsNullOrWhiteSpace(scaleEnv) &&
+            double.TryParse(scaleEnv, NumberStyles.Float, CultureInfo.InvariantCulture, out double envScale)) {
+            return ClampScale(envScale);
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && cellSize.PixelHeight >= 28) {
+            double targetHeight = 20.0;
+            double scale = targetHeight / cellSize.PixelHeight;
+            return ClampScale(scale);
+        }
+
+        return 1.0;
+    }
+
+    private static double ClampScale(double scale)
+        => Math.Min(2.0, Math.Max(0.5, scale));
 
     /// <summary>
     /// Returns platform-specific default cell size as fallback.
@@ -277,7 +314,7 @@ public static class Compatibility {
     /// </summary>
     /// <returns>The terminal protocol</returns>
     public static TerminalInfo GetTerminalInfo() {
-        if (_terminalInfo != null) {
+        if (_terminalInfo is not null) {
             return _terminalInfo;
         }
 

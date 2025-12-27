@@ -33,7 +33,7 @@ public static class SizeHelper {
     /// match sixel 6px row packing so the number of occupied rows is correct.
     /// </summary>
     public static ImageSize GetCharacterCellSize(int pixelWidth, int pixelHeight) {
-        CellSize cellSize = Compatibility.GetCellSize();
+        CellSize cellSize = Compatibility.GetEffectiveCellSize();
 
         // Align image height to a multiple of 6px before converting to rows
         // rows = ceil( ceil(h_px / 6) * 6 / cellHeight_px )
@@ -56,7 +56,7 @@ public static class SizeHelper {
     /// Maintains aspect ratio, aligns height to sixel 6px rows, and uses pixel-space math to avoid clipping.
     /// </summary>
     public static ImageSize GetResizedCharacterCellSize(int pixelWidth, int pixelHeight, int maxCellWidth, int maxCellHeight) {
-        CellSize cellSize = Compatibility.GetCellSize();
+        CellSize cellSize = Compatibility.GetEffectiveCellSize();
 
         if (pixelWidth <= 0 || pixelHeight <= 0) {
             return new ImageSize(1, 1);
