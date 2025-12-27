@@ -45,11 +45,26 @@ public static class ConvertTo {
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
 
-        // For Sixel and Blocks: use natural sizing if no constraints, otherwise apply constraints
+        // For Sixel and Blocks: default to a window-relative size when no constraints,
+        // otherwise apply explicit constraints. Always respect true cell size.
         ImageSize constrainedSize;
         if (width == 0 && height == 0) {
-            // No constraints specified - use natural image size
-            constrainedSize = SizeHelper.ConvertToCharacterCells(image);
+            ImageSize natural = SizeHelper.ConvertToCharacterCells(image);
+            bool hasConsole = !Console.IsOutputRedirected && !Console.IsInputRedirected;
+            if (hasConsole) {
+                int winCols = Math.Max(1, Console.WindowWidth);
+                int winRows = Math.Max(1, Console.WindowHeight);
+                int targetCols = Math.Max(1, (int)Math.Round(winCols * 0.6));
+                int targetRows = Math.Max(1, (int)Math.Round(winRows * 0.6));
+
+                // If natural is smaller than our window-relative target, upscale to target cells.
+                int applyW = natural.Width < targetCols ? targetCols : natural.Width;
+                int applyH = natural.Height < targetRows ? targetRows : natural.Height;
+                constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, applyW, applyH);
+            }
+            else {
+                constrainedSize = natural;
+            }
         }
         else {
             // Constraints specified - apply resizing logic

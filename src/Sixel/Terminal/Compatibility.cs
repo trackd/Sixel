@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Sixel.Terminal.Models;
@@ -32,19 +31,7 @@ public static class Compatibility {
     /// </summary>
     private static TerminalInfo? _terminalInfo;
 
-    /// <summary>
-    /// Resets all cached terminal compatibility values, forcing re-detection on next access.
-    /// Useful when terminal settings change or for testing.
-    /// </summary>
-    public static void ResetCache() {
-        _cellSize = null;
-        _terminalSupportsSixel = null;
-        _terminalSupportsKitty = null;
-        _terminalInfo = null;
-    }
-
-    /// <summary>
-    /// Get the response to a control sequence.
+    public static CellSize GetEffectiveCellSize() => GetCellSize();
     /// Only queries when it's safe to do so (no pending input, not redirected).
     /// </summary>
     public static string GetControlSequenceResponse(string controlSequence) {
@@ -165,20 +152,6 @@ public static class Compatibility {
         if (_cellSize is not null) {
             return _cellSize;
         }
-
-        // Check for environment variable override first
-        string? envWidth = Environment.GetEnvironmentVariable("SIXEL_CELL_WIDTH");
-        string? envHeight = Environment.GetEnvironmentVariable("SIXEL_CELL_HEIGHT");
-        if (!string.IsNullOrEmpty(envWidth) && !string.IsNullOrEmpty(envHeight) &&
-            int.TryParse(envWidth, out int overrideWidth) && int.TryParse(envHeight, out int overrideHeight) &&
-            IsValidCellSize(overrideWidth, overrideHeight)) {
-            _cellSize = new CellSize {
-                PixelWidth = overrideWidth,
-                PixelHeight = overrideHeight
-            };
-            return _cellSize;
-        }
-
         string response = GetControlSequenceResponse("[16t");
 
         try {
@@ -207,61 +180,12 @@ public static class Compatibility {
     }
 
     /// <summary>
-    /// Returns an effective cell size that applies a scaling heuristic for HiDPI terminals while
-    /// preserving the reported cell size semantics.
+    /// Minimal validation: only ensures positive integer values.
+    /// Terminal-reported cell sizes are treated as ground truth.
     /// </summary>
-    public static CellSize GetEffectiveCellSize() {
-        CellSize baseSize = GetCellSize();
-        double scale = GetCellScale(baseSize);
+    private static bool IsValidCellSize(int width, int height)
+        => width > 0 && height > 0;
 
-        return Math.Abs(scale - 1.0) < double.Epsilon
-            ? baseSize
-            : new CellSize {
-                PixelWidth = Math.Max(1, (int)Math.Round(baseSize.PixelWidth * scale)),
-                PixelHeight = Math.Max(1, (int)Math.Round(baseSize.PixelHeight * scale))
-            };
-    }
-
-    /// <summary>
-    /// Validates that cell size values are within reasonable bounds.
-    /// Detects obviously wrong values like those from buggy terminal responses.
-    /// </summary>
-    private static bool IsValidCellSize(int width, int height) {
-        // Cell sizes should be:
-        // - Positive
-        // - Reasonably sized (typical range: 6-20 width, 10-32 height)
-        // - Height should generally be >= width (cells are usually taller than wide)
-        // - Not suspiciously small (< 5 indicates likely parse error or DPI issue)
-        // - Not suspiciously large (> 30 indicates likely DPI scaling issue)
-
-        if (width <= 0 || height <= 0) return false;
-        if (width is < 5 or > 30) return false;
-        if (height is < 10 or > 40) return false;
-
-        // Reject obviously wrong aspect ratios (e.g., 6x4 from WezTerm on Mac)
-        // Normal cells are roughly 1:2 to 1:3 ratio (width:height)
-        double ratio = (double)height / width;
-        return ratio is not (< 1.0 or > 4.0);
-    }
-
-    private static double GetCellScale(CellSize cellSize) {
-        string? scaleEnv = Environment.GetEnvironmentVariable("SIXEL_CELL_SCALE");
-        if (!string.IsNullOrWhiteSpace(scaleEnv) &&
-            double.TryParse(scaleEnv, NumberStyles.Float, CultureInfo.InvariantCulture, out double envScale)) {
-            return ClampScale(envScale);
-        }
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && cellSize.PixelHeight >= 28) {
-            double targetHeight = 20.0;
-            double scale = targetHeight / cellSize.PixelHeight;
-            return ClampScale(scale);
-        }
-
-        return 1.0;
-    }
-
-    private static double ClampScale(double scale)
-        => Math.Min(2.0, Math.Max(0.5, scale));
 
     /// <summary>
     /// Returns platform-specific default cell size as fallback.
