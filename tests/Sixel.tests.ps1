@@ -60,24 +60,24 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
         $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol Sixel -Force
         $test | Should -Not -BeNullOrEmpty
         # $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_sixel_w2.sixel')) -Raw
-        "`nSixel", $test | Out-Host
+        # "`nSixel", $test | Out-Host
         # $test | Should -Be $rec
     }
 
     # # need to update the test file after including the height value in the string
-    # It 'Should convert an image to InlineImage format' {
-    #     $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol InlineImageProtocol -Force
-    #     $test | Should -Not -BeNullOrEmpty
-    #     $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_inline_w2.iip')) -Raw
-    #     "`nInlineImage", $test | Out-Host
-    #     $test | Should -Be $rec
-    # }
+    It 'Should convert an image to InlineImage format' {
+        $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol InlineImageProtocol -Force
+        $test | Should -Not -BeNullOrEmpty
+        # $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_inline_w2.iip')) -Raw
+        # "`nInlineImage", $test | Out-Host
+        # $test | Should -Be $rec
+    }
 
     It 'Should convert an image to Kitty format' {
         $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol KittyGraphicsProtocol -Force
         $test | Should -Not -BeNullOrEmpty
         # $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_kitty_w2.kitty')) -Raw
-        "`nKitty", $test | Out-Host
+        # "`nKitty", $test | Out-Host
         # $test | Should -Be $rec
     }
     It 'Should convert a filestream to sixel' {
