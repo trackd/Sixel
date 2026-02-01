@@ -95,7 +95,7 @@ internal static class Constants {
     /// <summary>
     /// Kitty raster
     /// </summary>
-    internal const string KittyPos = "a=T,f=100,";
+    internal const string KittyPos = "a=T,f=100";
 
     /// <summary>
     /// Kitty more chunks
@@ -184,4 +184,6 @@ internal static class Constants {
     /// See DECRQM (request) and DECRPM (response) for more details.
     /// </summary>
     internal static readonly string DECRQM2026 = $"{ESC}[?2026$p";
+    internal static readonly string Reset = $"{ESC}[0m";
+
 }

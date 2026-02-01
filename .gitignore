@@ -14,3 +14,6 @@ testdata/*
 .github/prompts/*
 .github/agents/*
 Copilot-Processing.md
+reference/*
+PwshSpectreConsole/lib
+docs/VT.md

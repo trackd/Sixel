@@ -27,8 +27,12 @@
     Note: Sixel requires Windows Terminal v1.22+ or VSCode 1.101+.
     VSCode requires "Enable Images", "Windows Enable Conpty", "Windows Use Conpty Dll" enabled.
 '
-    CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
-    AliasesToExport        = 'cts', 'gif'
+    CmdletsToExport        = @(
+        'ConvertTo-Sixel'
+        'ConvertTo-SixelGif'
+        'ConvertTo-Kitty'
+    )
+    AliasesToExport        = 'cts', 'gif', 'ctk', 'kitty'
     FormatsToProcess       = 'Sixel.format.ps1xml'
     PrivateData            = @{
         PSData = @{
@@ -46,6 +50,7 @@
             ProjectUri   = 'https://github.com/trackd/Sixel'
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
+            0.7.0 - bugfix sizing issues, improved detection of terminal capabilities. new Cmdlet ConvertTo-Kitty with more support for Kitty Graphics Protocol.
             0.6.1 - bugfix resizing image sometimes cuts off the left outer edge.
             0.6.0 - update libraries, tweak sizing algorithm.
             0.5.0 - Refactor, cleanup, bugfixes with terminal detection and stream.

@@ -16,10 +16,10 @@ namespace Sixel.Cmdlet;
 [OutputType(typeof(void))]
 public sealed class ShowSixelGifCmdlet : PSCmdlet {
     [Parameter(
-      HelpMessage = "SixelGif object to play.",
-      Mandatory = true,
-      ValueFromPipeline = true,
-      Position = 0
+        HelpMessage = "SixelGif object to play.",
+        Mandatory = true,
+        ValueFromPipeline = true,
+        Position = 0
     )]
     [ValidateNotNullOrEmpty]
     public SixelGif? Gif { get; set; }

@@ -122,7 +122,12 @@ dotnet_diagnostic.IDE0030.severity = warning
 dotnet_diagnostic.IDE0270.severity = warning
 dotnet_diagnostic.IDE0019.severity = warning
 
-# # Prefer var when the type is apparent (modern and concise)
+# Prefer var when the type is apparent (modern and concise)
+# how does this work with IDE0007?
+# var and explicit typing preferences
+# csharp_style_var_for_built_in_types = false:none
+# csharp_style_var_when_type_is_apparent = true:suggestion
+# csharp_style_var_elsewhere = false:suggestion
 csharp_style_var_when_type_is_apparent = true
 
 # # Expression-bodied members where concise
@@ -147,9 +152,10 @@ dotnet_diagnostic.IDE0051.severity = suggestion   # Unused private members
 dotnet_diagnostic.IDE0060.severity = suggestion   # Unused parameters
 dotnet_diagnostic.IDE0058.severity = suggestion   # Expression value is never used
 dotnet_diagnostic.IDE0130.severity = suggestion   # Use 'new' expression where possible (target-typed new)
-
+csharp_style_unused_value_expression_statement_preference = unused_local_variable
 # Nullable reference types - enabled as suggestions; project opt-in controls runtime enforcement
 nullable = enable
+csharp_style_prefer_primary_constructors = false
 
 # Formatting / newline preferences
 # prefer Stroustrup
@@ -166,10 +172,7 @@ csharp_indent_case_contents_when_block = true
 csharp_indent_switch_labels = true
 csharp_indent_labels = one_less_than_current
 
-# Var and explicit typing preferences
-# csharp_style_var_for_built_in_types = false:none
-# csharp_style_var_when_type_is_apparent = true:suggestion
-# csharp_style_var_elsewhere = false:suggestion
+
 
 # Using directive placement
 csharp_using_directive_placement = outside_namespace

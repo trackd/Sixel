@@ -27,25 +27,22 @@ public static class Blocks {
 
     internal static string ProcessFrame(ImageFrame<Rgba32> frame) {
         var _buffer = new StringBuilder();
-        Rgba32 _backgroundColor = GetConsoleBackgroundColor();
-
         for (int y = 0; y < frame.Height; y += 2) {
             if (y + 1 >= frame.Height) {
                 _buffer.AppendLine();
                 break;
             }
-
             for (int x = 0; x < frame.Width; x++) {
                 Rgba32 topPixel = frame[x, y];
-                Rgba32 bottomPixel = frame[x, y + 1];
+                Rgba32 bottomPixel = y + 1 < frame.Height ? frame[x, y + 1] : new Rgba32(0, 0, 0, 0);
 
-                _buffer.ProcessPixelPairs(topPixel, bottomPixel, _backgroundColor);
+                _buffer.ProcessPixelPairs(topPixel, bottomPixel);
             }
             _buffer.AppendLine();
         }
         return _buffer.ToString();
     }
-    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom, Rgba32 _backgroundColor) {
+    private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom) {
         bool topTransparent = IsTransparent(top);
         bool bottomTransparent = IsTransparent(bottom);
 
@@ -53,45 +50,70 @@ public static class Blocks {
             _buffer.Append(' ');
         }
         else if (topTransparent) {
-            (byte R, byte G, byte B) = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
-                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
-                   .Append(Constants.LowerHalfBlock)
-                   .Append(Constants.ESC).Append("[0m");
+            _buffer.AppendTopTransparent(bottom.R, bottom.G, bottom.B);
         }
         else if (bottomTransparent) {
-            (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
-            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
-                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
-                   .Append(Constants.UpperHalfBlock)
-                   .Append(Constants.ESC).Append("[0m");
+            _buffer.AppendBottomTransparent(top.R, top.G, top.B);
         }
         else {
-            (byte R, byte G, byte B) = BlendPixels(top, _backgroundColor);
-            (byte R, byte G, byte B) bottomRgb = BlendPixels(bottom, _backgroundColor);
-            _buffer.Append(Constants.ESC).Append(Constants.VTFG)
-                   .Append(R).Append(';').Append(G).Append(';').Append(B).Append('m')
-                   .Append(Constants.ESC).Append(Constants.VTBG)
-                   .Append(bottomRgb.R).Append(';').Append(bottomRgb.G).Append(';').Append(bottomRgb.B).Append('m')
-                   .Append(Constants.UpperHalfBlock)
-                   .Append(Constants.ESC).Append("[0m");
+            _buffer.AppendBlock(top.R, top.G, top.B, bottom.R, bottom.G, bottom.B);
         }
     }
-    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel, Rgba32 _backgroundColor) {
+    private static void AppendTopTransparent(this StringBuilder Builder, byte r, byte g, byte b) {
+        // "`e[38;2;{r};{g};{b}m▄`e[0m"
+        Builder.
+        Append(Constants.ESC).
+        Append(Constants.VTFG).
+        Append(r).Append(';').
+        Append(g).Append(';').
+        Append(b).Append('m').
+        Append(Constants.LowerHalfBlock).
+        Append(Constants.Reset);
+    }
+    private static void AppendBottomTransparent(this StringBuilder Builder, byte r, byte g, byte b) {
+        // "`e[38;2;{r};{g};{b}m▀`e[0m"
+        Builder.
+        Append(Constants.ESC).
+        Append(Constants.VTFG).
+        Append(r).Append(';').
+        Append(g).Append(';').
+        Append(b).Append('m').
+        Append(Constants.UpperHalfBlock).
+        Append(Constants.Reset);
+    }
+    private static void AppendBlock(this StringBuilder Builder, byte tr, byte tg, byte tb, byte br, byte bg, byte bb) {
+        // "`e[38;2;{tr};{tg};{tb};48;2;{br};{bg};{bb}m▀`e[0m"
+        Builder.
+        Append(Constants.ESC).
+        Append(Constants.VTFG).
+        Append(tr).Append(';').
+        Append(tg).Append(';').
+        Append(tb).Append(';').
+        Append(48).Append(';').
+        Append(2).Append(';').
+        Append(br).Append(';').
+        Append(bg).Append(';').
+        Append(bb).Append('m').
+        Append(Constants.UpperHalfBlock).
+        Append(Constants.Reset);
+    }
+    private static (byte R, byte G, byte B) BlendPixels(Rgba32 pixel) {
         // If pixel is fully transparent, return the background color
         if (IsTransparent(pixel)) {
-            return (_backgroundColor.R, _backgroundColor.G, _backgroundColor.B);
+            return (0, 0, 0);
         }
 
         float amount = pixel.A / 255f;
 
-        byte r = (byte)((pixel.R * amount) + (_backgroundColor.R * (1 - amount)));
-        byte g = (byte)((pixel.G * amount) + (_backgroundColor.G * (1 - amount)));
-        byte b = (byte)((pixel.B * amount) + (_backgroundColor.B * (1 - amount)));
+        byte r = (byte)(pixel.R * amount);
+        byte g = (byte)(pixel.G * amount);
+        byte b = (byte)(pixel.B * amount);
 
         return (r, g, b);
     }
     private static bool IsTransparent(Rgba32 pixel) {
+        if (pixel.A < 8) return true;
+        // if (pixel.A == 0) return true;
         // Calculate luminance for better edge artifact detection
         float luminance = ((0.299f * pixel.R) + (0.587f * pixel.G) + (0.114f * pixel.B)) / 255f;
 
@@ -102,35 +124,9 @@ public static class Blocks {
         // 4. Alpha is low and color is close to pure black (black edge artifacts)
         // 5. Very aggressive: moderately transparent with low luminance (catches most edge cases)
         return pixel.A < 8 ||
-               (pixel.A < 32 && luminance < 0.15f) ||
-               (pixel.A < 64 && pixel.R < 12 && pixel.G < 12 && pixel.B < 12) ||
-               (pixel.A < 128 && luminance < 0.05f) ||
-               (pixel.A < 240 && luminance < 0.01f);
+                (pixel.A < 32 && luminance < 0.15f) ||
+                (pixel.A < 64 && pixel.R < 12 && pixel.G < 12 && pixel.B < 12) ||
+                (pixel.A < 128 && luminance < 0.05f) ||
+                (pixel.A < 240 && luminance < 0.01f);
     }
-    private static Rgba32 GetConsoleBackgroundColor() {
-        if (Console.IsOutputRedirected) {
-            return Color.Black.ToPixel<Rgba32>();
-        }
-        Color color = Console.BackgroundColor switch {
-            ConsoleColor.Black => Color.FromRgb(0, 0, 0),
-            ConsoleColor.Blue => Color.FromRgb(0, 0, 170),
-            ConsoleColor.Cyan => Color.FromRgb(0, 170, 170),
-            ConsoleColor.DarkBlue => Color.FromRgb(0, 0, 85),
-            ConsoleColor.DarkCyan => Color.FromRgb(0, 85, 85),
-            ConsoleColor.DarkGray => Color.FromRgb(85, 85, 85),
-            ConsoleColor.DarkGreen => Color.FromRgb(0, 85, 0),
-            ConsoleColor.DarkMagenta => Color.FromRgb(85, 0, 85),
-            ConsoleColor.DarkRed => Color.FromRgb(85, 0, 0),
-            ConsoleColor.DarkYellow => Color.FromRgb(85, 85, 0),
-            ConsoleColor.Gray => Color.FromRgb(170, 170, 170),
-            ConsoleColor.Green => Color.FromRgb(0, 170, 0),
-            ConsoleColor.Magenta => Color.FromRgb(170, 0, 170),
-            ConsoleColor.Red => Color.FromRgb(170, 0, 0),
-            ConsoleColor.White => Color.FromRgb(255, 255, 255),
-            ConsoleColor.Yellow => Color.FromRgb(170, 170, 0),
-            _ => Color.Transparent,
-        };
-        return color.ToPixel<Rgba32>();
-    }
-
 }

@@ -15,4 +15,11 @@ public class CellSize {
     /// This isn't used for anything yet but this would be required for something like spectre console that needs to work around the size of the rendered sixel image.
     /// </summary>
     public int PixelHeight { get; set; }
+
+    /// <summary>
+    /// Gets the aspect ratio of the cell (width / height).
+    /// Typically ~0.5 for standard terminals (10x20 pixels).
+    /// This is the "font ratio" used to maintain proper image aspect ratios.
+    /// </summary>
+    public double AspectRatio => PixelHeight > 0 ? (double)PixelWidth / PixelHeight : 0.5;
 }

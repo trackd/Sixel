@@ -49,15 +49,10 @@ public static class ConvertTo {
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
 
-        // For Sixel and Blocks: default to window-relative size via SizeHelper when unconstrained
-        ImageSize constrainedSize;
-        if (width == 0 && height == 0) {
-            constrainedSize = SizeHelper.GetDefaultTerminalImageSize(image);
-        }
-        else {
-            // Constraints specified - apply resizing logic
-            constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
-        }
+        // Use protocol-aware sizing so non-sixel protocols do not apply sixel-specific math.
+        ImageSize constrainedSize = width == 0 && height == 0
+            ? SizeHelper.GetDefaultTerminalImageSize(image)
+            : SizeHelper.GetResizedCharacterCellSize(image, width, height);
 
         // Use the resolved protocol for all logic below
         switch (protocol) {
@@ -67,6 +62,7 @@ public static class ConvertTo {
                 }
                 // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
                 Image<Rgba32> resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
+                Resizer.PadHeightToMultipleOf6(resized);
                 ImageSize finalSize = SizeHelper.GetCharacterCellSize(resized);
                 ImageFrame<Rgba32> frame = resized.Frames[0];
                 string data = Protocols.Sixel.FrameToSixelString(frame);

@@ -16,6 +16,7 @@ public static class Sixel {
     public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
         // Use Resizer to handle resizing and quantization
         Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
+        Resizer.PadHeightToMultipleOf6(resizedImage);
         ImageFrame<Rgba32> targetFrame = resizedImage.Frames[0];
         return FrameToSixelString(targetFrame);
     }

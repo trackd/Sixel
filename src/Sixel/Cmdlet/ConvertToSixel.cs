@@ -91,12 +91,9 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                 case "InputObject": {
                         if (InputObject is not null && InputObject.Length > 512) {
                             // assume it's a base64 encoded image
-                            InputObject = Regex.Replace(
+                            InputObject = Compatibility.Base64Image().Replace(
                                 InputObject,
-                                @"^data:image/\w+;base64,",
-                                string.Empty,
-                                RegexOptions.IgnoreCase,
-                                TimeSpan.FromSeconds(1)
+                                string.Empty
                             );
                             imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
                         }
@@ -119,7 +116,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                         break;
                     }
                 case "Stream": {
-                        if (Stream is not null && Stream.CanSeek && Stream.Position != 0) {
+                        if (Stream?.CanSeek is true && Stream.Position is not 0) {
                             Stream.Position = 0;
                         }
                         imageStream = Stream;

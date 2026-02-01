@@ -9,15 +9,17 @@
         <Version>0.7.0</Version>
         <AnalysisMode>Recommended</AnalysisMode>
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest-Recommended</AnalysisLevel>
+        <NoWarn>CA1716</NoWarn>
     </PropertyGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
         <PackageReference Include="System.Management.Automation" Version="7.4" PrivateAssets="all" />
-        <PackageReference Include="Roslynator.Analyzers" Version="4.15.*">
+        <PackageReference Include="Roslynator.Analyzers" Version="4.*">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Roslynator.CodeFixes" Version="4.15.*">
+        <PackageReference Include="Roslynator.CodeFixes" Version="4.*">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

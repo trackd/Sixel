@@ -15,6 +15,9 @@ public static class KittyDev {
     /// Configuration options for Kitty graphics rendering
     /// </summary>
     public sealed class KittyImageOptions {
+        /// <summary>Action for the graphics command (default: transmit+display).</summary>
+        public char Action { get; set; } = 'T';
+
         /// <summary>Image ID for referencing (0 = auto-assign)</summary>
         public uint ImageId { get; set; }
 
@@ -36,6 +39,9 @@ public static class KittyDev {
         /// <summary>Pixel offset within first cell (Y coordinate)</summary>
         public int YOffset { get; set; }
 
+        /// <summary>Cursor movement policy (0 = move, 1 = no move)</summary>
+        public int CursorPolicy { get; set; }
+
         /// <summary>Width in character cells (0 = natural size)</summary>
         public int CellWidth { get; set; }
 
@@ -44,6 +50,27 @@ public static class KittyDev {
 
         /// <summary>Whether to preserve aspect ratio when resizing</summary>
         public bool PreserveAspectRatio { get; set; } = true;
+
+        /// <summary>Whether to use Unicode placeholders (U+10EEEE) or simple spaces</summary>
+        public bool UseUnicodePlaceholders { get; set; }
+
+        /// <summary>Whether to disable placeholders entirely</summary>
+        public bool DisablePlaceholders { get; set; }
+
+        /// <summary>Parent image id for relative placement</summary>
+        public uint ParentImageId { get; set; }
+
+        /// <summary>Parent placement id for relative placement</summary>
+        public uint ParentPlacementId { get; set; }
+
+        /// <summary>Relative horizontal offset in cells</summary>
+        public int RelativeXCells { get; set; }
+
+        /// <summary>Relative vertical offset in cells</summary>
+        public int RelativeYCells { get; set; }
+
+        /// <summary>Uncompressed data size for PNG when compression is enabled</summary>
+        public int SourceDataSize { get; set; }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ImageToKitty(string File, KittyImageOptions? options) {
@@ -91,7 +118,7 @@ public static class KittyDev {
     /// <param name="options">Configuration options for the conversion</param>
     /// <returns>The Kitty Graphics Protocol formatted string</returns>
     /// <exception cref="ArgumentNullException">Thrown when image or options is null</exception>
-    private static string ImageToKitty(Image<Rgba32> image, KittyImageOptions options) {
+    public static string ImageToKitty(Image<Rgba32> image, KittyImageOptions options) {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(options);
@@ -102,6 +129,12 @@ public static class KittyDev {
             throw new ArgumentNullException(nameof(options));
 #endif
 
+        EnsureUnicodePlaceholderRequirements(options);
+
+        // Store original cell dimensions for placeholder calculation
+        var cellSize = new ImageSize(options.CellWidth, options.CellHeight);
+        bool hasCellSize = cellSize.Width > 0 && cellSize.Height > 0;
+
         // Apply resizing if dimensions are specified
         if (options.CellWidth > 0 || options.CellHeight > 0) {
             ApplyResizing(image, options);
@@ -111,7 +144,20 @@ public static class KittyDev {
         using var ms = new MemoryStream();
         image.SaveAsPng(ms);
 
-        return ProcessImageData(ms.ToArray(), options);
+        string kittyData = ProcessImageData(ms.ToArray(), options);
+
+        if (!options.DisablePlaceholders && options.UseUnicodePlaceholders && hasCellSize) {
+            string placement = BuildUnicodePlacementCommand(options, cellSize);
+            kittyData += placement;
+        }
+
+        // Add placeholders to occupy screen space for correct cursor positioning
+        if (!options.DisablePlaceholders && hasCellSize) {
+            string placeholders = KittyPlaceholder.GeneratePlaceholders(cellSize, options.ImageId, true, options.UseUnicodePlaceholders);
+            return kittyData + placeholders;
+        }
+
+        return hasCellSize && options.CursorPolicy == 0 ? kittyData + KittyPlaceholder.GenerateSimplePlaceholders(cellSize) : kittyData;
     }
 
     /// <summary>
@@ -124,39 +170,38 @@ public static class KittyDev {
     /// <returns>Kitty delete command</returns>
     public static string CreateDeleteCommand(char deleteMode = 'a', uint imageId = 0,
         uint placementId = 0, bool freeMemory = true) {
-        var sb = new StringBuilder(128);
-
-        sb.Append('\u001b'); // ESC as char for better performance
-        sb.Append("_G");
-        sb.Append("a=d");
+        StringBuilder sb = new StringBuilder(128)
+            .Append('\u001b') // ESC as char for better performance
+            .Append("_G")
+            .Append("a=d");
 
         if (deleteMode != 'a') {
-            sb.Append(",d=");
-            sb.Append(freeMemory
-                ? char.ToUpper(deleteMode, CultureInfo.InvariantCulture)
-                : char.ToLower(deleteMode, CultureInfo.InvariantCulture));
+            sb.Append(",d=")
+                .Append(freeMemory
+                    ? char.ToUpper(deleteMode, CultureInfo.InvariantCulture)
+                    : char.ToLower(deleteMode, CultureInfo.InvariantCulture));
         }
 
         if (imageId > 0) {
-            sb.Append(",i=");
-            sb.Append(imageId);
+            sb.Append(",i=").Append(imageId);
         }
 
         if (placementId > 0) {
-            sb.Append(",p=");
-            sb.Append(placementId);
+            sb.Append(",p=").Append(placementId);
         }
 
-        sb.Append(Constants.ST);
-        return sb.ToString();
+        return sb.Append(Constants.ST).ToString();
     }
 
     /// <summary>
     /// Applies resizing logic to the image based on the specified options.
     /// Uses efficient calculations with proper aspect ratio handling.
+    /// Accounts for both image aspect ratio and cell aspect ratio (font ratio).
     /// </summary>
     private static void ApplyResizing(Image<Rgba32> image, KittyImageOptions options) {
         CellSize cellSize = Compatibility.GetCellSize();
+        double cellAspect = cellSize.AspectRatio;
+        double imageAspect = (double)image.Width / image.Height;
         int targetPixelWidth, targetPixelHeight;
 
         if (options.CellWidth > 0 && options.CellHeight > 0) {
@@ -166,18 +211,24 @@ public static class KittyDev {
         }
         else if (options.CellWidth > 0) {
             // Width specified - calculate height maintaining aspect ratio
+            // Account for both image aspect and cell aspect (font ratio)
             targetPixelWidth = options.CellWidth * cellSize.PixelWidth;
-            targetPixelHeight = options.PreserveAspectRatio ? (int)Math.Round((double)image.Height / image.Width * targetPixelWidth) : image.Height;
+            targetPixelHeight = options.PreserveAspectRatio
+                ? (int)Math.Round(targetPixelWidth / imageAspect * cellAspect)
+                : image.Height;
         }
         else if (options.CellHeight > 0) {
             // Height specified - calculate width maintaining aspect ratio
+            // Account for both image aspect and cell aspect (font ratio)
             targetPixelHeight = options.CellHeight * cellSize.PixelHeight;
-            targetPixelWidth = options.PreserveAspectRatio ? (int)Math.Round((double)image.Width / image.Height * targetPixelHeight) : image.Width;
+            targetPixelWidth = options.PreserveAspectRatio
+                ? (int)Math.Round(targetPixelHeight * imageAspect / cellAspect)
+                : image.Width;
         }
         else {
             // Fallback to original dimensions
             targetPixelWidth = image.Width;
-            targetPixelHeight = options.CellHeight * cellSize.PixelHeight;
+            targetPixelHeight = image.Height;
         }
 
         image.Mutate(ctx => ctx.Resize(new ResizeOptions {
@@ -191,6 +242,10 @@ public static class KittyDev {
     /// Processes image data with compression and encoding using efficient memory management.
     /// </summary>
     private static string ProcessImageData(byte[] imageData, KittyImageOptions options) {
+        if (options.SourceDataSize <= 0) {
+            options.SourceDataSize = imageData.Length;
+        }
+
         byte[] dataToEncode = imageData;
 
         if (options.UseCompression) {
@@ -254,12 +309,11 @@ public static class KittyDev {
         bool isFirstChunk = true;
 
         while (pos < base64Data.Length) {
-            sb.Append('\u001b'); // ESC as char for better performance
-            sb.Append("_G");
+            sb.Append('\u001b') // ESC as char for better performance
+                .Append("_G");
 
             if (isFirstChunk) {
                 BuildFirstChunkParameters(sb, options);
-                isFirstChunk = false;
             }
 
             int remaining = base64Data.Length - pos;
@@ -268,11 +322,17 @@ public static class KittyDev {
             pos += chunkSize;
 
             // Add chunk continuation flag
-            sb.Append(pos < base64Data.Length ? ",m=1" : ",m=0");
+            string continuationFlag = pos < base64Data.Length ? "m=1" : "m=0";
+            if (isFirstChunk) {
+                sb.Append(',').Append(continuationFlag);
+                isFirstChunk = false;
+            }
+            else {
+                sb.Append(continuationFlag);
+            }
 
             if (chunk.Length > 0) {
-                sb.Append(';');
-                sb.Append(chunk);
+                sb.Append(';').Append(chunk);
             }
 
             sb.Append(Constants.ST);
@@ -285,49 +345,114 @@ public static class KittyDev {
     /// Builds the first chunk parameters efficiently.
     /// </summary>
     private static void BuildFirstChunkParameters(StringBuilder sb, KittyImageOptions options) {
-        sb.Append("a=T,f=100"); // Transmit and display PNG
+        sb.Append("a=")
+            .Append(options.Action)
+            .Append(",f=100"); // PNG
 
-        if (options.UseCompression)
+        if (options.UseCompression) {
             sb.Append(",o=z");
+            if (options.SourceDataSize > 0) {
+                sb.Append(",S=").Append(options.SourceDataSize);
+            }
+        }
 
         if (options.ImageId > 0) {
-            sb.Append(",i=");
-            sb.Append(options.ImageId);
+            sb.Append(",i=").Append(options.ImageId);
         }
 
         if (options.PlacementId > 0) {
-            sb.Append(",p=");
-            sb.Append(options.PlacementId);
+            sb.Append(",p=").Append(options.PlacementId);
         }
 
         if (options.SuppressResponses > 0) {
-            sb.Append(",q=");
-            sb.Append(options.SuppressResponses);
+            sb.Append(",q=").Append(options.SuppressResponses);
+        }
+
+        if (options.UseUnicodePlaceholders) {
+            sb.Append(",U=1");
         }
 
         if (options.ZIndex != 0) {
-            sb.Append(",z=");
-            sb.Append(options.ZIndex);
+            sb.Append(",z=").Append(options.ZIndex);
         }
 
         if (options.XOffset > 0) {
-            sb.Append(",X=");
-            sb.Append(options.XOffset);
+            sb.Append(",X=").Append(options.XOffset);
         }
 
         if (options.YOffset > 0) {
-            sb.Append(",Y=");
-            sb.Append(options.YOffset);
+            sb.Append(",Y=").Append(options.YOffset);
+        }
+
+        if (options.CursorPolicy > 0) {
+            sb.Append(",C=").Append(options.CursorPolicy);
         }
 
         if (options.CellWidth > 0) {
-            sb.Append(",c=");
-            sb.Append(options.CellWidth);
+            sb.Append(",c=").Append(options.CellWidth);
         }
 
         if (options.CellHeight > 0) {
-            sb.Append(",r=");
-            sb.Append(options.CellHeight);
+            sb.Append(",r=").Append(options.CellHeight);
         }
+
+        if (options.ParentImageId > 0) {
+            sb.Append(",P=").Append(options.ParentImageId);
+        }
+
+        if (options.ParentPlacementId > 0) {
+            sb.Append(",Q=").Append(options.ParentPlacementId);
+        }
+
+        if (options.RelativeXCells != 0) {
+            sb.Append(",H=").Append(options.RelativeXCells);
+        }
+
+        if (options.RelativeYCells != 0) {
+            sb.Append(",V=").Append(options.RelativeYCells);
+        }
+    }
+
+    private static void EnsureUnicodePlaceholderRequirements(KittyImageOptions options) {
+        if (!options.UseUnicodePlaceholders) {
+            return;
+        }
+
+        if (options.SuppressResponses < 2) {
+            options.SuppressResponses = 2;
+        }
+
+        options.Action = 't';
+
+        if (options.ImageId == 0) {
+            options.ImageId = GenerateImageId();
+        }
+    }
+
+    internal static uint GenerateImageId() {
+        uint value = unchecked((uint)Environment.TickCount);
+        return value == 0 ? 1u : value;
+    }
+
+    private static string BuildUnicodePlacementCommand(KittyImageOptions options, ImageSize cellSize) {
+        StringBuilder sb = new StringBuilder(128)
+        .Append('\u001b')
+        .Append("_G")
+        .Append("a=p,U=1")
+        .Append(",i=")
+        .Append(options.ImageId);
+
+        if (options.SuppressResponses > 0) {
+            sb.Append(",q=").Append(options.SuppressResponses);
+        }
+
+        if (cellSize.Width > 0) {
+            sb.Append(",c=").Append(cellSize.Width);
+        }
+
+        if (cellSize.Height > 0) {
+            sb.Append(",r=").Append(cellSize.Height);
+        }
+        return sb.Append(Constants.ST).ToString();
     }
 }

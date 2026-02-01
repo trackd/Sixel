@@ -96,10 +96,8 @@ public static class Resizer {
         if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
             image.Mutate(ctx => {
                 ctx.Resize(new ResizeOptions() {
-                    // Never crop; pad to requested size, anchoring content at top-left to preserve the left edge.
-                    Mode = ResizeMode.BoxPad,
-                    Position = AnchorPositionMode.TopLeft,
-                    PadColor = Color.Transparent,
+                    // Fill the exact target pixel extents to match the computed cell size.
+                    Mode = ResizeMode.Stretch,
                     // https://en.wikipedia.org/wiki/Bicubic_interpolation
                     // quality goes Bicubic > Bilinear > NearestNeighbor
                     Sampler = KnownResamplers.Bicubic,
@@ -121,5 +119,27 @@ public static class Resizer {
             });
         }
         return image;
+    }
+
+    /// <summary>
+    /// Pads the image height to a multiple of 6 pixels for sixel encoding, without changing the width.
+    /// </summary>
+    /// <param name="image">The image to pad.</param>
+    internal static void PadHeightToMultipleOf6(Image<Rgba32> image) {
+        int paddedHeight = (image.Height + 5) / 6 * 6;
+        if (paddedHeight == image.Height) {
+            return;
+        }
+
+        image.Mutate(ctx => {
+            ctx.Resize(new ResizeOptions() {
+                // Pad only on the bottom to keep the origin anchored.
+                Mode = ResizeMode.Pad,
+                Position = AnchorPositionMode.TopLeft,
+                PadColor = Color.Transparent,
+                Size = new(image.Width, paddedHeight),
+                PremultiplyAlpha = false,
+            });
+        });
     }
 }

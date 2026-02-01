@@ -2,15 +2,17 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Sixel.Terminal.Models;
+
 
 namespace Sixel.Terminal;
 
 /// <summary>
 /// Provides methods and cached properties for detecting terminal compatibility, supported protocols, and cell/window sizes.
 /// </summary>
-public static class Compatibility {
+public static partial class Compatibility {
     /// <summary>
     /// Memory-caches the result of the terminal supporting sixel graphics.
     /// </summary>
@@ -20,11 +22,18 @@ public static class Compatibility {
     /// Check if the terminal supports kitty graphics
     /// </summary>
     internal static bool? _terminalSupportsKitty;
+    /// <summary>
+    /// Check if the terminal supports Synchronized Output
+    /// </summary>
+    internal static bool? _terminalSupportsSynchronizedOutput;
 
     /// <summary>
     /// Memory-caches the result of the terminal cell size.
     /// </summary>
     private static CellSize? _cellSize;
+
+    private static int? _lastWindowWidth;
+    private static int? _lastWindowHeight;
 
     /// <summary>
     /// get the terminal info
@@ -47,6 +56,7 @@ public static class Compatibility {
         for (int retry = 0; retry < maxRetries; retry++) {
             try {
                 var response = new StringBuilder();
+                bool capturing = false;
 
                 // Send the control sequence
                 Console.Write($"{Constants.ESC}{controlSequence}");
@@ -60,6 +70,14 @@ public static class Compatibility {
 
                     ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                     char key = keyInfo.KeyChar;
+
+                    if (!capturing) {
+                        if (key != '\x1b') {
+                            continue;
+                        }
+                        capturing = true;
+                    }
+
                     response.Append(key);
 
                     // Check if we have a complete response
@@ -91,11 +109,9 @@ public static class Compatibility {
         int length = response.Length;
         if (length < 2) return false;
 
-        // Look for common terminal response endings
-        char lastChar = response[length - 1];
 
         // Most VT terminal responses end with specific letters
-        switch (lastChar) {
+        switch (response[length - 1]) {
             case 'c': // Device Attributes (ESC[...c)
             case 'R': // Cursor Position Report (ESC[row;columnR)
             case 't': // Window manipulation (ESC[...t)
@@ -162,9 +178,11 @@ public static class Compatibility {
     /// </summary>
     /// <returns>The number of pixel sixels that will fit in a single character cell.</returns>
     public static CellSize GetCellSize() {
-        if (_cellSize is not null) {
+        if (_cellSize is not null && !HasWindowSizeChanged()) {
             return _cellSize;
         }
+
+        _cellSize = null;
         string response = GetControlSequenceResponse("[16t");
 
         try {
@@ -179,6 +197,7 @@ public static class Compatibility {
                         PixelWidth = width,
                         PixelHeight = height
                     };
+                    UpdateWindowSizeSnapshot();
                     return _cellSize;
                 }
             }
@@ -189,6 +208,7 @@ public static class Compatibility {
 
         // Platform-specific fallback values
         _cellSize = GetPlatformDefaultCellSize();
+        UpdateWindowSizeSnapshot();
         return _cellSize;
     }
 
@@ -213,6 +233,39 @@ public static class Compatibility {
             PixelWidth = 10,
             PixelHeight = 20
         };
+    }
+
+    private static bool HasWindowSizeChanged() {
+        if (Console.IsOutputRedirected || Console.IsInputRedirected) {
+            return false;
+        }
+
+        try {
+            int currentWidth = Console.WindowWidth;
+            int currentHeight = Console.WindowHeight;
+
+            return _lastWindowWidth.HasValue &&
+                _lastWindowHeight.HasValue &&
+                (_lastWindowWidth.Value != currentWidth || _lastWindowHeight.Value != currentHeight);
+        }
+        catch {
+            return false;
+        }
+    }
+
+    private static void UpdateWindowSizeSnapshot() {
+        if (Console.IsOutputRedirected || Console.IsInputRedirected) {
+            return;
+        }
+
+        try {
+            _lastWindowWidth = Console.WindowWidth;
+            _lastWindowHeight = Console.WindowHeight;
+        }
+        catch {
+            _lastWindowWidth = null;
+            _lastWindowHeight = null;
+        }
     }
 
     /// <summary>
@@ -246,6 +299,65 @@ public static class Compatibility {
         return _terminalSupportsKitty.Value;
     }
 
+    public static bool TerminalSupportsSynchronizedOutput() {
+        if (_terminalSupportsSynchronizedOutput.HasValue) {
+            return _terminalSupportsSynchronizedOutput.Value;
+        }
+
+        string response = GetControlSequenceResponse(Constants.DECRQM2026);
+        try {
+            if (string.IsNullOrEmpty(response)) {
+                _terminalSupportsSynchronizedOutput = false;
+                return false;
+            }
+
+            // Expected response: ESC[?2026;<n>$y  where <n> is a number (0..4)
+            int idx = response.IndexOf("?2026;", StringComparison.Ordinal);
+            if (idx >= 0) {
+                int start = idx + "?2026;".Length;
+                int end = response.IndexOf('$', start);
+                if (end < 0) {
+                    // If no $ found, try to find a non-digit terminator or use rest of string
+                    end = start;
+                    while (end < response.Length && char.IsDigit(response[end])) end++;
+                }
+
+                if (end > start) {
+#if NET8_0_OR_GREATER
+                    string numberText = response[start..end];
+#else
+                    string numberText = response.Substring(start, end);
+#endif
+                    if (int.TryParse(numberText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number)) {
+                        // 0 = not recognized (not supported). 1..4 indicate supported states.
+                        _terminalSupportsSynchronizedOutput = number != 0;
+                        Console.WriteLine($"Synchronized Output: received {number}");
+                        return _terminalSupportsSynchronizedOutput.Value;
+                    }
+                }
+            }
+
+            // As a fallback, try to extract the last numeric token from the response
+            for (int i = response.Length - 1; i >= 0; i--) {
+                if (char.IsDigit(response[i])) {
+                    int j = i;
+                    while (j >= 0 && char.IsDigit(response[j])) j--;
+                    string candidate = response.Substring(j + 1, i - j);
+                    if (int.TryParse(candidate, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fallbackNumber)) {
+                        _terminalSupportsSynchronizedOutput = fallbackNumber != 0;
+                        Console.WriteLine($"Synchronized Output fallback: received {fallbackNumber}");
+                        return _terminalSupportsSynchronizedOutput.Value;
+                    }
+                    break;
+                }
+            }
+        }
+        catch {
+            return false;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Get the terminal info
     /// </summary>
@@ -258,5 +370,12 @@ public static class Compatibility {
         _terminalInfo = TerminalChecker.CheckTerminal();
         return _terminalInfo;
     }
+#if NET7_0_OR_GREATER
+    [GeneratedRegex(@"^data:image/\w+;base64,", RegexOptions.IgnoreCase)]
+    internal static partial Regex Base64Image();
+#else
+    internal static Regex Base64Image() =>
+        new(@"^data:image/\w+;base64,", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+#endif
 
 }
