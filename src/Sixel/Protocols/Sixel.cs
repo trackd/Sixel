@@ -8,17 +8,19 @@ namespace Sixel.Protocols;
 
 public static class Sixel {
     /// <summary>
-    /// Converts an image to a Sixel string.
+    /// Converts an image to a Sixel payload, returning rendered size in character cells and encoded data.
     /// </summary>
     /// <param name="image">The image to convert.</param>
     /// <param name="imageSize">The size of the image in character cells.</param>
     /// <param name="maxColors">The Max colors of the image.</param>
-    public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
-        // Use Resizer to handle resizing and quantization
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
-        Resizer.PadHeightToMultipleOf6(resizedImage);
+    /// <returns>Tuple containing the final character-cell size and the Sixel data string.</returns>
+    public static (ImageSize Size, string Data) ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
+        // Use Resizer to handle resizing, padding, and quantization in one mutate pass
+        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, padHeightToMultipleOf6: true);
+        ImageSize finalSize = SizeHelper.GetCharacterCellSize(resizedImage);
         ImageFrame<Rgba32> targetFrame = resizedImage.Frames[0];
-        return FrameToSixelString(targetFrame);
+        string data = FrameToSixelString(targetFrame);
+        return (finalSize, data);
     }
     internal static string FrameToSixelString(ImageFrame<Rgba32> frame) {
         // Pre-allocate StringBuilder with estimated capacity for better performance

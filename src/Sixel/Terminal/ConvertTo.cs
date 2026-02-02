@@ -60,13 +60,8 @@ public static class ConvertTo {
                 if (!autoProtocol.Contains(ImageProtocol.Sixel) && !Compatibility.TerminalSupportsSixel() && !Force) {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
-                Image<Rgba32> resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
-                Resizer.PadHeightToMultipleOf6(resized);
-                ImageSize finalSize = SizeHelper.GetCharacterCellSize(resized);
-                ImageFrame<Rgba32> frame = resized.Frames[0];
-                string data = Protocols.Sixel.FrameToSixelString(frame);
-                return (finalSize, data);
+                // Delegate sixel conversion to protocol for self-contained handling.
+                return Protocols.Sixel.ImageToSixel(image, constrainedSize, maxColors);
 
             case ImageProtocol.KittyGraphicsProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force) {

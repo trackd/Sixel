@@ -79,43 +79,60 @@ public static class Resizer {
     /// This method is used when the image size is already known and does not need to be calculated.
     /// </summary>
     /// <param name="image">The image to resize.</param>
-    /// <param name="imageSize">The target size in terminal character cells.</param>    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
+    /// <param name="imageSize">The target size in terminal character cells.</param>
+    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
+    /// <param name="padHeightToMultipleOf6">When true, pad the final height to the next multiple of 6 pixels for sixel encoding without stretching the content.</param>
     /// <returns>The resized image.</returns>
     public static Image<Rgba32> ResizeToCharacterCells(
         Image<Rgba32> image,
         ImageSize imageSize,
-        int maxColors
+        int maxColors,
+        bool padHeightToMultipleOf6 = false
     ) {
         CellSize cellSize = Compatibility.GetCellSize();
 
         // Calculate pixel dimensions from cell dimensions
         int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
         int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+        int paddedPixelHeight = padHeightToMultipleOf6
+            ? (targetPixelHeight + 5) / 6 * 6
+            : targetPixelHeight;
+        int desiredPixelHeight = padHeightToMultipleOf6 ? paddedPixelHeight : targetPixelHeight;
 
-        // Only resize if the target size is different
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
+        bool needsResize = image.Width != targetPixelWidth || image.Height != desiredPixelHeight;
+        bool needsQuantize = maxColors > 0;
+        bool needsPadOnly = !needsResize && padHeightToMultipleOf6 && image.Height != desiredPixelHeight;
+
+        if (needsResize || needsQuantize || needsPadOnly) {
             image.Mutate(ctx => {
-                ctx.Resize(new ResizeOptions() {
-                    // Fill the exact target pixel extents to match the computed cell size.
-                    Mode = ResizeMode.Stretch,
-                    // https://en.wikipedia.org/wiki/Bicubic_interpolation
-                    // quality goes Bicubic > Bilinear > NearestNeighbor
-                    Sampler = KnownResamplers.Bicubic,
-                    Size = new(targetPixelWidth, targetPixelHeight),
-                    PremultiplyAlpha = false,
-                });
-                if (maxColors > 0) {
+                if (needsResize) {
+                    ctx.Resize(new ResizeOptions() {
+                        // Fill the exact target pixel extents to match the computed cell size.
+                        Mode = ResizeMode.Stretch,
+                        // https://en.wikipedia.org/wiki/Bicubic_interpolation
+                        // quality goes Bicubic > Bilinear > NearestNeighbor
+                        Sampler = KnownResamplers.Bicubic,
+                        Size = new(targetPixelWidth, desiredPixelHeight),
+                        PremultiplyAlpha = false,
+                    });
+                }
+
+                if (needsQuantize) {
                     ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
                 }
-            });
-        }
-        else if (maxColors > 0) {
-            image.Mutate(ctx => {
-                ctx.Quantize(new OctreeQuantizer(new() {
-                    MaxColors = maxColors,
-                }));
+
+                if (needsPadOnly) {
+                    // Add transparent rows on the bottom to reach the sixel-required multiple of 6 without resampling existing pixels.
+                    ctx.Resize(new ResizeOptions() {
+                        Mode = ResizeMode.Pad,
+                        Position = AnchorPositionMode.TopLeft,
+                        PadColor = Color.Transparent,
+                        Size = new(targetPixelWidth, desiredPixelHeight),
+                        PremultiplyAlpha = false,
+                    });
+                }
             });
         }
         return image;
