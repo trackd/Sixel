@@ -11,16 +11,21 @@ public static class Sixel {
     /// Converts an image to a Sixel payload, returning rendered size in character cells and encoded data.
     /// </summary>
     /// <param name="image">The image to convert.</param>
-    /// <param name="imageSize">The size of the image in character cells.</param>
+    /// <param name="maxCellWidth">Requested max width in terminal cells, or 0 for default behavior.</param>
+    /// <param name="maxCellHeight">Requested max height in terminal cells, or 0 for default behavior.</param>
     /// <param name="maxColors">The Max colors of the image.</param>
     /// <returns>Tuple containing the final character-cell size and the Sixel data string.</returns>
-    public static (ImageSize Size, string Data) ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
-        // Use Resizer to handle resizing, padding, and quantization in one mutate pass
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors, padHeightToMultipleOf6: true);
-        ImageSize finalSize = SizeHelper.GetCharacterCellSize(resizedImage);
+    public static (ImageSize Size, string Data) ImageToSixel(
+        Image<Rgba32> image,
+        int maxColors,
+        int maxCellWidth,
+        int maxCellHeight
+    ) {
+        ImageSize imageSize = SizeHelper.GetSixelTargetSize(image, maxCellWidth, maxCellHeight);
+        Image<Rgba32> resizedImage = Resizer.ResizeForSixel(image, imageSize, maxColors);
+        ImageSize finalSize = imageSize;
         ImageFrame<Rgba32> targetFrame = resizedImage.Frames[0];
-        string data = FrameToSixelString(targetFrame);
-        return (finalSize, data);
+        return (finalSize, FrameToSixelString(targetFrame));
     }
     internal static string FrameToSixelString(ImageFrame<Rgba32> frame) {
         // Pre-allocate StringBuilder with estimated capacity for better performance
@@ -93,7 +98,7 @@ public static class Sixel {
             pixel.B * 100 / 255
         );
 
-        sixelBuilder
+        _ = sixelBuilder
         .Append(Constants.SixelColorStart)
         .Append(colorIndex)
         .Append(Constants.SixelColorParam)
@@ -110,14 +115,14 @@ public static class Sixel {
         }
         if (repeatCounter <= 1) {
             // single entry
-            sixelBuilder
+            _ = sixelBuilder
             .Append(Constants.SixelColorStart)
             .Append(colorIndex)
             .Append(sixel);
         }
         else {
             // add repeats
-            sixelBuilder
+            _ = sixelBuilder
             .Append(Constants.SixelColorStart)
             .Append(colorIndex)
             .Append(Constants.SixelRepeat)
@@ -131,17 +136,17 @@ public static class Sixel {
     }
 
     private static void AppendNextLine(this StringBuilder sixelBuilder) {
-        sixelBuilder
+        _ = sixelBuilder
         .Append(Constants.SixelDECGNL);
     }
 
     private static void AppendExitSixel(this StringBuilder sixelBuilder) {
-        sixelBuilder
+        _ = sixelBuilder
         .Append(Constants.ST);
     }
 
     private static void StartSixel(this StringBuilder sixelBuilder, int width, int height) {
-        sixelBuilder
+        _ = sixelBuilder
         .Append(Constants.SixelStart)
         .Append(Constants.SixelRaster)
         .Append(width)

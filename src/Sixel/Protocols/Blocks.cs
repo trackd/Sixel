@@ -8,46 +8,15 @@ using SixLabors.ImageSharp.Processing;
 namespace Sixel.Protocols;
 
 public static class Blocks {
-    public static string ImageToBlocks(Image<Rgba32> image, ImageSize imageSize) {
-        // Resize the image directly to character cell dimensions (not pixel dimensions)
-        image.Mutate(ctx => {
-            ctx.Resize(new ResizeOptions {
-                Mode = ResizeMode.BoxPad,
-                Position = AnchorPositionMode.TopLeft,
-                PadColor = Color.Transparent,
-                // * 2 because each cell is 2 pixels high for blocks
-                Size = new Size(imageSize.Width, imageSize.Height * 2),
-                Sampler = KnownResamplers.Bicubic, // Better for preserving sharp transparency edges
-                PremultiplyAlpha = false
-            });
-        });
-        ImageFrame<Rgba32> targetFrame = image.Frames[0];
-        return ProcessFrameBlocks(targetFrame);
+    public static (ImageSize Size, string Data) ImageToBlocks(Image<Rgba32> image, int maxCellWidth, int maxCellHeight) {
+        ImageSize imageSize = SizeHelper.GetBlocksTargetSize(image, maxCellWidth, maxCellHeight);
+        Image<Rgba32> resizedImage = Resizer.ResizeForBlocks(image, imageSize);
+        ImageFrame<Rgba32> targetFrame = resizedImage.Frames[0];
+        return (imageSize, ProcessFrameBlocks(targetFrame));
     }
-    public static string ImageToBraille(Image<Rgba32> image, ImageSize imageSize) {
-        // Resize the image directly to character cell dimensions (not pixel dimensions)
-        image.Mutate(ctx => {
-            ctx.Resize(new ResizeOptions {
-                Mode = ResizeMode.BoxPad,
-                Position = AnchorPositionMode.TopLeft,
-                PadColor = Color.Transparent,
-                // width * 2  and height * 4 because braille is small.
-                Size = new Size(imageSize.Width * 2, imageSize.Height * 4),
-                Sampler = KnownResamplers.Bicubic, // Better for preserving sharp transparency edges
-                PremultiplyAlpha = false
-            });
-        });
-        ImageFrame<Rgba32> targetFrame = image.Frames[0];
-        return ProcessFrameBraille(targetFrame);
-    }
-
     internal static string ProcessFrameBlocks(ImageFrame<Rgba32> frame) {
         var _buffer = new StringBuilder();
         for (int y = 0; y < frame.Height; y += 2) {
-            // if (y + 1 >= frame.Height) {
-            //     _ = _buffer.AppendLine();
-            //     break;
-            // }
             for (int x = 0; x < frame.Width; x++) {
                 Rgba32 topPixel = frame[x, y];
                 Rgba32 bottomPixel = y + 1 < frame.Height ? frame[x, y + 1] : new Rgba32(0, 0, 0, 0);
@@ -56,50 +25,6 @@ public static class Blocks {
             }
             _ = _buffer.AppendLine();
         }
-        return _buffer.ToString();
-    }
-    private static string ProcessFrameBraille(ImageFrame<Rgba32> frame) {
-        var _buffer = new StringBuilder();
-        int width = frame.Width;
-        int height = frame.Height;
-
-        for (int row = 0; row < width; row++) {
-            for (int xCell = 0; xCell < width; xCell += height) {
-                int baseX = xCell;
-                int dotBits = 0;
-                int sampleCount = 0;
-                int rSum = 0, gSum = 0, bSum = 0;
-
-                for (int dx = 0; dx < 2; dx++) {
-                    int sampleX = Math.Clamp(baseX + (int)Math.Round((dx + 0.5) / 2.0 * width), 0, width - 1);
-                    for (int dy = 0; dy < 4; dy++) {
-                        int sampleY = Math.Clamp((int)Math.Round((row + ((dy + 0.5) / 4.0)) * height / height), 0, height - 1);
-                        Rgba32 px = frame[sampleX, sampleY];
-                        bool on = !IsTransparent(px);
-                        if (on) {
-                            int dotIndex = dx == 0 ? (dy == 0 ? 0 : dy == 1 ? 1 : dy == 2 ? 2 : 6) : (dy == 0 ? 3 : dy == 1 ? 4 : dy == 2 ? 5 : 7);
-                            dotBits |= 1 << dotIndex;
-                            rSum += px.R; gSum += px.G; bSum += px.B;
-                            sampleCount++;
-                        }
-                    }
-                }
-
-                if (dotBits == 0) {
-                    _ = _buffer.Append(' ');
-                }
-                else {
-                    byte R = (byte)(rSum / Math.Max(1, sampleCount));
-                    byte G = (byte)(gSum / Math.Max(1, sampleCount));
-                    byte B = (byte)(bSum / Math.Max(1, sampleCount));
-                    int codepoint = 0x2800 + dotBits;
-                    _buffer.AppendCodepoint(codepoint, R, G, B);
-                }
-            }
-
-            _ = _buffer.AppendLine();
-        }
-
         return _buffer.ToString();
     }
     private static void ProcessPixelPairs(this StringBuilder _buffer, Rgba32 top, Rgba32 bottom) {
@@ -157,17 +82,7 @@ public static class Blocks {
         Append(Constants.UpperHalfBlock).
         Append(Constants.Reset);
     }
-    private static void AppendCodepoint(this StringBuilder Builder, int codepoint, byte r, byte g, byte b) {
-        // "`e[38;2;{r};{g};{b}m▄`e[0m"
-        _ = Builder.
-        Append(Constants.ESC).
-        Append(Constants.VTFG).
-        Append(r).Append(';').
-        Append(g).Append(';').
-        Append(b).Append('m').
-        Append(char.ConvertFromUtf32(codepoint)).
-        Append(Constants.Reset);
-    }
+
     private static (byte R, byte G, byte B) BlendPixels(Rgba32 top, Rgba32 bottom) {
         // If pixel is fully transparent, return the background color
         if (IsTransparent(top) && IsTransparent(bottom)) {

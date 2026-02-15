@@ -10,5 +10,6 @@ public enum ImageProtocol {
     Blocks = 1,
     InlineImageProtocol = 2,
     Sixel = 4,
-    KittyGraphicsProtocol = 8
+    KittyGraphicsProtocol = 8,
+    Braille = 16
 }

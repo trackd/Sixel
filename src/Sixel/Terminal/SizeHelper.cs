@@ -9,6 +9,25 @@ namespace Sixel.Terminal;
 /// Provides methods for converting and resizing image dimensions to terminal character cell sizes.
 /// </summary>
 public static class SizeHelper {
+    public static ImageSize GetSixelTargetSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
+        => GetRequestedOrDefaultCellSize(image, maxCellWidth, maxCellHeight);
+
+    public static ImageSize GetKittyTargetSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
+        => GetRequestedOrDefaultCellSize(image, maxCellWidth, maxCellHeight);
+
+    public static ImageSize GetBlocksTargetSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
+        => GetRequestedOrDefaultCellSize(image, maxCellWidth, maxCellHeight);
+
+    public static ImageSize GetBrailleTargetSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
+        => GetRequestedOrDefaultCellSize(image, maxCellWidth, maxCellHeight);
+
+    private static ImageSize GetRequestedOrDefaultCellSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight) {
+        bool hasConstraints = maxCellWidth > 0 || maxCellHeight > 0;
+        return hasConstraints
+            ? GetResizedCharacterCellSize(image, maxCellWidth, maxCellHeight)
+            : GetDefaultTerminalImageSize(image);
+    }
+
     /// <summary>
     /// Converts image dimensions from pixels to terminal character cells.
     /// </summary>

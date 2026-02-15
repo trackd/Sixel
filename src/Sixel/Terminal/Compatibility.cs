@@ -299,6 +299,20 @@ public static partial class Compatibility {
         return _terminalSupportsKitty.Value;
     }
 
+    /// <summary>
+    /// query if the terminal supports synchronized output.
+    /// Use CSI ? 2026 $ p to query the state of the (DEC) mode 2026.
+    /// This works for any private mode number.
+    /// If you get nothing back (DECRQM not implemented at all)
+    /// or you get back a CSI ? 2026 ; 0 $ y
+    /// 0 	Mode is not recognized 	not supported
+    /// 1 	Set
+    /// 2 	Reset
+    /// 3 	Permanently set
+    /// 4 	Permanently reset
+    /// => [?2026;0$y
+    /// See DECRQM (request) and DECRPM (response) for more details.
+    /// </summary>
     public static bool TerminalSupportsSynchronizedOutput() {
         if (_terminalSupportsSynchronizedOutput.HasValue) {
             return _terminalSupportsSynchronizedOutput.Value;
@@ -331,7 +345,7 @@ public static partial class Compatibility {
                     if (int.TryParse(numberText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number)) {
                         // 0 = not recognized (not supported). 1..4 indicate supported states.
                         _terminalSupportsSynchronizedOutput = number != 0;
-                        Console.WriteLine($"Synchronized Output: received {number}");
+                        // Console.WriteLine($"Synchronized Output: received {number}");
                         return _terminalSupportsSynchronizedOutput.Value;
                     }
                 }
@@ -345,7 +359,7 @@ public static partial class Compatibility {
                     string candidate = response.Substring(j + 1, i - j);
                     if (int.TryParse(candidate, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fallbackNumber)) {
                         _terminalSupportsSynchronizedOutput = fallbackNumber != 0;
-                        Console.WriteLine($"Synchronized Output fallback: received {fallbackNumber}");
+                        // Console.WriteLine($"Synchronized Output fallback: received {fallbackNumber}");
                         return _terminalSupportsSynchronizedOutput.Value;
                     }
                     break;
@@ -370,12 +384,14 @@ public static partial class Compatibility {
         _terminalInfo = TerminalChecker.CheckTerminal();
         return _terminalInfo;
     }
+
 #if NET7_0_OR_GREATER
-    [GeneratedRegex(@"^data:image/\w+;base64,", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^data:image/\w+;base64,", RegexOptions.IgnoreCase, 1000)]
     internal static partial Regex Base64Image();
 #else
     internal static Regex Base64Image() =>
         new(@"^data:image/\w+;base64,", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 #endif
-
+    public static string TrimBase64(string b64)
+        => Base64Image().Replace(b64, string.Empty);
 }

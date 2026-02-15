@@ -2,9 +2,6 @@
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using SixLabors.ImageSharp.Processing.Processors.Transforms;
 namespace Sixel.Terminal;
 
 /// <summary>
@@ -49,26 +46,19 @@ public static class ConvertTo {
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
 
-        // Use protocol-aware sizing so non-sixel protocols do not apply sixel-specific math.
-        ImageSize constrainedSize = width == 0 && height == 0
-            ? SizeHelper.GetDefaultTerminalImageSize(image)
-            : SizeHelper.GetResizedCharacterCellSize(image, width, height);
-
         // Use the resolved protocol for all logic below
         switch (protocol) {
             case ImageProtocol.Sixel:
                 if (!autoProtocol.Contains(ImageProtocol.Sixel) && !Compatibility.TerminalSupportsSixel() && !Force) {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                // Delegate sixel conversion to protocol for self-contained handling.
-                return Protocols.Sixel.ImageToSixel(image, constrainedSize, maxColors);
+                return Protocols.Sixel.ImageToSixel(image, maxColors, width, height);
 
             case ImageProtocol.KittyGraphicsProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force) {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
-                // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
-                return (constrainedSize, KittyGraphics.ImageToKitty(image, constrainedSize));
+                return KittyGraphics.ImageToKitty(image, width, height);
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
@@ -80,7 +70,10 @@ public static class ConvertTo {
                 return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
 
             case ImageProtocol.Blocks:
-                return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));
+                return Blocks.ImageToBlocks(image, width, height);
+
+            case ImageProtocol.Braille:
+                return Braille.ImageToBraille(image, width, height);
 
             case ImageProtocol.Auto:
                 throw new InvalidOperationException("Auto protocol should have been resolved");

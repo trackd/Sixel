@@ -8,9 +8,12 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
+
+// WIP, not working yet..
+
 namespace Sixel.Protocols;
 
-public static class KittyDev {
+internal static class KittyDev {
     /// <summary>
     /// Configuration options for Kitty graphics rendering
     /// </summary>

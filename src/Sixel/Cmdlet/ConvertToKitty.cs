@@ -179,10 +179,7 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
                 case "InputObject": {
                         if (InputObject?.Length > 512) {
                             // assume it's a base64 encoded image
-                            InputObject = Compatibility.Base64Image().Replace(
-                                InputObject,
-                                string.Empty
-                            );
+                            InputObject = Compatibility.TrimBase64(InputObject);
                             imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
                         }
                         else {

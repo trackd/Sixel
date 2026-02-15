@@ -30,9 +30,8 @@
     CmdletsToExport        = @(
         'ConvertTo-Sixel'
         'ConvertTo-SixelGif'
-        'ConvertTo-Kitty'
     )
-    AliasesToExport        = 'cts', 'gif', 'ctk', 'kitty'
+    AliasesToExport        = 'cts', 'gif'
     FormatsToProcess       = 'Sixel.format.ps1xml'
     PrivateData            = @{
         PSData = @{
@@ -50,7 +49,7 @@
             ProjectUri   = 'https://github.com/trackd/Sixel'
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
-            0.7.0 - bugfix sizing issues, improved detection of terminal capabilities. new Cmdlet ConvertTo-Kitty with more support for Kitty Graphics Protocol.
+            0.7.0 - bugfix sizing issues, improved detection of terminal capabilities, library update.
             0.6.1 - bugfix resizing image sometimes cuts off the left outer edge.
             0.6.0 - update libraries, tweak sizing algorithm.
             0.5.0 - Refactor, cleanup, bugfixes with terminal detection and stream.

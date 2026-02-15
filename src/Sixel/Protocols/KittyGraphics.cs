@@ -21,15 +21,15 @@ public static class KittyGraphics {
         string base64Image = Convert.ToBase64String(imageBytes);
         return ConvertToKittyGraphics(base64Image);
     }
-    public static string ImageToKitty(Image<Rgba32> image, ImageSize imageSize) {
-        // Use Resizer to handle resizing - NO 6px alignment for Kitty
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, 0);
+    public static (ImageSize Size, string Data) ImageToKitty(Image<Rgba32> image, int maxCellWidth, int maxCellHeight) {
+        ImageSize imageSize = SizeHelper.GetKittyTargetSize(image, maxCellWidth, maxCellHeight);
+        Image<Rgba32> resizedImage = Resizer.ResizeForKitty(image, imageSize);
         // convert the resized image to base64
         using MemoryStream? ms = new();
         resizedImage.SaveAsPng(ms);
         byte[] imageBytes = ms.ToArray();
         string base64Image = Convert.ToBase64String(imageBytes);
-        return ConvertToKittyGraphics(base64Image, imageSize);
+        return (imageSize, ConvertToKittyGraphics(base64Image, imageSize));
     }
     private static string ConvertToKittyGraphics(string base64Image) {
         // basic implementation of kitty graphics protocol
@@ -37,9 +37,9 @@ public static class KittyGraphics {
         int pos = 0;
         while (pos < base64Image.Length) {
             bool isFirstChunk = pos == 0;
-            sb.Append(Constants.KittyStart);
+            _ = sb.Append(Constants.KittyStart);
             if (isFirstChunk) {
-                sb.Append(Constants.KittyPos);
+                _ = sb.Append(Constants.KittyPos);
             }
             int remaining = base64Image.Length - pos;
             int chunkSize = Math.Min(Constants.KittychunkSize, remaining);
@@ -47,9 +47,9 @@ public static class KittyGraphics {
             pos += chunkSize;
             string chunkFlag = pos < base64Image.Length ? Constants.KittyMore : Constants.KittyFinish;
             if (isFirstChunk) {
-                sb.Append(',');
+                _ = sb.Append(',');
             }
-            sb
+            _ = sb
             .Append(chunkFlag)
             .Append(Constants.Divider)
             .Append(chunk)
@@ -64,11 +64,11 @@ public static class KittyGraphics {
         int pos = 0;
         while (pos < base64Image.Length) {
             bool isFirstChunk = pos == 0;
-            sb.Append(Constants.KittyStart);
+            _ = sb.Append(Constants.KittyStart);
             if (isFirstChunk) {
-                sb.Append(Constants.KittyPos);
+                _ = sb.Append(Constants.KittyPos);
                 // Add cell dimension parameters so terminal knows exact size
-                sb.AppendFormat(CultureInfo.InvariantCulture, ",c={0},r={1}", imageSize.Width, imageSize.Height);
+                _ = sb.AppendFormat(CultureInfo.InvariantCulture, ",c={0},r={1}", imageSize.Width, imageSize.Height);
             }
             int remaining = base64Image.Length - pos;
             int chunkSize = Math.Min(Constants.KittychunkSize, remaining);
@@ -76,9 +76,9 @@ public static class KittyGraphics {
             pos += chunkSize;
             string chunkFlag = pos < base64Image.Length ? Constants.KittyMore : Constants.KittyFinish;
             if (isFirstChunk) {
-                sb.Append(',');
+                _ = sb.Append(',');
             }
-            sb
+            _ = sb
             .Append(chunkFlag)
             .Append(Constants.Divider)
             .Append(chunk)

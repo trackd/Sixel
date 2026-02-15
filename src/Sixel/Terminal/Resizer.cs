@@ -10,6 +10,79 @@ namespace Sixel.Terminal;
 /// Provides methods to resize images to fit within terminal character cell dimensions, with optional color quantization.
 /// </summary>
 public static class Resizer {
+    public static Image<Rgba32> ResizeForSixel(
+        Image<Rgba32> image,
+        ImageSize imageSize,
+        int maxColors
+    ) {
+        CellSize cellSize = Compatibility.GetCellSize();
+        int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
+        int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+        int sixelAlignedHeight = (targetPixelHeight + 5) / 6 * 6;
+        return ResizeExact(image, targetPixelWidth, sixelAlignedHeight, maxColors);
+    }
+
+    public static Image<Rgba32> ResizeForKitty(
+        Image<Rgba32> image,
+        ImageSize imageSize
+    ) {
+        CellSize cellSize = Compatibility.GetCellSize();
+        int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
+        int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+        return ResizeExact(image, targetPixelWidth, targetPixelHeight, maxColors: 0);
+    }
+
+    public static Image<Rgba32> ResizeForBlocks(
+        Image<Rgba32> image,
+        ImageSize imageSize
+    ) {
+        int targetPixelWidth = imageSize.Width;
+        int targetPixelHeight = imageSize.Height * 2;
+        return ResizeExact(image, targetPixelWidth, targetPixelHeight, maxColors: 0);
+    }
+
+    public static Image<Rgba32> ResizeForBraille(
+        Image<Rgba32> image,
+        ImageSize imageSize
+    ) {
+        int targetPixelWidth = imageSize.Width * 2;
+        int targetPixelHeight = imageSize.Height * 4;
+        return ResizeExact(image, targetPixelWidth, targetPixelHeight, maxColors: 0);
+    }
+
+    private static Image<Rgba32> ResizeExact(
+        Image<Rgba32> image,
+        int targetPixelWidth,
+        int targetPixelHeight,
+        int maxColors
+    ) {
+        bool needsResize = image.Width != targetPixelWidth || image.Height != targetPixelHeight;
+        bool needsQuantize = maxColors > 0;
+
+        if (!needsResize && !needsQuantize) {
+            return image;
+        }
+
+        image.Mutate(ctx => {
+            if (needsResize) {
+                ctx.Resize(new ResizeOptions() {
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Bicubic,
+                    Size = new(targetPixelWidth, targetPixelHeight),
+                    PremultiplyAlpha = false,
+                });
+            }
+
+            if (needsQuantize) {
+                ctx.Quantize(new OctreeQuantizer(new() {
+                    MaxColors = maxColors,
+                }));
+            }
+        });
+
+        return image;
+    }
+
     /// <summary>
     /// Resizes an image to fit within the specified terminal character cell dimensions.
     /// </summary>
@@ -89,74 +162,13 @@ public static class Resizer {
         int maxColors,
         bool padHeightToMultipleOf6 = false
     ) {
-        CellSize cellSize = Compatibility.GetCellSize();
-
-        // Calculate pixel dimensions from cell dimensions
-        int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
-        int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
-        int paddedPixelHeight = padHeightToMultipleOf6
-            ? (targetPixelHeight + 5) / 6 * 6
-            : targetPixelHeight;
-        int desiredPixelHeight = padHeightToMultipleOf6 ? paddedPixelHeight : targetPixelHeight;
-
-        bool needsResize = image.Width != targetPixelWidth || image.Height != desiredPixelHeight;
-        bool needsQuantize = maxColors > 0;
-        bool needsPadOnly = !needsResize && padHeightToMultipleOf6 && image.Height != desiredPixelHeight;
-
-        if (needsResize || needsQuantize || needsPadOnly) {
-            image.Mutate(ctx => {
-                if (needsResize) {
-                    ctx.Resize(new ResizeOptions() {
-                        // Fill the exact target pixel extents to match the computed cell size.
-                        Mode = ResizeMode.Stretch,
-                        // https://en.wikipedia.org/wiki/Bicubic_interpolation
-                        // quality goes Bicubic > Bilinear > NearestNeighbor
-                        Sampler = KnownResamplers.Bicubic,
-                        Size = new(targetPixelWidth, desiredPixelHeight),
-                        PremultiplyAlpha = false,
-                    });
-                }
-
-                if (needsQuantize) {
-                    ctx.Quantize(new OctreeQuantizer(new() {
-                        MaxColors = maxColors,
-                    }));
-                }
-
-                if (needsPadOnly) {
-                    // Add transparent rows on the bottom to reach the sixel-required multiple of 6 without resampling existing pixels.
-                    ctx.Resize(new ResizeOptions() {
-                        Mode = ResizeMode.Pad,
-                        Position = AnchorPositionMode.TopLeft,
-                        PadColor = Color.Transparent,
-                        Size = new(targetPixelWidth, desiredPixelHeight),
-                        PremultiplyAlpha = false,
-                    });
-                }
-            });
-        }
-        return image;
-    }
-
-    /// <summary>
-    /// Pads the image height to a multiple of 6 pixels for sixel encoding, without changing the width.
-    /// </summary>
-    /// <param name="image">The image to pad.</param>
-    internal static void PadHeightToMultipleOf6(Image<Rgba32> image) {
-        int paddedHeight = (image.Height + 5) / 6 * 6;
-        if (paddedHeight == image.Height) {
-            return;
-        }
-
-        image.Mutate(ctx => {
-            ctx.Resize(new ResizeOptions() {
-                // Pad only on the bottom to keep the origin anchored.
-                Mode = ResizeMode.Pad,
-                Position = AnchorPositionMode.TopLeft,
-                PadColor = Color.Transparent,
-                Size = new(image.Width, paddedHeight),
-                PremultiplyAlpha = false,
-            });
-        });
+        return padHeightToMultipleOf6
+            ? ResizeForSixel(image, imageSize, maxColors)
+            : ResizeExact(
+                image,
+                imageSize.Width * Compatibility.GetCellSize().PixelWidth,
+                imageSize.Height * Compatibility.GetCellSize().PixelHeight,
+                maxColors
+            );
     }
 }

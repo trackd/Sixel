@@ -2,6 +2,8 @@
 using System.Text;
 using Sixel.Terminal.Models;
 
+// WIP, not working yet..
+
 namespace Sixel.Protocols;
 
 /// <summary>
@@ -9,7 +11,7 @@ namespace Sixel.Protocols;
 /// These placeholders occupy screen space so the cursor ends up in the correct position after the image.
 /// Based on implementations from Yazi and Chafa.
 /// </summary>
-public static class KittyPlaceholder {
+internal static class KittyPlaceholder {
     /// <summary>
     /// Base Unicode character used as placeholder (U+10EEEE - private use area).
     /// This character is rendered as the image by terminals that support Kitty protocol.
