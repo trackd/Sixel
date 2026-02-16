@@ -33,9 +33,9 @@ task Build {
         Write-Warning 'C# project not found, skipping Build'
         return
     }
+
     $ModuleFile = Import-PowerShellDataFile -Path (Join-Path $script:folders.ProjectRoot 'Module' "$($script:folders.ModuleName).psd1")
     [xml]$csproj = Get-Content -Path $folders.CsprojPath -Raw
-    $dotnetArgs += '-p:Version={0}' -f $ModuleFile.ModuleVersion.ToString()
     $frameworks = $csproj.
     SelectNodes('//TargetFramework | //TargetFrameworks').
     '#text'.
@@ -47,7 +47,9 @@ task Build {
         '--configuration', $Configuration
         '--nologo'
         '--verbosity', 'minimal'
+        ('-p:Version={0}' -f $ModuleFile.ModuleVersion.ToString())
     )
+
     foreach ($fwork in $frameworks) {
         exec { dotnet @dotnetArgs --framework $fwork --output (Join-Path $folders.DestinationPath $fwork) }
     }
