@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sixel.Shared/Sixel.Shared.csproj" />
+    <Project Path="src/Sixel/Sixel.csproj" />
+  </Folder>
+</Solution>
