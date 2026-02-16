@@ -23,8 +23,8 @@ if (-not (Get-Module -ListAvailable -Name InvokeBuild)) {
 }
 Import-Module InvokeBuild -ErrorAction Stop
 
-if ($task) {
-    $buildparams.Task = $task
+if ($Task) {
+    $buildparams.Task = $Task
 }
 
 if (-not $env:CI) {

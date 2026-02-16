@@ -23,18 +23,18 @@ public static class ConvertTo {
     /// <returns>A tuple containing the image size and the converted image data.</returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static (ImageSize Size, string Data) ConsoleImage(
-      ImageProtocol imageProtocol,
-      Stream imageStream,
-      int maxColors,
-      int width = 0,
-      int height = 0,
-      bool Force = false
+        ImageProtocol imageProtocol,
+        Stream imageStream,
+        int maxColors,
+        int width = 0,
+        int height = 0,
+        bool Force = false
     ) {
         /// this is a guess at the protocol based on the environment variables and VT responses.
         /// the parameter `imageProtocol` is the chosen protocol, we need to see if that is supported.
         ImageProtocol[] autoProtocol = Compatibility.GetTerminalInfo().Protocol;
 
-        // Improved: If Auto, select the best supported protocol by priority (Kitty > Sixel > Inline > Blocks)
+        // Improved: If Auto, select the best supported protocol by priority (Sixel > Kitty > Inline > Blocks)
         ImageProtocol protocol = imageProtocol;
         if (imageProtocol == ImageProtocol.Auto) {
             protocol = autoProtocol.Contains(ImageProtocol.Sixel)
@@ -93,6 +93,8 @@ public static class ConvertTo {
             case ImageProtocol.Braille:
                 return Braille.ImageToBraille(image, constrainedSize.Width, constrainedSize.Height);
             case ImageProtocol.Auto:
+                // Defensive assertion: the Auto protocol should have been resolved to a concrete protocol above.
+                // Reaching this case indicates a logic error in the protocol resolution code.
                 throw new InvalidOperationException("Auto protocol should have been resolved");
             default:
                 throw new InvalidOperationException($"Unsupported image protocol: {protocol}");

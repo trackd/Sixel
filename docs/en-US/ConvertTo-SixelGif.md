@@ -24,7 +24,7 @@ ConvertTo-SixelGif [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [
 ### Url
 
 ```powershell
-ConvertTo-SixelGif -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
+ConvertTo-SixelGif -Url <uri> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [-Timeout <TimeSpan>] [<CommonParameters>]
 ```
 
 ### Stream
@@ -170,6 +170,22 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Timeout
+
+Timeout for webrequest
+
+```yaml
+Type: TimeSpan
+Parameter Sets: Url
+Aliases:
+
+Required: False
+Position: Named
+Default value: 15
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

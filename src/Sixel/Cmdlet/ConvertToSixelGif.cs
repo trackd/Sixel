@@ -1,4 +1,4 @@
-﻿using System.Management.Automation;
+using System.Management.Automation;
 using System.Net.Http;
 using Sixel.Protocols;
 using Sixel.Terminal;
@@ -11,7 +11,8 @@ namespace Sixel.Cmdlet;
 [Alias("gif")]
 [OutputType(typeof(SixelGif))]
 public sealed class ConvertSixelGifCmdlet : PSCmdlet {
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient _httpClient = new();
+
     [Parameter(
         HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
         Mandatory = true,
@@ -75,7 +76,14 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
     [Parameter(
         HelpMessage = "The number of times to loop the gif. Use 0 for infinite loop."
     )]
+    [ValidateRange(0, 256)]
     public int LoopCount { get; set; } = 3;
+
+    [Parameter(
+        HelpMessage = "Timeout for web request",
+        ParameterSetName = "Url"
+    )]
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
     protected override void ProcessRecord() {
         Stream? imageStream = null;
         try {
@@ -100,8 +108,9 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
                     }
                     break;
                 case "Url": {
+                        _httpClient.Timeout = Timeout;
                         HttpResponseMessage response = _httpClient.GetAsync(Url).GetAwaiter().GetResult();
-                        response.EnsureSuccessStatusCode();
+                        _ = response.EnsureSuccessStatusCode();
                         imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
                         break;
                     }
@@ -113,6 +122,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
                         break;
                     }
                 default:
+                    // just to stop analyzer from complaining..
                     break;
             }
             if (imageStream is null) {

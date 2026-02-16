@@ -108,5 +108,16 @@ public static class Blocks {
         Append(Constants.Reset);
     }
 
-    private static bool IsTransparent(Rgba32 pixel) => pixel.A == 0;
+    // private static bool IsTransparent(Rgba32 pixel) => pixel.A == 0;
+    private static bool IsTransparent(Rgba32 pixel) {
+        if (pixel.A <= 8) {
+            return true;
+        }
+
+        float luminance = ((0.299f * pixel.R) + (0.587f * pixel.G) + (0.114f * pixel.B)) / 255f;
+        return (pixel.A < 32 && luminance < 0.15f) ||
+                (pixel.A < 64 && pixel.R < 12 && pixel.G < 12 && pixel.B < 12) ||
+                (pixel.A < 128 && luminance < 0.05f) ||
+                (pixel.A < 240 && luminance < 0.01f);
+    }
 }

@@ -10,7 +10,7 @@ namespace Sixel.Cmdlet;
 [Alias("cts")]
 [OutputType(typeof(string))]
 public sealed class ConvertSixelCmdlet : PSCmdlet {
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient _httpClient = new();
     [Parameter(
         HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
         Mandatory = true,
@@ -66,7 +66,6 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
     [ValidateTerminalWidth()]
     public int Width { get; set; }
 
-
     [Parameter(
         HelpMessage = "Height of the image in character cells, the width will be scaled to maintain aspect ratio."
     )]
@@ -82,6 +81,12 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
         HelpMessage = "Choose ImageProtocol to output."
     )]
     public ImageProtocol Protocol { get; set; } = ImageProtocol.Auto;
+
+    [Parameter(
+        HelpMessage = "Timeout for web request",
+        ParameterSetName = "Url"
+    )]
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
 
     protected override void ProcessRecord() {
         Stream? imageStream = null;
@@ -106,6 +111,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                     }
                     break;
                 case "Url": {
+                        _httpClient.Timeout = Timeout;
                         HttpResponseMessage response = _httpClient.GetAsync(Url).GetAwaiter().GetResult();
                         _ = response.EnsureSuccessStatusCode();
                         imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
@@ -119,6 +125,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                         break;
                     }
                 default:
+                    // just to stop analyzer from complaining..
                     break;
             }
             if (imageStream is null) {

@@ -23,7 +23,7 @@ ConvertTo-Sixel [-Path] <String> [-MaxColors <int>] [-Width <int>] [-Height <int
 ### Url
 
 ```powershell
-ConvertTo-Sixel -Url <Uri> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
+ConvertTo-Sixel -Url <Uri> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [-Timeout <TimeSpan>] [<CommonParameters>]
 ```
 
 ### Stream
@@ -210,6 +210,22 @@ Aliases:
 Required: False
 Position: Named
 Default value: ImageProtocol.Auto
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Timeout
+
+Timeout for webrequest
+
+```yaml
+Type: TimeSpan
+Parameter Sets: Url
+Aliases:
+
+Required: False
+Position: Named
+Default value: 15
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

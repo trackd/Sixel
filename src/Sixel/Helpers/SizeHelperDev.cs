@@ -5,10 +5,14 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Sixel.Terminal;
 
-/// <summary>
-/// testing math..
+/// Provides experimental image sizing helpers for terminal rendering.
 /// </summary>
-public static class SizeHelperDev {
+/// <remarks>
+/// This class contains development and testing implementations of image sizing logic
+/// used when rendering images in terminal character cells. It is intended for
+/// experimentation and validation of sizing math and may change between releases.
+/// </remarks>
+internal static class SizeHelperDev {
     public static ImageSize GetSixelTargetSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
         => GetRequestedOrDefaultCellSize(image, maxCellWidth, maxCellHeight);
 
