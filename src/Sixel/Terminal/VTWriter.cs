@@ -14,24 +14,22 @@ internal sealed class VTWriter : IDisposable {
 
     public VTWriter() {
         bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        bool isRedirected = Console.IsOutputRedirected || Console.IsOutputRedirected;
+        bool isRedirected = Console.IsOutputRedirected || Console.IsInputRedirected;
 
+        // in my tests Console.Write has been much faster on Mac/Linux and does not need special handling here.
         if (isWindows && !isRedirected) {
             // Open the Windows stream to CONOUT$, for better performance..
             // Console.Write is too slow for gifs on Windows.
-            if (isWindows && !isRedirected) {
 #if NET472
-                _windowsStream = new FileStream(NativeMethods.OpenConOut(), FileAccess.Write);
-                _writer = new StreamWriter(_windowsStream);
-                _customwriter = true;
+            // net472 can't access CONOUT$ directly, use pinvoke to solve that.
+            _windowsStream = new FileStream(NativeMethods.OpenConOut(), FileAccess.Write);
+            _writer = new StreamWriter(_windowsStream);
+            _customwriter = true;
 #else
-                // Open the Windows stream to CONOUT$, for better performance..
-                // Console.Write is too slow for gifs.
-                _windowsStream = File.OpenWrite("CONOUT$");
-                _writer = new StreamWriter(_windowsStream);
-                _customwriter = true;
+            _windowsStream = File.OpenWrite("CONOUT$");
+            _writer = new StreamWriter(_windowsStream);
+            _customwriter = true;
 #endif
-            }
         }
     }
 

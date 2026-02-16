@@ -6,10 +6,21 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Terminal;
 
-/// <summary>
-/// testing math..
+/// Experimental image resizing helpers used for validating and tuning terminal rendering math.
 /// </summary>
-public static class ResizerDev {
+/// <remarks>
+/// <para>
+/// <see cref="ResizerDev"/> provides alternative resizing algorithms and size calculations
+/// intended primarily for development, testing, and comparison against the main resizing
+/// helpers in this library (for example, non-<c>Dev</c> resizer/size helper classes).
+/// </para>
+/// <para>
+/// This API is considered <b>experimental</b>: its behavior and surface area may change
+/// between releases without notice. Consumers should prefer the primary, documented
+/// resizing helpers for production use, and treat this type as an advanced or diagnostic
+/// utility.
+/// </para>
+internal static class ResizerDev {
     public static Image<Rgba32> ResizeForSixel(
         Image<Rgba32> image,
         ImageSize imageSize,
