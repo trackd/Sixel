@@ -9,7 +9,7 @@ $isReload = $true
 if ($IsCoreClr) {
     if (-not ('Sixel.Shared.LoadContext' -as [type])) {
         $isReload = $false
-        Add-Type -Path ([Path]::Combine($PSScriptRoot, 'bin', 'net8.0', "$moduleName.Shared.dll"))
+        Add-Type -Path ([Path]::Combine($PSScriptRoot, 'lib', 'net8.0', "$moduleName.Shared.dll"))
     }
 
     $mainModule = [Sixel.Shared.LoadContext]::Initialize()
@@ -19,13 +19,13 @@ else {
     # PowerShell 5.1 has no concept of an Assembly Load Context so it will
     # just load the module assembly directly.
 
-    $innerMod = if ('Sixel.Terminal.SizeHelper' -as [type]) {
-        $modAssembly = [Sixel.Terminal.SizeHelper].Assembly
+    $innerMod = if ('Sixel.Protocols.Sixel' -as [type]) {
+        $modAssembly = [Sixel.Protocols.Sixel].Assembly
         &$importModule -Assembly $modAssembly -Force -PassThru
     }
     else {
         $isReload = $false
-        $modPath = [Path]::Combine($PSScriptRoot, 'bin', 'net472', "$moduleName.dll")
+        $modPath = [Path]::Combine($PSScriptRoot, 'lib', 'net472', "$moduleName.dll")
         &$importModule -Name $modPath -ErrorAction Stop -PassThru
     }
 }

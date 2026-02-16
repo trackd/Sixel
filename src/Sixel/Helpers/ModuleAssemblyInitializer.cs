@@ -1,4 +1,6 @@
-﻿#if NET472
+﻿// 5.1 (net472) can't do ALC so we can just have the resolver here with conditional compilation.
+// > net8.0 will use => src/Sixel.Shared/LoadContext.cs
+#if NET472
 using System;
 using System.IO;
 using System.Linq;
@@ -12,7 +14,7 @@ public sealed class ModuleAssemblyInitializer : IModuleAssemblyInitializer, IMod
 
     public void OnImport() => AppDomain.CurrentDomain.AssemblyResolve += s_resolveHandler;
 
-    public void OnRemove(PSModuleInfo module) => AppDomain.CurrentDomain.AssemblyResolve -= s_resolveHandler;
+    public void OnRemove(PSModuleInfo psModuleInfo) => AppDomain.CurrentDomain.AssemblyResolve -= s_resolveHandler;
 
     private static Assembly? Resolve(object? sender, ResolveEventArgs args) {
         AssemblyName assemblyName = new(args.Name);

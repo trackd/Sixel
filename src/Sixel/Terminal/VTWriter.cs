@@ -14,17 +14,16 @@ internal sealed class VTWriter : IDisposable {
 
     public VTWriter() {
         bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        bool isRedirected = Console.IsOutputRedirected;
+        bool isRedirected = Console.IsOutputRedirected || Console.IsOutputRedirected;
 
         if (isWindows && !isRedirected) {
             // Open the Windows stream to CONOUT$, for better performance..
-            // Console.Write is too slow for gifs.
-            _windowsStream = File.OpenWrite("CONOUT$");
+            // Console.Write is too slow for gifs on Windows.
             if (isWindows && !isRedirected) {
 #if NET472
-            _windowsStream = new FileStream(NativeMethods.OpenConOut(), FileAccess.Write);
-            _writer = new StreamWriter(_windowsStream);
-            _customwriter = true;
+                _windowsStream = new FileStream(NativeMethods.OpenConOut(), FileAccess.Write);
+                _writer = new StreamWriter(_windowsStream);
+                _customwriter = true;
 #else
                 // Open the Windows stream to CONOUT$, for better performance..
                 // Console.Write is too slow for gifs.

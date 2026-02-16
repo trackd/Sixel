@@ -1,5 +1,6 @@
 // AssemblyLoadContext won't work in net472 so we conditionally compile this
 // for net5.0 or greater.
+// 5.1 uses => src/Sixel/Helpers/ModuleAssemblyInitializer.cs
 #if NET5_0_OR_GREATER
 using System.IO;
 using System.Reflection;
@@ -29,15 +30,9 @@ public class LoadContext : AssemblyLoadContext {
     }
 
     protected override Assembly? Load(AssemblyName assemblyName) {
-        // Checks to see if we are trying to access our current assembly
-        // (ALCLoader.Shared). If so return the already loaded assembly object
-        // as it provides a common interface between Pwsh and the ALC.
         if (AssemblyName.ReferenceMatchesDefinition(_thisAssemblyName, assemblyName)) {
             return _thisAssembly;
         }
-
-        // Checks to see if the assembly exists in our path, if so load it in
-        // the ALC. Otherwise fallback to the default loading behaviour.
         string asmPath = Path.Join(_assemblyDir, $"{assemblyName.Name}.dll");
         return File.Exists(asmPath) ? LoadFromAssemblyPath(asmPath) : null;
     }
@@ -56,15 +51,11 @@ public class LoadContext : AssemblyLoadContext {
             string assemblyPath = typeof(LoadContext).Assembly.Location;
             string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
 
-            // Removes the '.Shared' from the assembly name to refer to our main module.
             string moduleName = assemblyName[..^7];
             string modulePath = Path.Combine(
                 Path.GetDirectoryName(assemblyPath)!,
                 $"{moduleName}.dll"
             );
-
-            // Creates the ALC which loads our module in the ALC and returns
-            // the loaded Assembly object for the psm1 to load.
             _instance = new LoadContext(modulePath);
             return _instance._moduleAssembly;
         }
