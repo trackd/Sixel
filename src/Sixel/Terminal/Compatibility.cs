@@ -13,6 +13,8 @@ namespace Sixel.Terminal;
 /// Provides methods and cached properties for detecting terminal compatibility, supported protocols, and cell/window sizes.
 /// </summary>
 public static partial class Compatibility {
+    private static readonly object s_controlSequenceLock = new();
+
     /// <summary>
     /// Memory-caches the result of the terminal supporting sixel graphics.
     /// </summary>
@@ -49,52 +51,137 @@ public static partial class Compatibility {
         const int timeoutMs = 500;
         const int maxRetries = 2;
 
-        for (int retry = 0; retry < maxRetries; retry++) {
-            try {
-                var response = new StringBuilder();
-                bool capturing = false;
+        lock (s_controlSequenceLock)
+        {
+            // Drain any stale bytes that may have leaked from prior VT interactions.
+            DrainPendingInput();
 
-                // Send the control sequence
-                Console.Write($"{Constants.ESC}{controlSequence}");
-                var stopwatch = Stopwatch.StartNew();
+            for (int retry = 0; retry < maxRetries; retry++)
+            {
+                try
+                {
+                    var response = new StringBuilder();
+                    bool capturing = false;
 
-                while (stopwatch.ElapsedMilliseconds < timeoutMs) {
-                    if (!Console.KeyAvailable) {
-                        Thread.Sleep(1);
-                        continue;
-                    }
+                    // Send the control sequence
+                    Console.Write($"{Constants.ESC}{controlSequence}");
+                    Console.Out.Flush();
+                    var stopwatch = Stopwatch.StartNew();
 
-                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                    char key = keyInfo.KeyChar;
-
-                    if (!capturing) {
-                        if (key != '\x1b') {
+                    while (stopwatch.ElapsedMilliseconds < timeoutMs)
+                    {
+                        if (!TryReadAvailableKey(out char key))
+                        {
+                            Thread.Sleep(1);
                             continue;
                         }
-                        capturing = true;
+
+                        if (!capturing)
+                        {
+                            if (key != '\x1b')
+                            {
+                                continue;
+                            }
+                            capturing = true;
+                        }
+
+                        response.Append(key);
+
+                        // Check if we have a complete response
+                        if (IsCompleteResponse(response))
+                        {
+                            DrainPendingInput();
+                            return response.ToString();
+                        }
                     }
 
-                    response.Append(key);
-
-                    // Check if we have a complete response
-                    if (IsCompleteResponse(response)) {
+                    // If we got a partial response, return it
+                    if (response.Length > 0)
+                    {
+                        DrainPendingInput();
                         return response.ToString();
                     }
                 }
+                catch (Exception)
+                {
+                    if (retry == maxRetries - 1)
+                    {
+                        DrainPendingInput();
+                        return string.Empty;
+                    }
+                }
+            }
 
-                // If we got a partial response, return it
-                if (response.Length > 0) {
-                    return response.ToString();
-                }
-            }
-            catch (Exception) {
-                if (retry == maxRetries - 1) {
-                    return string.Empty;
-                }
-            }
+            DrainPendingInput();
         }
 
         return string.Empty;
+    }
+
+    /// <summary>
+    /// Attempts to read a key if one is available.
+    /// </summary>
+    /// <param name="key">The key read from stdin.</param>
+    /// <returns>True when a key was read, otherwise false.</returns>
+    private static bool TryReadAvailableKey(out char key)
+    {
+        key = default;
+
+        try
+        {
+            if (!Console.KeyAvailable)
+            {
+                return false;
+            }
+
+            key = Console.ReadKey(true).KeyChar;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Drains any pending stdin bytes to prevent VT probe responses from leaking into user input.
+    /// </summary>
+    private static void DrainPendingInput()
+    {
+        if (Console.IsOutputRedirected || Console.IsInputRedirected)
+        {
+            return;
+        }
+
+        try
+        {
+            const int quietPeriodMs = 20;
+            const int maxDrainMs = 250;
+
+            var stopwatch = Stopwatch.StartNew();
+            long lastReadAt = stopwatch.ElapsedMilliseconds;
+
+            while (stopwatch.ElapsedMilliseconds < maxDrainMs)
+            {
+                if (!Console.KeyAvailable)
+                {
+                    if (stopwatch.ElapsedMilliseconds - lastReadAt >= quietPeriodMs)
+                    {
+                        break;
+                    }
+
+                    Thread.Sleep(1);
+                    continue;
+                }
+
+                _ = Console.ReadKey(true);
+                lastReadAt = stopwatch.ElapsedMilliseconds;
+            }
+        }
+        catch
+        {
+            // Best effort only.
+        }
     }
 
 
