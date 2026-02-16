@@ -11,60 +11,45 @@ namespace Sixel.Shared;
 /// <summary>
 /// Custom AssemblyLoadContext for isolating and resolving assemblies in .NET 5.0 or greater environments.
 /// </summary>
-public class LoadContext : AssemblyLoadContext
-{
+public class LoadContext : AssemblyLoadContext {
     private static LoadContext? _instance;
-    private static object _sync = new object();
+    private static readonly object _sync = new();
 
-    private Assembly _thisAssembly;
-    private AssemblyName _thisAssemblyName;
-    private Assembly _moduleAssembly;
-    private string _assemblyDir;
+    private readonly Assembly _thisAssembly;
+    private readonly AssemblyName _thisAssemblyName;
+    private readonly Assembly _moduleAssembly;
+    private readonly string _assemblyDir;
 
     private LoadContext(string mainModulePathAssemblyPath)
-        : base (name: "Sixel", isCollectible: false)
-    {
+        : base(name: "Sixel", isCollectible: false) {
         _assemblyDir = Path.GetDirectoryName(mainModulePathAssemblyPath) ?? "";
         _thisAssembly = typeof(LoadContext).Assembly;
         _thisAssemblyName = _thisAssembly.GetName();
         _moduleAssembly = LoadFromAssemblyPath(mainModulePathAssemblyPath);
     }
 
-    protected override Assembly? Load(AssemblyName assemblyName)
-    {
+    protected override Assembly? Load(AssemblyName assemblyName) {
         // Checks to see if we are trying to access our current assembly
         // (ALCLoader.Shared). If so return the already loaded assembly object
         // as it provides a common interface between Pwsh and the ALC.
-        if (AssemblyName.ReferenceMatchesDefinition(_thisAssemblyName, assemblyName))
-        {
+        if (AssemblyName.ReferenceMatchesDefinition(_thisAssemblyName, assemblyName)) {
             return _thisAssembly;
         }
 
         // Checks to see if the assembly exists in our path, if so load it in
         // the ALC. Otherwise fallback to the default loading behaviour.
         string asmPath = Path.Join(_assemblyDir, $"{assemblyName.Name}.dll");
-        if (File.Exists(asmPath))
-        {
-            return LoadFromAssemblyPath(asmPath);
-        }
-        else
-        {
-            return null;
-        }
+        return File.Exists(asmPath) ? LoadFromAssemblyPath(asmPath) : null;
     }
 
-    public static Assembly Initialize()
-    {
+    public static Assembly Initialize() {
         LoadContext? instance = _instance;
-        if (instance is not null)
-        {
+        if (instance is not null) {
             return instance._moduleAssembly;
         }
 
-        lock (_sync)
-        {
-            if (_instance is not null)
-            {
+        lock (_sync) {
+            if (_instance is not null) {
                 return _instance._moduleAssembly;
             }
 
@@ -72,7 +57,7 @@ public class LoadContext : AssemblyLoadContext
             string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
 
             // Removes the '.Shared' from the assembly name to refer to our main module.
-            string moduleName = assemblyName.Substring(0, assemblyName.Length - 7);
+            string moduleName = assemblyName[..^7];
             string modulePath = Path.Combine(
                 Path.GetDirectoryName(assemblyPath)!,
                 $"{moduleName}.dll"

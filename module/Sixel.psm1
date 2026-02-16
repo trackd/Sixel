@@ -19,14 +19,6 @@ else {
     # PowerShell 5.1 has no concept of an Assembly Load Context so it will
     # just load the module assembly directly.
 
-    # The type can be any type within our ALCLoader project
-    if (-not ('Sixel.Shared.AssemblyResolver' -as [type])) {
-        Add-Type -Path ([Path]::Combine($PSScriptRoot, 'bin', 'net472', "$moduleName.Shared.dll"))
-    }
-
-    $appDomain = [AppDomain]::CurrentDomain
-    $resolver = [Sixel.Shared.AssemblyResolver]::ResolveHandler
-    $appDomain.add_AssemblyResolve($resolver)
     $innerMod = if ('Sixel.Terminal.SizeHelper' -as [type]) {
         $modAssembly = [Sixel.Terminal.SizeHelper].Assembly
         &$importModule -Assembly $modAssembly -Force -PassThru
@@ -36,27 +28,22 @@ else {
         $modPath = [Path]::Combine($PSScriptRoot, 'bin', 'net472', "$moduleName.dll")
         &$importModule -Name $modPath -ErrorAction Stop -PassThru
     }
-    $registerEngineEventSplat = @{
-        SourceIdentifier = ([System.Management.Automation.PsEngineEvent]::Exiting)
-        Action           = {
-            $appDomain.remove_AssemblyResolve($resolver)
-        }
-    }
-    Register-EngineEvent @registerEngineEventSplat
 }
 
 if ($isReload) {
-    # Bug in pwsh, Import-Module in an assembly will pick up a cached instance
-    # and not call the same path to set the nested module's cmdlets to the
-    # current module scope. This is only technically needed if someone is
-    # calling 'Import-Module -Name $module -Force' a second time. The first
-    # import is still fine.
     # https://github.com/PowerShell/PowerShell/issues/20710
     $addExportedCmdlet = [PSModuleInfo].GetMethod(
         'AddExportedCmdlet',
         [BindingFlags]'Instance, NonPublic'
     )
+    $addExportedAlias = [PSModuleInfo].GetMethod(
+        'AddExportedAlias',
+        [BindingFlags]'Instance, NonPublic'
+    )
     foreach ($cmd in $innerMod.ExportedCmdlets.Values) {
         $addExportedCmdlet.Invoke($ExecutionContext.SessionState.Module, @(, $cmd))
+    }
+    foreach ($alias in $innerMod.ExportedAliases.Values) {
+        $addExportedAlias.Invoke($ExecutionContext.SessionState.Module, @(, $alias))
     }
 }

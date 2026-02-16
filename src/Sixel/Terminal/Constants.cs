@@ -3,8 +3,7 @@ namespace Sixel.Terminal;
 /// <summary>
 /// Contains constants, values and helpers for Sixel terminal compatibility and encoding.
 /// </summary>
-internal static class Constants
-{
+internal static class Constants {
     /// <summary>
     /// The character to use when entering a terminal escape code sequence.
     /// Optimized as char for better performance in StringBuilder operations.
@@ -185,4 +184,6 @@ internal static class Constants
     /// See DECRQM (request) and DECRPM (response) for more details.
     /// </summary>
     internal static readonly string DECRQM2026 = $"{ESC}[?2026$p";
+
+    internal static readonly string Reset = $"{ESC}[0m";
 }
