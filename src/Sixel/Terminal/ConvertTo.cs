@@ -10,8 +10,7 @@ namespace Sixel.Terminal;
 /// <summary>
 /// Provides methods to load and convert images to terminal-compatible formats using various image protocols.
 /// </summary>
-public static class ConvertTo
-{
+public static class ConvertTo {
     /// <summary>
     /// Load an image and convert it to a terminal compatible format.
     /// </summary>
@@ -22,6 +21,7 @@ public static class ConvertTo
     /// <param name="height">The target height in character cells, or 0 to maintain aspect ratio.</param>
     /// <param name="Force">Whether to force conversion even if terminal doesn't support the protocol.</param>
     /// <returns>A tuple containing the image size and the converted image data.</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public static (ImageSize Size, string Data) ConsoleImage(
       ImageProtocol imageProtocol,
       Stream imageStream,
@@ -29,57 +29,71 @@ public static class ConvertTo
       int width = 0,
       int height = 0,
       bool Force = false
-    )
-    {
+    ) {
         /// this is a guess at the protocol based on the environment variables and VT responses.
         /// the parameter `imageProtocol` is the chosen protocol, we need to see if that is supported.
-        var autoProtocol = Compatibility.GetTerminalInfo().Protocol;
+        ImageProtocol[] autoProtocol = Compatibility.GetTerminalInfo().Protocol;
 
         // Improved: If Auto, select the best supported protocol by priority (Kitty > Sixel > Inline > Blocks)
         ImageProtocol protocol = imageProtocol;
-        if (imageProtocol == ImageProtocol.Auto)
-        {
-            if (autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol))
-                protocol = ImageProtocol.KittyGraphicsProtocol;
-            else if (autoProtocol.Contains(ImageProtocol.Sixel))
-                protocol = ImageProtocol.Sixel;
-            else if (autoProtocol.Contains(ImageProtocol.InlineImageProtocol))
-                protocol = ImageProtocol.InlineImageProtocol;
-            else
-                protocol = ImageProtocol.Blocks;
+        if (imageProtocol == ImageProtocol.Auto) {
+            protocol = autoProtocol.Contains(ImageProtocol.Sixel)
+                ? ImageProtocol.Sixel
+                : autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol)
+                ? ImageProtocol.KittyGraphicsProtocol
+                : autoProtocol.Contains(ImageProtocol.InlineImageProtocol) ? ImageProtocol.InlineImageProtocol : ImageProtocol.Blocks;
         }
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
-        var imageSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
+
+        // For Sixel and Blocks: use natural sizing if no constraints, otherwise apply constraints
+        ImageSize constrainedSize;
+        if (width == 0 && height == 0) {
+            // No constraints specified - use natural image size
+            constrainedSize = SizeHelper.ConvertToCharacterCells(image);
+        }
+        else {
+            // Constraints specified - apply resizing logic
+            constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
+        }
 
         // Use the resolved protocol for all logic below
-        switch (protocol)
-        {
+        switch (protocol) {
             case ImageProtocol.Sixel:
-                if (!autoProtocol.Contains(ImageProtocol.Sixel) && !Compatibility.TerminalSupportsSixel() && !Force)
-                {
+                if (!autoProtocol.Contains(ImageProtocol.Sixel) && !Compatibility.TerminalSupportsSixel() && !Force) {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                return (imageSize, Protocols.Sixel.ImageToSixel(image, imageSize, maxColors));
+                // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
+                Image<Rgba32> resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
+                ImageSize finalSize = SizeHelper.GetCharacterCellSize(resized);
+                ImageFrame<Rgba32> frame = resized.Frames[0];
+                string data = Protocols.Sixel.FrameToSixelString(frame);
+                return (finalSize, data);
 
             case ImageProtocol.KittyGraphicsProtocol:
-                if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force)
-                {
+                if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force) {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
-                return (imageSize, KittyGraphics.ImageToKitty(image, imageSize));
+                // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
+                ImageSize kittySize = constrainedSize;
+                return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
 
             case ImageProtocol.InlineImageProtocol:
-                if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force)
-                {
+                if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
                 }
                 imageStream.Position = 0;
-                return (imageSize, InlineImage.ImageToInline(imageStream, imageSize));
+                // Pass raw width/height to InlineImage - 0 values become "auto"
+                var inlineSize = new ImageSize(width, height);
+                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
 
             case ImageProtocol.Blocks:
-                return (imageSize, Blocks.ImageToBlocks(image, imageSize));
+                return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));
 
+            case ImageProtocol.Braille:
+                return Braille.ImageToBraille(image, constrainedSize.Width, constrainedSize.Height);
+            case ImageProtocol.Auto:
+                throw new InvalidOperationException("Auto protocol should have been resolved");
             default:
                 throw new InvalidOperationException($"Unsupported image protocol: {protocol}");
         }

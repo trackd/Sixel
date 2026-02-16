@@ -1,14 +1,14 @@
 namespace Sixel.Terminal;
 
 /// <summary>
-/// Contains constant values and helpers for Sixel terminal compatibility and encoding.
+/// Contains constants, values and helpers for Sixel terminal compatibility and encoding.
 /// </summary>
-internal static class Constants
-{
+internal static class Constants {
     /// <summary>
     /// The character to use when entering a terminal escape code sequence.
+    /// Optimized as char for better performance in StringBuilder operations.
     /// </summary>
-    internal const string ESC = "\u001b";
+    internal const char ESC = '\u001b';
 
     /// <summary>
     /// The character to indicate the start of a sixel color palette entry or to switch to a new color.
@@ -43,8 +43,9 @@ internal static class Constants
     /// <summary>
     /// The start of a sixel sequence.
     /// evaluate $"{ESC}P0;1;0q"; which chafa uses
+    /// Optimized to use ESC char for better StringBuilder performance.
     /// </summary>
-    internal const string SixelStart = $"{ESC}P0;1q";
+    internal static readonly string SixelStart = $"{ESC}P0;1q";
 
     /// <summary>
     /// The raster settings for setting the sixel pixel ratio to 1:1 so images are square when rendered instead of the 2:1 double height default.
@@ -54,8 +55,9 @@ internal static class Constants
     /// <summary>
     /// The end of a sixel sequence.
     /// ST is the string terminator for sixel.
+    /// Optimized to use ESC char for better StringBuilder performance.
     /// </summary>
-    internal const string ST = $"{ESC}\\";
+    internal static readonly string ST = $"{ESC}\\";
 
     /// <summary>
     /// color parameter
@@ -69,13 +71,15 @@ internal static class Constants
 
     /// <summary>
     /// inline image protocol start
+    /// Optimized to use ESC char for better StringBuilder performance.
     /// </summary>
-    internal const string InlineImageStart = $"{ESC}]";
+    internal static readonly string InlineImageStart = $"{ESC}]";
 
     /// <summary>
     /// move 1 character row down
+    /// Optimized to use ESC char for better StringBuilder performance.
     /// </summary>
-    internal const string AddEmptyRow = $"{ESC}[1B";
+    internal static readonly string AddEmptyRow = $"{ESC}[1B";
 
     /// <summary>
     /// inline image protocol end
@@ -84,8 +88,9 @@ internal static class Constants
 
     /// <summary>
     /// kitty start sequence
+    /// Optimized to use ESC char for better StringBuilder performance.
     /// </summary>
-    internal const string KittyStart = $"{ESC}_G";
+    internal static readonly string KittyStart = $"{ESC}_G";
 
     /// <summary>
     /// Kitty raster
@@ -136,21 +141,21 @@ internal static class Constants
     /// <summary>
     /// hide cursor
     /// </summary>
-    internal const string HideCursor = $"{ESC}[?25l";
+    internal static readonly string HideCursor = $"{ESC}[?25l";
     /// <summary>
     /// show cursor
     /// </summary>
     /// <summary>
-    internal const string ShowCursor = $"{ESC}[?25h";
+    internal static readonly string ShowCursor = $"{ESC}[?25h";
 
     /// <summary>
     /// chafa compatibility string
     /// </summary>
-    internal const string xtermHideCursor = $"{ESC}[?8452l";
+    internal static readonly string xtermHideCursor = $"{ESC}[?8452l";
     /// <summary>
     /// Adds VT sequence SM ? 8452 h / RM ? 8452 l for enabling/disabling sixel cursor placement conformance (xterm extension).
     /// </summary>
-    internal const string xtermShowCursor = $"{ESC}[?8452h";
+    internal static readonly string xtermShowCursor = $"{ESC}[?8452h";
     /// <summary>
     /// DECSDM (sixel display mode)
     /// Nota bene: this reference has the sense for DECSDM (sixel display mode) reversed!
@@ -163,12 +168,12 @@ internal static class Constants
     /// https://contour-terminal.org/vt-extensions/synchronized-output/#feature-detection
     /// this is the sequence to enable synchronized output in a terminal.
     /// </summary>
-    internal const string DECBSU = $"{ESC}[?2026h";
+    internal static readonly string DECBSU = $"{ESC}[?2026h";
     /// <summary>
     /// https://contour-terminal.org/vt-extensions/synchronized-output/#feature-detection
     /// this is the sequence to disable synchronized output in a terminal.
     /// </summary>
-    internal const string DECESU = $"{ESC}[?2026l";
+    internal static readonly string DECESU = $"{ESC}[?2026l";
     /// <summary>
     /// query if the terminal supports synchronized output.
     /// Use CSI ? 2026 $ p to query the state of the (DEC) mode 2026.
@@ -178,5 +183,7 @@ internal static class Constants
     /// then synchronized output is not supported.
     /// See DECRQM (request) and DECRPM (response) for more details.
     /// </summary>
-    internal const string DECRQM2026 = $"{ESC}[?2026$p";
+    internal static readonly string DECRQM2026 = $"{ESC}[?2026$p";
+
+    internal static readonly string Reset = $"{ESC}[0m";
 }
