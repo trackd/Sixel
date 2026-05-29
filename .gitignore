@@ -7,5 +7,7 @@ output
 testimages/*
 refdocs/*
 *.md
+*.drawio
 !docs/en-US/*.md
 !README.md
+sixlabors.lic

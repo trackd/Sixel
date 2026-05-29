@@ -4,7 +4,7 @@
 
 @{
     RootModule             = 'Sixel.psm1'
-    ModuleVersion          = '0.7.0'
+    ModuleVersion          = '0.7.1'
     CompatiblePSEditions   = @('Desktop', 'Core')
     PowerShellVersion      = '5.1'
     DotNetFrameworkVersion = '4.7.2'
@@ -46,6 +46,7 @@
             ProjectUri   = 'https://github.com/trackd/Sixel'
             # Prerelease   = 'prerelease01'
             ReleaseNotes = @'
+            0.7.1 - bugfix httpclient reuse, better support to cancel gif playback from pipeline.
             0.7.0 - new Braille protocol support, improved terminal detection, and library updates.
             0.6.1 - bugfix resizing image sometimes cuts off the left outer edge.
             0.6.0 - update libraries, tweak sizing algorithm.
