@@ -17,9 +17,18 @@ internal sealed class ValidateTerminalWidth : ValidateArgumentsAttribute {
     /// <exception cref="ValidationMetadataException"></exception>
     protected override void Validate(object arguments, EngineIntrinsics engineIntrinsics) {
         int requestedWidth = (int)arguments;
-        int hostWidth = Console.WindowWidth;
-        if (requestedWidth > hostWidth) {
-            throw new ValidationMetadataException($"{requestedWidth} width is greater than terminal width ({hostWidth}).");
+        if (Console.IsOutputRedirected || Console.IsInputRedirected) {
+            return;
+        }
+
+        try {
+            int hostWidth = Console.WindowWidth;
+            if (requestedWidth > hostWidth) {
+                throw new ValidationMetadataException($"{requestedWidth} width is greater than terminal width ({hostWidth}).");
+            }
+        }
+        catch {
+            // When no interactive console is attached, skip terminal-bound validation.
         }
     }
 }
@@ -33,9 +42,18 @@ internal sealed class ValidateTerminalHeight : ValidateArgumentsAttribute {
     /// <exception cref="ValidationMetadataException"></exception>
     protected override void Validate(object arguments, EngineIntrinsics engineIntrinsics) {
         int requestedHeight = (int)arguments;
-        int hostHeight = Console.WindowHeight;
-        if (requestedHeight > hostHeight) {
-            throw new ValidationMetadataException($"{requestedHeight} height is greater than terminal height ({hostHeight}).");
+        if (Console.IsOutputRedirected || Console.IsInputRedirected) {
+            return;
+        }
+
+        try {
+            int hostHeight = Console.WindowHeight;
+            if (requestedHeight > hostHeight) {
+                throw new ValidationMetadataException($"{requestedHeight} height is greater than terminal height ({hostHeight}).");
+            }
+        }
+        catch {
+            // When no interactive console is attached, skip terminal-bound validation.
         }
     }
 }
