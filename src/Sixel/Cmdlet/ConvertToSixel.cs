@@ -111,10 +111,13 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
                     }
                     break;
                 case "Url": {
-                        _httpClient.Timeout = Timeout;
-                        HttpResponseMessage response = _httpClient.GetAsync(Url).GetAwaiter().GetResult();
+                        using var timeoutTokenSource = new CancellationTokenSource(Timeout);
+                        using HttpResponseMessage response = _httpClient.GetAsync(Url, timeoutTokenSource.Token).GetAwaiter().GetResult();
                         _ = response.EnsureSuccessStatusCode();
-                        imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+
+                        imageStream = new MemoryStream();
+                        response.Content.CopyToAsync(imageStream).GetAwaiter().GetResult();
+                        imageStream.Position = 0;
                         break;
                     }
                 case "Stream": {

@@ -83,12 +83,21 @@ internal static class ResizerDev {
                     PremultiplyAlpha = false,
                 });
             }
-
+#if NET472
             if (needsQuantize) {
                 ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,
                 }));
             }
+#else
+            if (needsQuantize) {
+                // Sixlabors v4 refactors OctreeQuantizer to HexadecatreeQuantizer
+                // Sixlabors/ImageSharp#3107
+                ctx.Quantize(new HexadecatreeQuantizer(new() {
+                    MaxColors = maxColors,
+                }));
+            }
+#endif
         });
 
         return image;
@@ -143,17 +152,32 @@ internal static class ResizerDev {
                     PremultiplyAlpha = false,
                 });
                 if (quantize) {
+#if NET472
+                    // v4 is not available in net472 so we remain with OctreeQuantizer
                     ctx.Quantize(new OctreeQuantizer(new() {
                         MaxColors = maxColors,
                     }));
+#else
+                    // Sixlabors v4 refactors OctreeQuantizer to HexadecatreeQuantizer
+                    // Sixlabors/ImageSharp#3107
+                    ctx.Quantize(new HexadecatreeQuantizer(new() {
+                        MaxColors = maxColors,
+                    }));
+#endif
                 }
             });
         }
         else if (quantize) {
             image.Mutate(ctx => {
+#if NET472
                 ctx.Quantize(new OctreeQuantizer(new() {
                     MaxColors = maxColors,
                 }));
+#else
+                ctx.Quantize(new HexadecatreeQuantizer(new() {
+                    MaxColors = maxColors,
+                }));
+#endif
             });
         }
         return (newSize, image);

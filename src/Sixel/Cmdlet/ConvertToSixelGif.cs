@@ -12,6 +12,7 @@ namespace Sixel.Cmdlet;
 [OutputType(typeof(SixelGif))]
 public sealed class ConvertSixelGifCmdlet : PSCmdlet {
     private static readonly HttpClient _httpClient = new();
+    private volatile bool _stopping;
 
     [Parameter(
         HelpMessage = "InputObject from Pipeline, can be filepath or base64 encoded image.",
@@ -84,15 +85,24 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
         ParameterSetName = "Url"
     )]
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
+
+    protected override void BeginProcessing() =>
+        // Show-SixelGif consumes Ctrl+C (args.Cancel = true) so StopProcessing() is never called on
+        // this cmdlet. Register our own handler so we can stop the pipeline from this side as well.
+        Console.CancelKeyPress += OnCancelKeyPress;
+
     protected override void ProcessRecord() {
         Stream? imageStream = null;
         try {
+
+            // Check before converting each GIF so a Ctrl+C during playback stops the whole pipeline.
+            if (_stopping) return;
+
             switch (ParameterSetName) {
                 case "InputObject": {
                         if (InputObject?.Length > 512) {
                             // assume it's a base64 encoded image
                             InputObject = Compatibility.TrimBase64(InputObject);
-
                             imageStream = new MemoryStream(Convert.FromBase64String(InputObject));
                         }
                         else {
@@ -108,10 +118,13 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
                     }
                     break;
                 case "Url": {
-                        _httpClient.Timeout = Timeout;
-                        HttpResponseMessage response = _httpClient.GetAsync(Url).GetAwaiter().GetResult();
+                        using var timeoutTokenSource = new CancellationTokenSource(Timeout);
+                        using HttpResponseMessage response = _httpClient.GetAsync(Url, timeoutTokenSource.Token).GetAwaiter().GetResult();
                         _ = response.EnsureSuccessStatusCode();
-                        imageStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+
+                        imageStream = new MemoryStream();
+                        response.Content.CopyToAsync(imageStream).GetAwaiter().GetResult();
+                        imageStream.Position = 0;
                         break;
                     }
                 case "Stream": {
@@ -141,4 +154,10 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
             }
         }
     }
+    protected override void StopProcessing() =>
+        _stopping = true;
+    protected override void EndProcessing() =>
+        Console.CancelKeyPress -= OnCancelKeyPress;
+    private void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs args) =>
+        _stopping = true;
 }
