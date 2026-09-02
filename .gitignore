@@ -9,5 +9,6 @@ refdocs/*
 *.md
 *.drawio
 !docs/en-US/*.md
+!docs/zh-CN/*.md
 !README.md
 sixlabors.lic
