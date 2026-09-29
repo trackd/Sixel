@@ -26,6 +26,9 @@ public partial class Helpers {
             // { Terminals.unknown, "TERM_PROGRAM" }
         };
         _reverseLookup = new Dictionary<string, Terminals>(StringComparer.OrdinalIgnoreCase);
+        _reverseLookup["iTerm.app"] = Terminals.Iterm2;
+        _reverseLookup["xterm-kitty"] = Terminals.Kitty;
+        _reverseLookup["xterm-ghostty"] = Terminals.Ghostty;
         foreach ((Terminals terminal, string? envVar) in _lookup) {
             if (!_reverseLookup.ContainsKey(envVar)) {
                 _reverseLookup[envVar] = terminal;

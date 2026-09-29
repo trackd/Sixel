@@ -1,20 +1,20 @@
 ---
 external help file: Sixel.dll-Help.xml
 Module Name: Sixel
-online version: https://github.com/trackd/Sixel/blob/main/docs/en-US/ConvertTo-Sixel.md
+online version: https://github.com/trackd/Sixel/blob/main/docs/zh-CN/ConvertTo-Sixel.md
 schema: 2.0.0
 ---
 
 # ConvertTo-Sixel
 
-## 摘要
+## SYNOPSIS
 
 将图像转换为 Sixel、Kitty、InlineImage 或 Blocks。
 用于在控制台中显示
 
-## 语法
+## SYNTAX
 
-### Path（默认）
+### Path (Default)
 
 ```powershell
 ConvertTo-Sixel [-Path] <String> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
@@ -38,11 +38,11 @@ ConvertTo-Sixel -Stream <Stream> [-MaxColors <int>] [-Width <int>] [-Height <int
 ConvertTo-Sixel -InputObject <String> [-MaxColors <int>] [-Width <int>] [-Height <int>] [-Force] [<CommonParameters>]
 ```
 
-## 说明
+## DESCRIPTION
 
 `ConvertTo-Sixel` 将图像转换为可在控制台中显示的形式。
 
-## 示例
+## EXAMPLES
 
 ### -------------------------- 示例 1 --------------------------
 
@@ -60,7 +60,7 @@ PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
 
 转换本地文件。
 
-## 参数
+## PARAMETERS
 
 ### -Path
 
@@ -230,20 +230,20 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-## 输入
+## INPUTS
 
 ### System.String
 
 图像文件的路径、URL、Base64 字符串、流
 
-## 输出
+## OUTPUTS
 
 ### System.String
 
 一个 sixel 字符串
 
-## 备注
+## NOTES
 
 仅当你的终端支持 sixel 图像时，此命令才有效。
 
-## 相关链接
+## RELATED LINKS

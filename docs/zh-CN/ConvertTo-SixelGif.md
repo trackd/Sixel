@@ -1,21 +1,21 @@
 ---
 external help file: Sixel.dll-Help.xml
 Module Name: Sixel
-online version: https://github.com/trackd/Sixel/blob/main/docs/en-US/ConvertTo-SixelGif.md
+online version: https://github.com/trackd/Sixel/blob/main/docs/zh-CN/ConvertTo-SixelGif.md
 schema: 2.0.0
 ---
 
 # ConvertTo-SixelGif
 
-## 摘要
+## SYNOPSIS
 
 将 gif 转换为 sixel 动画。
 
 此 cmdlet 仅支持 Sixel。
 
-## 语法
+## SYNTAX
 
-### Path（默认）
+### Path (Default)
 
 ```powershell
 ConvertTo-SixelGif [-Path] <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
@@ -39,11 +39,11 @@ ConvertTo-SixelGif -Stream <stream> [-MaxColors <int>] [-Width <int>] [-Force] [
 ConvertTo-SixelGif -InputObject <string> [-MaxColors <int>] [-Width <int>] [-Force] [-LoopCount <int>] [<CommonParameters>]
 ```
 
-## 说明
+## DESCRIPTION
 
 `ConvertTo-SixelGif` 获取一个 gif 并将其转换为 sixel 动画
 
-## 示例
+## EXAMPLES
 
 ### -------------------------- 示例 1 --------------------------
 
@@ -59,7 +59,7 @@ PS C:\> ConvertTo-SixelGif -Path $env:USERPROFILE\desktop\hello.gif
 
 将本地文件转换为 sixel 格式
 
-## 参数
+## PARAMETERS
 
 ### -Path
 
@@ -190,21 +190,21 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-## 输入
+## INPUTS
 
 ### System.String
 
 gif 文件的路径或 URL
 
-## 输出
+## OUTPUTS
 
 ### System.String
 
 一个 sixel 动画
 
-## 备注
+## NOTES
 
 仅当你的终端支持 sixel 图像时，此命令才有效。
 需要 Windows Terminal 1.22 或更高版本
 
-## 相关链接
+## RELATED LINKS

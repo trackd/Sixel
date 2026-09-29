@@ -21,7 +21,8 @@ public sealed partial class Helpers {
         { Terminals.VSCode, new[] { ImageProtocol.InlineImageProtocol } },
         { Terminals.Mintty, new[] { ImageProtocol.InlineImageProtocol } },
         { Terminals.Alacritty, new[] { ImageProtocol.Blocks } },
-        { Terminals.xterm, new[] { ImageProtocol.InlineImageProtocol } },
+        // Sixel is detected by DA; xterm does not imply iTerm2 OSC 1337 support.
+        { Terminals.xterm, new[] { ImageProtocol.Blocks } },
         { Terminals.mlterm, new[] { ImageProtocol.Sixel } },
         { Terminals.unknown, new[] { ImageProtocol.Blocks } }
     };

@@ -1,9 +1,9 @@
 ﻿using System.Text;
+using System.Globalization;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace Sixel.Protocols;
 
@@ -13,31 +13,43 @@ public static class KittyGraphics {
     /// </summary>
     /// <returns>The Kitty Graphics Protocol formatted string.</returns>
     public static string ImageToKitty(Stream imageStream) {
-        // Read the raw image data from the stream
-        using var ms = new MemoryStream();
-        imageStream.CopyTo(ms);
-        byte[] imageBytes = ms.ToArray();
-        string base64Image = Convert.ToBase64String(imageBytes);
-        return ConvertToKittyGraphics(base64Image);
+        if (imageStream.CanSeek)
+            imageStream.Position = 0;
+        using var image = Image.Load<Rgba32>(imageStream);
+        CellSize cell = Compatibility.GetCellSize();
+        ImageSize cells = ImageLayout.Measure(image.Width, image.Height, cell, sixel: false);
+        Resizer.PadToCells(image, cells, cell);
+        return Encode(image, cells);
     }
     public static string ImageToKitty(Image<Rgba32> image, ImageSize imageSize) {
-        // Use Resizer to handle resizing
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, 0);
-        // convert the resized image to base64
-        using MemoryStream? ms = new();
-        resizedImage.SaveAsPng(ms);
+        CellSize cell = Compatibility.GetCellSize();
+        ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height,
+            imageSize.Width, imageSize.Height, cell, sixel: false);
+        Resizer.ResizeToPixels(image, layout.Pixels, 0);
+        Resizer.PadToCells(image, layout.Cells, cell);
+        return Encode(image, layout.Cells);
+    }
+
+    internal static string Encode(Image<Rgba32> image, ImageSize imageSize) {
+        using MemoryStream ms = new();
+        image.SaveAsPng(ms);
         byte[] imageBytes = ms.ToArray();
         string base64Image = Convert.ToBase64String(imageBytes);
-        return ConvertToKittyGraphics(base64Image);
+        return ConvertToKittyGraphics(base64Image, imageSize);
     }
-    private static string ConvertToKittyGraphics(string base64Image) {
+    private static string ConvertToKittyGraphics(string base64Image, ImageSize imageSize) {
         // basic implementation of kitty graphics protocol
         StringBuilder sb = new();
         int pos = 0;
         while (pos < base64Image.Length) {
             _ = sb.Append(Constants.KittyStart);
             if (pos == 0) {
-                _ = sb.Append(Constants.KittyPos);
+                _ = sb.Append(Constants.KittyPos)
+                    .Append("t=d,q=2,c=").Append(imageSize.Width.ToString(CultureInfo.InvariantCulture))
+                    .Append(",r=").Append(imageSize.Height.ToString(CultureInfo.InvariantCulture)).Append(',');
+            }
+            else {
+                sb.Append("q=2,");
             }
             int remaining = base64Image.Length - pos;
             string chunk = base64Image.Substring(pos, Math.Min(Constants.KittychunkSize, remaining));

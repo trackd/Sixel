@@ -25,7 +25,7 @@ public static class Sixel {
         var sixelBuilder = new StringBuilder(estimatedSize);
         var sixel = new StringBuilder(estimatedSize / 2);
         var palette = new Dictionary<Rgba32, int>(256); // Pre-size for typical max colors
-        int colorCounter = 1;
+        int colorCounter = 0;
         sixel.StartSixel(frame.Width, frame.Height);
         frame.ProcessPixelRows(accessor => {
             for (int y = 0; y < accessor.Height; y++) {
@@ -38,7 +38,8 @@ public static class Sixel {
                 int lastColor = -1;
                 int repeatCounter = 0;
                 foreach (ref Rgba32 pixel in pixelRow) {
-                    if (!palette.TryGetValue(pixel, out int colorIndex)) {
+                    int colorIndex = -1;
+                    if (pixel.A != 0 && !palette.TryGetValue(pixel, out colorIndex)) {
                         // The colors can be added to the palette and interleaved with the sixel data so long as the color is defined before it is used.
                         // for compatibility testing im not doing this at the moment.
                         colorIndex = colorCounter++;
@@ -46,8 +47,8 @@ public static class Sixel {
                         sixel.AddColorToPalette(pixel, colorIndex);
                     }
 
-                    // Transparency is a special color index of 0 that exists in our sixel palette.
-                    int colorId = pixel.A == 0 ? 0 : colorIndex;
+                    // Transparent spans advance horizontally without selecting a palette entry.
+                    int colorId = colorIndex;
 
                     // Sixel data will use a repeat entry if the color is the same as the last one.
                     // https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.3.1
@@ -71,12 +72,11 @@ public static class Sixel {
 
                 // Add a carriage return at the end of each row and a new line every 6 pixel rows.
                 sixelBuilder.AppendCarriageReturn();
-                if (y % 6 == 5) {
+                if (y % 6 == 5 && y + 1 < accessor.Height) {
                     sixelBuilder.AppendNextLine();
                 }
             }
         });
-        sixelBuilder.AppendNextLine();
         sixelBuilder.AppendExitSixel();
 
         return sixel.Append(sixelBuilder).ToString();
@@ -101,22 +101,22 @@ public static class Sixel {
         .Append(b);
     }
     private static void AppendSixel(this StringBuilder sixelBuilder, int colorIndex, int repeatCounter, char sixel) {
-        if (colorIndex == 0) {
-            // Transparent pixels are a special case and are always 0 in the palette.
+        if (colorIndex < 0) {
             sixel = Constants.SixelTransparent;
+        }
+        else {
+            sixelBuilder
+            .Append(Constants.SixelColorStart)
+            .Append(colorIndex);
         }
         if (repeatCounter <= 1) {
             // single entry
             _ = sixelBuilder
-            .Append(Constants.SixelColorStart)
-            .Append(colorIndex)
             .Append(sixel);
         }
         else {
             // add repeats
             _ = sixelBuilder
-            .Append(Constants.SixelColorStart)
-            .Append(colorIndex)
             .Append(Constants.SixelRepeat)
             .Append(repeatCounter)
             .Append(sixel);

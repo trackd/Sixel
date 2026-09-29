@@ -2,9 +2,6 @@
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using SixLabors.ImageSharp.Processing.Processors.Transforms;
 namespace Sixel.Terminal;
 
 /// <summary>
@@ -46,16 +43,10 @@ public static class ConvertTo {
         // Load the image once to avoid duplicate loading
         using var image = Image.Load<Rgba32>(imageStream);
 
-        // For Sixel and Blocks: use natural sizing if no constraints, otherwise apply constraints
-        ImageSize constrainedSize;
-        if (width == 0 && height == 0) {
-            // No constraints specified - use natural image size
-            constrainedSize = SizeHelper.ConvertToCharacterCells(image);
-        }
-        else {
-            // Constraints specified - apply resizing logic
-            constrainedSize = SizeHelper.GetResizedCharacterCellSize(image, width, height);
-        }
+        CellSize cell = Compatibility.GetCellSize();
+        ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height, width, height,
+            cell, sixel: protocol == ImageProtocol.Sixel);
+        ImageSize constrainedSize = layout.Cells;
 
         // Use the resolved protocol for all logic below
         switch (protocol) {
@@ -63,29 +54,37 @@ public static class ConvertTo {
                 if (!autoProtocol.Contains(ImageProtocol.Sixel) && !Compatibility.TerminalSupportsSixel() && !Force) {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
-                // Resize first to get actual pixel dimensions, then compute final cell size from the resized image.
-                Image<Rgba32> resized = Resizer.ResizeToCharacterCells(image, constrainedSize, maxColors);
-                ImageSize finalSize = SizeHelper.GetCharacterCellSize(resized);
+                // Raster dimensions and occupied cells come from the same layout.
+                Image<Rgba32> resized = Resizer.ResizeToPixels(image, layout.Pixels, maxColors);
+                ImageSize finalSize = layout.Cells;
                 ImageFrame<Rgba32> frame = resized.Frames[0];
                 string data = Protocols.Sixel.FrameToSixelString(frame);
-                return (finalSize, data);
+                return (finalSize, ImagePlacement.Wrap(ImagePlacement.SixelModes + data, finalSize.Height));
 
             case ImageProtocol.KittyGraphicsProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.KittyGraphicsProtocol) && !Compatibility.TerminalSupportsKitty() && !Force) {
                     throw new InvalidOperationException("Terminal does not support Kitty, override with -Force");
                 }
-                // Use the same sizing logic as Sixel/Blocks so we never pass 0x0 to the resizer.
+                // Explicit placement matches the padded raster exactly.
                 ImageSize kittySize = constrainedSize;
-                return (kittySize, KittyGraphics.ImageToKitty(image, kittySize));
+                Resizer.ResizeToPixels(image, layout.Pixels, 0);
+                Resizer.PadToCells(image, kittySize, cell);
+                return (kittySize, ImagePlacement.Wrap(KittyGraphics.Encode(image, kittySize), kittySize.Height));
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
                 }
-                imageStream.Position = 0;
-                // Pass raw width/height to InlineImage - 0 values become "auto"
-                var inlineSize = new ImageSize(width, height);
-                return (inlineSize, InlineImage.ImageToInline(imageStream, width, height));
+                Resizer.ResizeToPixels(image, layout.Pixels, 0);
+                Resizer.PadToCells(image, layout.Cells, cell);
+                using (var encoded = new MemoryStream()) {
+                    if (image.Frames.Count > 1)
+                        image.SaveAsGif(encoded);
+                    else
+                        image.SaveAsPng(encoded);
+                    string inline = InlineImage.ImageToInline(encoded, layout.Cells.Width, layout.Cells.Height);
+                    return (layout.Cells, ImagePlacement.Wrap(inline, layout.Cells.Height));
+                }
 
             case ImageProtocol.Blocks:
                 return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));
