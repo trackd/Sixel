@@ -1,9 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Sixel.Terminal.Models;
 
 
@@ -14,6 +11,7 @@ namespace Sixel.Terminal;
 /// </summary>
 public static partial class Compatibility {
     private static readonly object s_controlSequenceLock = new();
+    internal static Func<IQueryTransport> CreateQueryTransport { get; set; } = () => new ConsoleQueryTransport();
 
     /// <summary>
     /// Memory-caches the result of the terminal supporting sixel graphics.
@@ -39,225 +37,43 @@ public static partial class Compatibility {
     private static TerminalInfo? _terminalInfo;
 
     /// <summary>
-    /// Get the response to a control sequence.
-    /// Only queries when it's safe to do so (no pending input, not redirected).
-    /// Retries up to 2 times with 500ms timeout each.
+    /// Explicitly queries the terminal. The caller must own console input (not a
+    /// line editor, completion callback, or background runspace). Automatic
+    /// capability and size getters never call this method.
     /// </summary>
     public static string GetControlSequenceResponse(string controlSequence) {
-        if (Console.IsOutputRedirected || Console.IsInputRedirected) {
-            return string.Empty;
+        lock (s_controlSequenceLock) {
+            return TerminalQuery.Read(controlSequence, CreateQueryTransport());
         }
-
-        const int timeoutMs = 500;
-        const int maxRetries = 2;
-
-        lock (s_controlSequenceLock)
-        {
-            // Drain any stale bytes that may have leaked from prior VT interactions.
-            DrainPendingInput();
-
-            for (int retry = 0; retry < maxRetries; retry++)
-            {
-                try
-                {
-                    var response = new StringBuilder();
-                    bool capturing = false;
-
-                    // Send the control sequence
-                    Console.Write($"{Constants.ESC}{controlSequence}");
-                    Console.Out.Flush();
-                    var stopwatch = Stopwatch.StartNew();
-
-                    while (stopwatch.ElapsedMilliseconds < timeoutMs)
-                    {
-                        if (!TryReadAvailableKey(out char key))
-                        {
-                            Thread.Sleep(1);
-                            continue;
-                        }
-
-                        if (!capturing)
-                        {
-                            if (key != '\x1b')
-                            {
-                                continue;
-                            }
-                            capturing = true;
-                        }
-
-                        response.Append(key);
-
-                        // Check if we have a complete response
-                        if (IsCompleteResponse(response))
-                        {
-                            DrainPendingInput();
-                            return response.ToString();
-                        }
-                    }
-
-                    // If we got a partial response, return it
-                    if (response.Length > 0)
-                    {
-                        DrainPendingInput();
-                        return response.ToString();
-                    }
-                }
-                catch (Exception)
-                {
-                    if (retry == maxRetries - 1)
-                    {
-                        DrainPendingInput();
-                        return string.Empty;
-                    }
-                }
-            }
-
-            DrainPendingInput();
-        }
-
-        return string.Empty;
     }
 
     /// <summary>
-    /// Attempts to read a key if one is available.
+    /// Explicitly refreshes capabilities and cell metrics while the caller owns
+    /// console input. Do not call from module import, a prompt, or tab completion.
     /// </summary>
-    /// <param name="key">The key read from stdin.</param>
-    /// <returns>True when a key was read, otherwise false.</returns>
-    private static bool TryReadAvailableKey(out char key)
-    {
-        key = default;
-
-        try
-        {
-            if (!Console.KeyAvailable)
-            {
-                return false;
+    public static TerminalInfo RefreshTerminalInfo() {
+        lock (s_controlSequenceLock) {
+            string response = GetControlSequenceResponse(TerminalQuery.KittyAndDeviceAttributes);
+            if (response.Length > 0) {
+                _terminalSupportsKitty = response.Contains(";OK");
+                _terminalSupportsSixel = response.Contains(";4;") || response.Contains(";4c");
             }
-
-            key = Console.ReadKey(true).KeyChar;
-            return true;
-        }
-        catch
-        {
-            return false;
+            QueryCellSize();
+            _terminalInfo = TerminalChecker.CheckTerminal();
+            return _terminalInfo;
         }
     }
 
-    /// <summary>
-    /// Drains any pending stdin bytes to prevent VT probe responses from leaking into user input.
-    /// </summary>
-    private static void DrainPendingInput()
-    {
-        if (Console.IsOutputRedirected || Console.IsInputRedirected)
-        {
-            return;
-        }
-
-        try
-        {
-            const int quietPeriodMs = 20;
-            const int maxDrainMs = 250;
-
-            var stopwatch = Stopwatch.StartNew();
-            long lastReadAt = stopwatch.ElapsedMilliseconds;
-
-            while (stopwatch.ElapsedMilliseconds < maxDrainMs)
-            {
-                if (!Console.KeyAvailable)
-                {
-                    if (stopwatch.ElapsedMilliseconds - lastReadAt >= quietPeriodMs)
-                    {
-                        break;
-                    }
-
-                    Thread.Sleep(1);
-                    continue;
-                }
-
-                _ = Console.ReadKey(true);
-                lastReadAt = stopwatch.ElapsedMilliseconds;
-            }
-        }
-        catch
-        {
-            // Best effort only.
-        }
+    /// <summary>Sets known cell metrics without writing queries or reading console input.</summary>
+    public static void SetCellSize(int pixelWidth, int pixelHeight) {
+        if (!IsValidCellSize(pixelWidth, pixelHeight))
+            throw new ArgumentOutOfRangeException(nameof(pixelWidth), "Cell dimensions must be positive.");
+        _cellSize = new CellSize { PixelWidth = pixelWidth, PixelHeight = pixelHeight };
+        UpdateWindowSizeSnapshot();
     }
-
-
     /// <summary>
-    /// Check for complete terminal responses
-    /// </summary>
-    private static bool IsCompleteResponse(StringBuilder response) {
-        int length = response.Length;
-        if (length < 2) return false;
-
-
-        // Most VT terminal responses end with specific letters
-        switch (response[length - 1]) {
-            case 'c': // Device Attributes (ESC[...c)
-            case 'R': // Cursor Position Report (ESC[row;columnR)
-            case 't': // Window manipulation (ESC[...t)
-            case 'n': // Device Status Report (ESC[...n)
-            case 'y': // DECRPM response (ESC[?...y)
-                      // Make sure it's actually a CSI sequence (ESC[)
-                return length >= 3 && response[0] == '\x1b' && response[1] == '[';
-
-            case '\\': // String Terminator (ESC\)
-                return length >= 2 && response[length - 2] == '\x1b';
-
-            case (char)7: // BEL character
-                return true;
-
-            default:
-                // Check for Kitty graphics protocol: ends with ";OK" followed by ST and then another response
-                if (length >= 7) // Minimum for ";OK" + ESC\ + ESC[...c
-                {
-                    // Look for ";OK" pattern
-                    bool hasOK = false;
-                    for (int i = 0; i <= length - 3; i++) {
-                        if (response[i] == ';' && i + 2 < length &&
-                            response[i + 1] == 'O' && response[i + 2] == 'K') {
-                            hasOK = true;
-                            break;
-                        }
-                    }
-
-                    if (hasOK) {
-                        // Look for ESC\ (String Terminator)
-                        int stIndex = -1;
-                        for (int i = 0; i < length - 1; i++) {
-                            if (response[i] == '\x1b' && response[i + 1] == '\\') {
-                                stIndex = i;
-                                break;
-                            }
-                        }
-
-                        if (stIndex >= 0 && stIndex + 2 < length) {
-                            // Check if there's a complete response after the ST
-                            int afterSTStart = stIndex + 2;
-                            int afterSTLength = length - afterSTStart;
-                            if (afterSTLength >= 3 &&
-                                response[afterSTStart] == '\x1b' &&
-                                response[afterSTStart + 1] == '[') {
-                                char afterSTLast = response[length - 1];
-                                return afterSTLast is 'c' or
-                                        'R' or
-                                        't' or
-                                        'n' or
-                                        'y';
-                            }
-                        }
-                    }
-                }
-                return false;
-        }
-    }
-
-    /// <summary>
-    /// Get the cell size of the terminal in pixel-sixel size.
-    /// The response to the command will look like [6;20;10t where the 20 is height and 10 is width.
-    /// I think the 6 is the terminal class, which is not used here.
+    /// Gets cached cell metrics, or the 10 by 20 fallback, without terminal I/O.
+    /// Call RefreshTerminalInfo explicitly to query metrics, or SetCellSize to supply them.
     /// </summary>
     /// <returns>The number of pixel sixels that will fit in a single character cell.</returns>
     public static CellSize GetCellSize() {
@@ -265,32 +81,30 @@ public static partial class Compatibility {
             return _cellSize;
         }
 
-        _cellSize = null;
+        // Unknown metrics must not initiate terminal I/O during completion or import.
+        return GetPlatformDefaultCellSize();
+    }
+
+    private static CellSize QueryCellSize() {
         string response = GetControlSequenceResponse("[16t");
 
-        try {
-            string[] parts = response.Split(';', 't');
-            if (parts.Length >= 3) {
-                int width = int.Parse(parts[2], NumberStyles.Number, CultureInfo.InvariantCulture);
-                int height = int.Parse(parts[1], NumberStyles.Number, CultureInfo.InvariantCulture);
-
-                // Validate the parsed values are reasonable
-                if (IsValidCellSize(width, height)) {
-                    _cellSize = new CellSize {
-                        PixelWidth = width,
-                        PixelHeight = height
-                    };
-                    UpdateWindowSizeSnapshot();
-                    return _cellSize;
-                }
-            }
+        if (TryParseSizeReport(response, 6, out int width, out int height)) {
+            _cellSize = new CellSize { PixelWidth = width, PixelHeight = height };
+            UpdateWindowSizeSnapshot();
+            return _cellSize;
         }
-        catch {
-            // Fall through to platform-specific fallback
+
+        // Some terminals implement window pixel/cell queries but not CSI 16 t.
+        if (TryParseSizeReport(GetControlSequenceResponse("[14t"), 4, out int pixelWidth, out int pixelHeight)
+            && TryParseSizeReport(GetControlSequenceResponse("[18t"), 8, out int columns, out int rows)
+            && pixelWidth >= columns && pixelHeight >= rows) {
+            _cellSize = new CellSize { PixelWidth = pixelWidth / columns, PixelHeight = pixelHeight / rows };
+            UpdateWindowSizeSnapshot();
+            return _cellSize;
         }
 
         // Platform-specific fallback values
-        _cellSize = GetPlatformDefaultCellSize();
+        _cellSize ??= GetPlatformDefaultCellSize();
         UpdateWindowSizeSnapshot();
         return _cellSize;
     }
@@ -301,6 +115,18 @@ public static partial class Compatibility {
     /// </summary>
     private static bool IsValidCellSize(int width, int height)
         => width > 0 && height > 0;
+
+    internal static bool TryParseSizeReport(string response, int report, out int width, out int height) {
+        width = height = 0;
+        string prefix = "\x1b[" + report.ToString(CultureInfo.InvariantCulture) + ";";
+        if (!response.StartsWith(prefix, StringComparison.Ordinal) || response[response.Length - 1] != 't')
+            return false;
+        string[] parts = response.Substring(prefix.Length, response.Length - prefix.Length - 1).Split(';');
+        return parts.Length == 2
+            && int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out height)
+            && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out width)
+            && IsValidCellSize(width, height);
+    }
 
 
     /// <summary>
@@ -352,34 +178,27 @@ public static partial class Compatibility {
     }
 
     /// <summary>
-    /// Check if the terminal supports sixel graphics.
-    /// This is done by sending the terminal a Device Attributes request.
-    /// If the terminal responds with a response that contains ";4;" then it supports sixel graphics.
-    /// https://vt100.net/docs/vt510-rm/DA1.html
+    /// Checks cached or environment-derived sixel support without terminal I/O.
+    /// Use RefreshTerminalInfo explicitly for active capability detection.
     /// </summary>
     /// <returns>True if the terminal supports sixel graphics, false otherwise.</returns>
     public static bool TerminalSupportsSixel() {
         if (_terminalSupportsSixel.HasValue) {
             return _terminalSupportsSixel.Value;
         }
-        string response = GetControlSequenceResponse("[c");
-        _terminalSupportsSixel = response.Contains(";4;") || response.Contains(";4c");
-        return _terminalSupportsSixel.Value;
+        return GetTerminalInfo().Protocol.Contains(ImageProtocol.Sixel);
     }
 
     /// <summary>
-    /// Check if the terminal supports kitty graphics.
-    /// https://sw.kovidgoyal.net/kitty/graphics-protocol/
-    /// response: ␛_Gi=31;OK␛\␛[?62;c
+    /// Checks cached or environment-derived Kitty support without terminal I/O.
+    /// Use RefreshTerminalInfo explicitly for active capability detection.
     /// </summary>
     /// <returns>True if the terminal supports kitty graphics, false otherwise.</returns>
     public static bool TerminalSupportsKitty() {
         if (_terminalSupportsKitty.HasValue) {
             return _terminalSupportsKitty.Value;
         }
-        string kittyTest = $"_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA{Constants.ST}{Constants.ESC}[c";
-        _terminalSupportsKitty = GetControlSequenceResponse(kittyTest).Contains(";OK");
-        return _terminalSupportsKitty.Value;
+        return GetTerminalInfo().Protocol.Contains(ImageProtocol.KittyGraphicsProtocol);
     }
 
     /// <summary>

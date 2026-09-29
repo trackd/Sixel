@@ -12,6 +12,11 @@ internal sealed class VTWriter : IDisposable {
     private readonly bool _customwriter;
     private bool _disposed;
 
+    internal VTWriter(TextWriter writer) {
+        _writer = writer;
+        _customwriter = true;
+    }
+
     public VTWriter() {
         bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         bool isRedirected = Console.IsOutputRedirected || Console.IsInputRedirected;
@@ -49,6 +54,13 @@ internal sealed class VTWriter : IDisposable {
         else {
             Console.WriteLine(text);
         }
+    }
+
+    internal void Flush() {
+        if (_customwriter)
+            _writer?.Flush();
+        else
+            Console.Out.Flush();
     }
 
     private void Dispose(bool disposing) {

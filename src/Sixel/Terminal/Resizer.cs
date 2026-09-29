@@ -1,4 +1,4 @@
-﻿using Sixel.Terminal.Models;
+using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -6,146 +6,56 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace Sixel.Terminal;
 
-/// <summary>
-/// Provides methods to resize images to fit within terminal character cell dimensions, with optional color quantization.
-/// </summary>
+/// <summary>Fits image content in pixel space before measuring occupied terminal cells.</summary>
 public static class Resizer {
-    /// <summary>
-    /// Resizes an image to fit within the specified terminal character cell dimensions.
-    /// </summary>
-    /// <param name="image">The image to resize.</param>
-    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
-    /// <param name="RequestedWidth">The target width in terminal character cells.</param>
-    /// <param name="RequestedHeight">The target height in terminal character cells (optional).</param>
-    /// <param name="quantize">Whether to quantize the image to reduce colors.</param>
-    /// <returns>tuple of ImageSize and resized Image stream.</returns>
+    /// <summary>Resizes to the requested cell bounds, preserving aspect ratio.</summary>
     public static (ImageSize Size, Image<Rgba32> ConsoleImage) OldResizeToCharacterCells(
-        Image<Rgba32> image,
-        int maxColors,
-        int? RequestedWidth,
-        int? RequestedHeight,
-        bool quantize = false
-    ) {
-        CellSize cellSize = Compatibility.GetCellSize();
-        int reqWidth = (RequestedWidth > 0) ? RequestedWidth.Value : 0;
-        int reqHeight = (RequestedHeight > 0) ? RequestedHeight.Value : 0;
-
-        // If both are zero, do not resize or quantize, just return the current size in cells
-        // if (reqWidth == 0 && reqHeight == 0)
-        // {
-        //     var currentSize = SizeHelper.ConvertToCharacterCells(image.Width, image.Height);
-        //     return (currentSize, image);        // }
-
-        ImageSize newSize = SizeHelper.GetResizedCharacterCellSize(image.Width, image.Height, reqWidth, reqHeight);
-
-        // Calculate pixel dimensions from cell dimensions
-        int targetPixelWidth = newSize.Width * cellSize.PixelWidth;
-        int targetPixelHeight = newSize.Height * cellSize.PixelHeight;
-
-        // Only resize if the target size is different
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
-            image.Mutate(ctx => {
-                ctx.Resize(new ResizeOptions() {
-                    // Pads the image to fit the bound of the container without resizing the original source.
-                    // When downscaling, performs the same functionality as Pad
-                    Mode = ResizeMode.BoxPad,
-                    Position = AnchorPositionMode.TopLeft,
-                    PadColor = Color.Transparent,
-                    // https://en.wikipedia.org/wiki/Bicubic_interpolation
-                    // quality goes Bicubic > Bilinear > NearestNeighbor
-                    Sampler = KnownResamplers.Bicubic,
-                    Size = new(targetPixelWidth, targetPixelHeight),
-                    PremultiplyAlpha = false,
-                });
-                if (quantize) {
-#if NET472
-                    // v4 is not available in net472 so we remain with OctreeQuantizer
-                    ctx.Quantize(new OctreeQuantizer(new() {
-                        MaxColors = maxColors,
-                    }));
-#else
-                    // Sixlabors v4 refactors OctreeQuantizer to HexadecatreeQuantizer
-                    // Sixlabors/ImageSharp#3107
-                    ctx.Quantize(new HexadecatreeQuantizer(new() {
-                        MaxColors = maxColors,
-                    }));
-#endif
-                }
-            });
-        }
-        else if (quantize) {
-            image.Mutate(ctx => {
-#if NET472
-                ctx.Quantize(new OctreeQuantizer(new() {
-                    MaxColors = maxColors,
-                }));
-#else
-                ctx.Quantize(new HexadecatreeQuantizer(new() {
-                    MaxColors = maxColors,
-                }));
-#endif
-            });
-        }
-        return (newSize, image);
+        Image<Rgba32> image, int maxColors, int? RequestedWidth, int? RequestedHeight, bool quantize = false) {
+        ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height,
+            RequestedWidth ?? 0, RequestedHeight ?? 0, Compatibility.GetCellSize(), sixel: true);
+        ResizeToPixels(image, layout.Pixels, quantize ? maxColors : 0);
+        return (layout.Cells, image);
     }
-    /// <summary>
-    /// Resizes an image to fit within the specified terminal character cell dimensions.
-    /// This method is used when the image size is already known and does not need to be calculated.
-    /// </summary>
-    /// <param name="image">The image to resize.</param>
-    /// <param name="imageSize">The target size in terminal character cells.</param>    /// <param name="maxColors">The maximum number of colors to use (for quantization).</param>
-    /// <returns>The resized image.</returns>
-    public static Image<Rgba32> ResizeToCharacterCells(
-        Image<Rgba32> image,
-        ImageSize imageSize,
-        int maxColors
-    ) {
-        CellSize cellSize = Compatibility.GetCellSize();
 
-        // Calculate pixel dimensions from cell dimensions
-        int targetPixelWidth = imageSize.Width * cellSize.PixelWidth;
-        int targetPixelHeight = imageSize.Height * cellSize.PixelHeight;
+    /// <summary>Fits an image within sixel cell bounds, including six-pixel band occupancy.</summary>
+    public static Image<Rgba32> ResizeToCharacterCells(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
+        ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height,
+            imageSize.Width, imageSize.Height, Compatibility.GetCellSize(), sixel: true);
+        return ResizeToPixels(image, layout.Pixels, maxColors);
+    }
 
-        // Only resize if the target size is different
-        if (image.Width != targetPixelWidth || image.Height != targetPixelHeight) {
-            image.Mutate(ctx => {
-                ctx.Resize(new ResizeOptions() {
-                    // Never crop; pad to requested size, anchoring content at top-left to preserve the left edge.
-                    Mode = ResizeMode.BoxPad,
-                    Position = AnchorPositionMode.TopLeft,
-                    PadColor = Color.Transparent,
-                    // https://en.wikipedia.org/wiki/Bicubic_interpolation
-                    // quality goes Bicubic > Bilinear > NearestNeighbor
-                    Sampler = KnownResamplers.Bicubic,
-                    Size = new(targetPixelWidth, targetPixelHeight),
-                    PremultiplyAlpha = false,
-                });
-                if (maxColors > 0) {
-#if NET472
-                    ctx.Quantize(new OctreeQuantizer(new() {
-                        MaxColors = maxColors,
-                    }));
-#else
-                    ctx.Quantize(new HexadecatreeQuantizer(new() {
-                        MaxColors = maxColors,
-                    }));
-#endif
-                }
-            });
+    internal static Image<Rgba32> ResizeToPixels(Image<Rgba32> image, Size pixels, int maxColors) {
+        if (image.Width != pixels.Width || image.Height != pixels.Height) {
+            image.Mutate(ctx => ctx.Resize(new ResizeOptions {
+                Mode = ResizeMode.Stretch,
+                Size = pixels,
+                Sampler = KnownResamplers.Bicubic,
+                PremultiplyAlpha = true
+            }));
         }
-        else if (maxColors > 0) {
+        if (maxColors > 0) {
             image.Mutate(ctx => {
 #if NET472
-                ctx.Quantize(new OctreeQuantizer(new() {
-                    MaxColors = maxColors,
-                }));
+                ctx.Quantize(new OctreeQuantizer(new() { MaxColors = maxColors }));
 #else
-                ctx.Quantize(new HexadecatreeQuantizer(new() {
-                    MaxColors = maxColors,
-                }));
+                ctx.Quantize(new HexadecatreeQuantizer(new() { MaxColors = maxColors }));
 #endif
             });
         }
         return image;
+    }
+
+    // Pad only after fitting, so explicit whole-cell placement preserves the content aspect ratio.
+    internal static void PadToCells(Image<Rgba32> image, ImageSize cells, CellSize cell) {
+        int width = checked(cells.Width * cell.PixelWidth);
+        int height = checked(cells.Height * cell.PixelHeight);
+        if (image.Width != width || image.Height != height) {
+            image.Mutate(ctx => ctx.Resize(new ResizeOptions {
+                Mode = ResizeMode.BoxPad,
+                Position = AnchorPositionMode.TopLeft,
+                PadColor = Color.Transparent,
+                Size = new Size(width, height)
+            }));
+        }
     }
 }
