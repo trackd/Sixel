@@ -16,7 +16,7 @@ $script:folders = @{
     OutputPath       = Join-Path $PSScriptRoot 'output'
     DestinationPath  = Join-Path $PSScriptRoot 'output' 'lib'
     ModuleSourcePath = Join-Path $PSScriptRoot 'module'
-    DocsPath         = Join-Path $PSScriptRoot 'docs' 'en-US'
+    DocsPath         = Join-Path $PSScriptRoot 'docs'
     TestPath         = Join-Path $PSScriptRoot 'tests'
     CsprojPath       = Join-Path $PSScriptRoot 'src' $modulename "$modulename.csproj"
 }
@@ -84,30 +84,36 @@ task GenerateHelp -if (-not $SkipHelp) {
 
     Import-Module $modulePath -Force
 
-    $helpOutputPath = Join-Path $folders.OutputPath 'en-US'
-    New-Item -Path $helpOutputPath -ItemType Directory -Force | Out-Null
-
-    $allCommandHelp = Get-ChildItem -Path $folders.DocsPath -Filter '*.md' -Recurse -File |
-        Where-Object { $_.Name -ne "$($folders.ModuleName).md" } |
-        Import-MarkdownCommandHelp
-
-    if ($allCommandHelp.Count -gt 0) {
-        $tempOutputPath = Join-Path $helpOutputPath 'temp'
-        Export-MamlCommandHelp -CommandHelp $allCommandHelp -OutputFolder $tempOutputPath -Force | Out-Null
-
-        $generatedFile = Get-ChildItem -Path $tempOutputPath -Filter '*.xml' -Recurse -File | Select-Object -First 1
-        if ($generatedFile) {
-            Move-Item -Path $generatedFile.FullName -Destination $helpOutputPath -Force
+    foreach ($lang in (Get-ChildItem -Path $folders.DocsPath -Directory)) {
+        $helpOutputPath = Join-Path $folders.OutputPath $lang.Name
+        if (-not (Test-Path $helpOutputPath)) {
+            New-Item -Path $helpOutputPath -ItemType Directory -Force | Out-Null
         }
-        Remove-Item -Path $tempOutputPath -Recurse -Force -ErrorAction SilentlyContinue
+
+        $allCommandHelp = Get-ChildItem -Path $lang -Filter '*.md' -Recurse -File |
+            Where-Object { $_.Name -ne "$($folders.ModuleName).md" } |
+            Import-MarkdownCommandHelp
+
+        if ($allCommandHelp.Count -gt 0) {
+            $tempOutputPath = Join-Path $helpOutputPath 'temp'
+            Export-MamlCommandHelp -CommandHelp $allCommandHelp -OutputFolder $tempOutputPath -Force | Out-Null
+
+            $generatedFile = Get-ChildItem -Path $tempOutputPath -Filter '*.xml' -Recurse -File | Select-Object -First 1
+            if ($generatedFile) {
+                Move-Item -Path $generatedFile.FullName -Destination $helpOutputPath -Force
+            }
+            Remove-Item -Path $tempOutputPath -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
+
 
 task Test -if (-not $SkipTests) {
     if (-not (Test-Path $folders.TestPath)) {
         Write-Warning "Test directory not found at: $($folders.TestPath)"
         return
     }
+    exec { dotnet test (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration }
     $pesterConfig = New-PesterConfiguration
     # $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.Run.Path = $folders.TestPath
@@ -123,6 +129,5 @@ task CleanAfter {
             Remove-Item -Force -ErrorAction Ignore
     }
 }
-
 
 task All -Jobs Reset, Build, ModuleFiles, GenerateHelp, CleanAfter, Test

@@ -39,21 +39,18 @@ public static class InlineImage {
         }
         ReadOnlySpan<char> base64Image = Convert.ToBase64String(imageBytes).AsSpan();
         string size = imageBytes.Length.ToString(CultureInfo.InvariantCulture);
-        string widthString = width > 0 ? $"width={width};" : "width=auto;";
-        string heightString = height > 0 ? $"height={height};" : "height=auto;";
+        string widthString = width > 0 ? "width=" + width.ToString(CultureInfo.InvariantCulture) + ";" : "width=auto;";
+        string heightString = height > 0 ? "height=" + height.ToString(CultureInfo.InvariantCulture) + ";" : "height=auto;";
         StringBuilder iip = new();
-        _ = iip.Append(Constants.HideCursor)
-            .Append(Constants.InlineImageStart)
+        _ = iip.Append(Constants.InlineImageStart)
             .Append("1337;File=inline=1;")
             .Append("size=" + size + ";")
             .Append(widthString)
             .Append(heightString)
-            .Append("preserveAspectRatio=1:")
-            // .Append("preserveAspectRatio=1;")
-            // .Append("doNotMoveCursor=1:")
+            // The caller has already fitted and padded to this exact cell rectangle.
+            .Append("preserveAspectRatio=0:")
             .Append(base64Image)
-            .Append(Constants.InlineImageEnd)
-            .Append(Constants.ShowCursor);
+            .Append(Constants.InlineImageEnd);
         return iip.ToString();
     }
 }
