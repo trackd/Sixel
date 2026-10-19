@@ -11,6 +11,7 @@
     </ItemGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
         <PackageReference Include="System.Management.Automation" Version="7.4" PrivateAssets="all" />
+        <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
         <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.13" />
     </ItemGroup>
     <!-- <ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
