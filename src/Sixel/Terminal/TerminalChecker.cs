@@ -84,14 +84,25 @@ public static class TerminalChecker {
                 detectedProtocols = protocols;
             }
         }
-        // Only use explicitly refreshed probe results. Discovery must never read stdin.
+        // A reported identity is stronger evidence than inherited environment variables.
+        Terminals reported = Compatibility.GetReportedTerminal(out _);
+        if (reported != Terminals.unknown) {
+            detectedTerminal = reported;
+            if (Helpers.SupportedProtocol.TryGetValue(reported, out ImageProtocol[]? reportedProtocols))
+                detectedProtocols = reportedProtocols;
+        }
+        // Reading cached probe results is passive; discovery never initiates I/O.
         List<ImageProtocol>? protocolList = [.. detectedProtocols];
+        if (Compatibility._terminalSupportsKitty == false) protocolList.Remove(ImageProtocol.KittyGraphicsProtocol);
+        if (Compatibility._terminalSupportsSixel == false) protocolList.Remove(ImageProtocol.Sixel);
         bool kittySupported = Compatibility._terminalSupportsKitty == true;
         bool sixelSupported = Compatibility._terminalSupportsSixel == true;
         if (kittySupported && !protocolList.Contains(ImageProtocol.KittyGraphicsProtocol))
             protocolList.Insert(0, ImageProtocol.KittyGraphicsProtocol);
         if (sixelSupported && !protocolList.Contains(ImageProtocol.Sixel))
             protocolList.Insert(0, ImageProtocol.Sixel);
+        if (protocolList.Count == 0)
+            protocolList.Add(ImageProtocol.Blocks);
 
         return new TerminalInfo {
             Terminal = detectedTerminal,
