@@ -31,6 +31,13 @@ public static class KittyGraphics {
     }
 
     internal static string Encode(Image<Rgba32> image, ImageSize imageSize) {
+        if (Compatibility.GetTerminalInfo().Terminal == Terminals.Contour) {
+            byte[] pixels = new byte[checked(image.Width * image.Height * 4)];
+            image.CopyPixelDataTo(pixels);
+            return KittyProtocol.Encode(["a=T", "f=32", "t=d", "q=2", "C=1",
+                KittyImage.Number('s', image.Width), KittyImage.Number('v', image.Height),
+                KittyImage.Number('c', imageSize.Width), KittyImage.Number('r', imageSize.Height)], pixels) + KittyImage.CursorRows(imageSize.Height);
+        }
         using MemoryStream ms = new();
         image.SaveAsPng(ms);
         byte[] imageBytes = ms.ToArray();

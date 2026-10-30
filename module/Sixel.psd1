@@ -27,7 +27,7 @@
     Note: Sixel requires Windows Terminal v1.22+ or VSCode 1.101+.
     VSCode requires "Enable Images", "Windows Enable Conpty", "Windows Use Conpty Dll" enabled.
 '
-    CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif'
+    CmdletsToExport        = 'ConvertTo-Sixel', 'ConvertTo-SixelGif', 'ConvertTo-Kitty'
     AliasesToExport        = 'cts', 'gif'
     FormatsToProcess       = 'Sixel.format.ps1xml'
     PrivateData            = @{

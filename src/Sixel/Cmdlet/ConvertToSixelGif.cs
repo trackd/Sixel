@@ -70,7 +70,7 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
     public int Width { get; set; }
 
     [Parameter(
-        HelpMessage = "Force the command to attempt to output sixel data even if the terminal does not support sixel."
+        HelpMessage = "Attempt conversion without compatibility checks or automatic terminal probing."
     )]
     public SwitchParameter Force { get; set; }
 
@@ -97,6 +97,8 @@ public sealed class ConvertSixelGifCmdlet : PSCmdlet {
 
             // Check before converting each GIF so a Ctrl+C during playback stops the whole pipeline.
             if (_stopping) return;
+
+            TerminalExecution.Prepare(this, Force.IsPresent);
 
             switch (ParameterSetName) {
                 case "InputObject": {

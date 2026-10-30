@@ -12,6 +12,13 @@ namespace Sixel.Terminal;
 public static partial class Compatibility {
     private static readonly object s_controlSequenceLock = new();
     internal static Func<IQueryTransport> CreateQueryTransport { get; set; } = () => new ConsoleQueryTransport();
+    internal static bool _runtimeProbeAttempted;
+    internal static string? _terminalIdentity;
+
+    /// <summary>Whether a runtime probe has been attempted. Skipped/redirected calls do not count.</summary>
+    public static bool RuntimeProbeAttempted => _runtimeProbeAttempted;
+
+
 
     /// <summary>
     /// Memory-caches the result of the terminal supporting sixel graphics.
@@ -53,15 +60,82 @@ public static partial class Compatibility {
     /// </summary>
     public static TerminalInfo RefreshTerminalInfo() {
         lock (s_controlSequenceLock) {
-            string response = GetControlSequenceResponse(TerminalQuery.KittyAndDeviceAttributes);
-            if (response.Length > 0) {
-                _terminalSupportsKitty = response.Contains(";OK");
-                _terminalSupportsSixel = response.Contains(";4;") || response.Contains(";4c");
-            }
-            QueryCellSize();
-            _terminalInfo = TerminalChecker.CheckTerminal();
-            return _terminalInfo;
+            ProbeRuntime();
+            return GetTerminalInfo();
         }
+    }
+
+    internal static void EnsureRuntimeProbe() {
+        lock (s_controlSequenceLock) {
+            if (!_runtimeProbeAttempted) ProbeRuntime();
+        }
+    }
+
+    private static void ProbeRuntime() {
+        IQueryTransport transport = CreateQueryTransport();
+        try {
+            if (transport.IsRedirected || transport.KeyAvailable) return;
+        }
+        catch (InvalidOperationException) { return; }
+        catch (IOException) { return; }
+        _runtimeProbeAttempted = true;
+        string response = TerminalQuery.Read(TerminalQuery.RuntimeProbe, transport);
+        // A timeout is not a negative capability result. Preserve prior evidence.
+        if (response.Length == 0) return;
+        _terminalSupportsKitty = false;
+        _terminalSupportsSixel = false;
+        int pixelWidth = 0, pixelHeight = 0, columns = 0, rows = 0;
+        CellSize? measured = null;
+        foreach (string segment in response.Split('\x1b')) {
+            string report = "\x1b" + segment;
+            if (segment.StartsWith("_G", StringComparison.Ordinal) &&
+                TerminalQuery.IsKittyQueryResponse(report + "\x1b\\", out bool kittySuccess))
+                _terminalSupportsKitty = kittySuccess;
+            else if (segment.StartsWith("[?", StringComparison.Ordinal) && segment[segment.Length - 1] == 'c')
+                _terminalSupportsSixel = segment.Substring(2, segment.Length - 3).Split(';').Skip(1).Contains("4");
+            else if (TryParseSizeReport(report, 6, out int width, out int height))
+                measured = new CellSize { PixelWidth = width, PixelHeight = height };
+            else if (TryParseSizeReport(report, 4, out width, out height)) {
+                pixelWidth = width;
+                pixelHeight = height;
+            }
+            else if (TryParseSizeReport(report, 8, out width, out height)) {
+                columns = width;
+                rows = height;
+            }
+            else if (segment.StartsWith("P>|", StringComparison.Ordinal))
+                _terminalIdentity = segment.Substring(3);
+        }
+        if (measured is null && columns > 0 && rows > 0 && pixelWidth >= columns && pixelHeight >= rows)
+            measured = new CellSize { PixelWidth = pixelWidth / columns, PixelHeight = pixelHeight / rows };
+        if (measured is not null) {
+            _cellSize = measured;
+            UpdateWindowSizeSnapshot();
+        }
+        _terminalInfo = TerminalChecker.CheckTerminal();
+    }
+
+    /// <summary>Returns a passive snapshot of independently assessed Kitty features.</summary>
+    public static KittyCapabilities GetKittyCapabilities() {
+        Terminals terminal = GetTerminalInfo().Terminal;
+        Terminals reported = GetReportedTerminal(out string? version);
+        if (reported != Terminals.unknown) terminal = reported;
+        else if (Helpers.GetTerminal(Environment.GetEnvironmentVariable("TERM_PROGRAM") ?? string.Empty) == terminal)
+            version = Environment.GetEnvironmentVariable("TERM_PROGRAM_VERSION");
+        return KittyCapabilities.Detect(terminal, version, _terminalSupportsKitty);
+    }
+
+    internal static Terminals GetReportedTerminal(out string? version) {
+        version = null;
+        if (_terminalIdentity is null) return Terminals.unknown;
+        foreach (Terminals terminal in new[] { Terminals.Kitty, Terminals.WezTerm, Terminals.Ghostty, Terminals.Contour }) {
+            string name = terminal.ToString();
+            if (!_terminalIdentity.StartsWith(name + "(", StringComparison.OrdinalIgnoreCase) &&
+                !_terminalIdentity.StartsWith(name + " ", StringComparison.OrdinalIgnoreCase)) continue;
+            version = _terminalIdentity.Substring(name.Length).Trim('(', ')', ' ');
+            return terminal;
+        }
+        return Terminals.unknown;
     }
 
     /// <summary>Sets known cell metrics without writing queries or reading console input.</summary>
@@ -83,30 +157,6 @@ public static partial class Compatibility {
 
         // Unknown metrics must not initiate terminal I/O during completion or import.
         return GetPlatformDefaultCellSize();
-    }
-
-    private static CellSize QueryCellSize() {
-        string response = GetControlSequenceResponse("[16t");
-
-        if (TryParseSizeReport(response, 6, out int width, out int height)) {
-            _cellSize = new CellSize { PixelWidth = width, PixelHeight = height };
-            UpdateWindowSizeSnapshot();
-            return _cellSize;
-        }
-
-        // Some terminals implement window pixel/cell queries but not CSI 16 t.
-        if (TryParseSizeReport(GetControlSequenceResponse("[14t"), 4, out int pixelWidth, out int pixelHeight)
-            && TryParseSizeReport(GetControlSequenceResponse("[18t"), 8, out int columns, out int rows)
-            && pixelWidth >= columns && pixelHeight >= rows) {
-            _cellSize = new CellSize { PixelWidth = pixelWidth / columns, PixelHeight = pixelHeight / rows };
-            UpdateWindowSizeSnapshot();
-            return _cellSize;
-        }
-
-        // Platform-specific fallback values
-        _cellSize ??= GetPlatformDefaultCellSize();
-        UpdateWindowSizeSnapshot();
-        return _cellSize;
     }
 
     /// <summary>
