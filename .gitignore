@@ -13,3 +13,4 @@ refdocs/*
 !README.md
 sixlabors.lic
 /.local/
+/artifacts/
