@@ -63,7 +63,7 @@ internal sealed partial class ImageBackend : IDisposable {
         using var frame = RenderFrame(index);
         var raster = new DrawingRaster(frame);
         quantizer ??= new DrawingQuantizer();
-        quantizer.Quantize(raster.Pixels.AsSpan(), raster.Width, maxColors);
+        quantizer.Quantize(raster.Pixels, raster.Width, maxColors);
         return Protocols.Sixel.FrameToSixelString(raster);
     }
 

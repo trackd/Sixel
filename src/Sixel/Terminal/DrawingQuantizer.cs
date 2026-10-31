@@ -5,7 +5,7 @@ namespace Sixel.Terminal;
 internal sealed class DrawingQuantizer {
     private ColorBin[]? histogram;
 
-    internal void Quantize(Span<int> pixels, int width, int maxColors) {
+    internal void Quantize(int[] pixels, int width, int maxColors) {
         if (maxColors <= 0) return;
         // Preserve exact colors when reduction is unnecessary, including low-color
         // art whose distinct colors would otherwise share a histogram bin.
@@ -24,7 +24,7 @@ internal sealed class DrawingQuantizer {
         // Five bits/channel bounds histogram memory and sort work independently
         // of image size. Full-precision sums retain the actual mean of each bin.
         if (histogram is null) histogram = new ColorBin[32768];
-        else histogram.AsSpan().Clear();
+        else Array.Clear(histogram, 0, histogram.Length);
         ColorBin[] bins = histogram;
         var occupied = new List<int>();
         foreach (int pixel in pixels) {
