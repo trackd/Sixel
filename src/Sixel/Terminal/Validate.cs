@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace Sixel.Terminal;
 

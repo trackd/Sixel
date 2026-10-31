@@ -1,3 +1,4 @@
+#if !NET472
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -35,11 +36,7 @@ public static class Resizer {
         }
         if (maxColors > 0) {
             image.Mutate(ctx => {
-#if NET472
-                ctx.Quantize(new OctreeQuantizer(new() { MaxColors = maxColors }));
-#else
                 ctx.Quantize(new HexadecatreeQuantizer(new() { MaxColors = maxColors }));
-#endif
             });
         }
         return image;
@@ -59,3 +56,4 @@ public static class Resizer {
         }
     }
 }
+#endif

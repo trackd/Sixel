@@ -1,93 +1,70 @@
-﻿using System.Text;
+using System.Text;
 using Sixel.Terminal;
-using Sixel.Terminal.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Sixel.Protocols;
 
-public static class Sixel {
-    /// <summary>
-    /// Converts an image to a Sixel string.
-    /// </summary>
-    /// <param name="image">The image to convert.</param>
-    /// <param name="imageSize">The size of the image in character cells.</param>
-    /// <param name="maxColors">The Max colors of the image.</param>
-    public static string ImageToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors) {
-        // Use Resizer to handle resizing and quantization
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
-        ImageFrame<Rgba32> targetFrame = resizedImage.Frames[0];
-        return FrameToSixelString(targetFrame);
-    }
-    internal static string FrameToSixelString(ImageFrame<Rgba32> frame) {
-        // Pre-allocate StringBuilder with estimated capacity for better performance
-        int estimatedSize = frame.Width * frame.Height / 4; // Rough estimate based on compression
-        var sixelBuilder = new StringBuilder(estimatedSize);
-        var sixel = new StringBuilder(estimatedSize / 2);
-        var palette = new Dictionary<Rgba32, int>(256); // Pre-size for typical max colors
-        int colorCounter = 0;
-        sixel.StartSixel(frame.Width, frame.Height);
-        frame.ProcessPixelRows(accessor => {
-            for (int y = 0; y < accessor.Height; y++) {
-                Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
-                // The value of 1 left-shifted by the remainder of the current row divided by 6 gives the correct sixel character offset from the empty sixel char for each row.
-                // See the description of s...s for more detail on the sixel format https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.2.1
+public static partial class Sixel {
+    // Backends supply RGBA pixels; palette assignment, runs and six-row bands
+    // are independent of the image library.
+    private sealed class FrameEncoder {
+        private readonly StringBuilder data;
+        private readonly StringBuilder paletteData;
+        private readonly Dictionary<uint, int> palette = new(256);
+        private readonly int height;
+        private int row;
+        private int lastColor = -1;
+        private int repeatCount;
 
-                // modulus trick from https://github.com/sxyazi/yazi/blob/main/yazi-adapter/src/sixel.rs (MIT)
-                char c = (char)('?' + (1 << (y % 6)));
-                int lastColor = -1;
-                int repeatCounter = 0;
-                foreach (ref Rgba32 pixel in pixelRow) {
-                    int colorIndex = -1;
-                    if (pixel.A != 0 && !palette.TryGetValue(pixel, out colorIndex)) {
-                        // The colors can be added to the palette and interleaved with the sixel data so long as the color is defined before it is used.
-                        // for compatibility testing im not doing this at the moment.
-                        colorIndex = colorCounter++;
-                        palette[pixel] = colorIndex;
-                        sixel.AddColorToPalette(pixel, colorIndex);
-                    }
+        internal FrameEncoder(int width, int height) {
+            this.height = height;
+            int capacity = width * height / 4;
+            data = new StringBuilder(capacity);
+            paletteData = new StringBuilder(capacity / 2);
+            paletteData.StartSixel(width, height);
+        }
 
-                    // Transparent spans advance horizontally without selecting a palette entry.
-                    int colorId = colorIndex;
-
-                    // Sixel data will use a repeat entry if the color is the same as the last one.
-                    // https://vt100.net/docs/vt3xx-gp/chapter14.html#S14.3.1
-                    if (colorId == lastColor || repeatCounter == 0) {
-                        // If the color was repeated go to the next loop iteration to check the next pixel.
-                        lastColor = colorId;
-                        repeatCounter++;
-                        continue;
-                    }
-
-                    // Every time the color is not repeated the previous color is written to the string.
-                    sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
-
-                    // Remember the current color and reset the repeat counter.
-                    lastColor = colorId;
-                    repeatCounter = 1;
-                }
-
-                // Write the last color and repeat counter to the string for the current row.
-                sixelBuilder.AppendSixel(lastColor, repeatCounter, c);
-
-                // Add a carriage return at the end of each row and a new line every 6 pixel rows.
-                sixelBuilder.AppendCarriageReturn();
-                if (y % 6 == 5 && y + 1 < accessor.Height) {
-                    sixelBuilder.AppendNextLine();
+        internal void Pixel(byte red, byte green, byte blue, byte alpha) {
+            int color = -1;
+            if (alpha != 0) {
+                uint rgba = (uint)(red | green << 8 | blue << 16 | alpha << 24);
+                if (!palette.TryGetValue(rgba, out color)) {
+                    color = palette.Count;
+                    palette.Add(rgba, color);
+                    paletteData.AddColorToPalette(red, green, blue, color);
                 }
             }
-        });
-        sixelBuilder.AppendExitSixel();
+            if (color == lastColor || repeatCount == 0) {
+                lastColor = color;
+                repeatCount++;
+                return;
+            }
+            WriteRun();
+            lastColor = color;
+            repeatCount = 1;
+        }
 
-        return sixel.Append(sixelBuilder).ToString();
+        private void WriteRun() => data.AppendSixel(lastColor, repeatCount, (char)('?' + (1 << (row % 6))));
+
+        internal void EndRow() {
+            WriteRun();
+            data.AppendCarriageReturn();
+            if (row % 6 == 5 && row + 1 < height) data.AppendNextLine();
+            row++;
+            lastColor = -1;
+            repeatCount = 0;
+        }
+
+        internal string Finish() {
+            data.AppendExitSixel();
+            return paletteData.Append(data).ToString();
+        }
     }
-
-    private static void AddColorToPalette(this StringBuilder sixelBuilder, Rgba32 pixel, int colorIndex) {
+    private static void AddColorToPalette(this StringBuilder sixelBuilder, byte red, byte green, byte blue, int colorIndex) {
         // rgb 0-255 needs to be translated to 0-100 for sixel.
         (int r, int g, int b) = (
-            pixel.R * 100 / 255,
-            pixel.G * 100 / 255,
-            pixel.B * 100 / 255
+            red * 100 / 255,
+            green * 100 / 255,
+            blue * 100 / 255
         );
 
         _ = sixelBuilder

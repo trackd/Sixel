@@ -1,4 +1,5 @@
-﻿
+#if !NET472
+
 using System.Text;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
@@ -91,3 +92,4 @@ public static class Braille {
                 (pixel.A < 240 && luminance < 0.01f);
     }
 }
+#endif

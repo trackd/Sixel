@@ -1,5 +1,9 @@
 using Sixel.Terminal.Models;
+#if NET472
+using System.Drawing;
+#else
 using SixLabors.ImageSharp;
+#endif
 
 namespace Sixel.Terminal;
 

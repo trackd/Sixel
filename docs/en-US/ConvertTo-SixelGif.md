@@ -43,6 +43,9 @@ ConvertTo-SixelGif -InputObject <string> [-MaxColors <int>] [-Width <int>] [-For
 
 The `ConvertTo-SixelGif` takes a gif and converts it to sixel animation  
 
+Windows PowerShell 5.1 decodes GIF frames using System.Drawing. PowerShell 7 uses
+ImageSharp. Pixel resampling and palette quantization can differ between engines.
+
 ## EXAMPLES
 
 ### -------------------------- EXAMPLE 1 --------------------------
@@ -50,6 +53,8 @@ The `ConvertTo-SixelGif` takes a gif and converts it to sixel animation
 ```powershell
 PS C:\> ConvertTo-SixelGif -Url 'https://i.gifer.com/10j2.gif'
 ```
+
+Downloads a GIF and converts its frames to a Sixel animation object.
 
 ### -------------------------- EXAMPLE 2 --------------------------
 
@@ -102,6 +107,21 @@ Type: Stream
 Parameter Sets: Stream
 Aliases: RawContentStream, FileStream, InputStream, ContentStream
 
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
+### -InputObject
+
+A local file path or a base64-encoded image supplied through the pipeline.
+
+```yaml
+Type: String
+Parameter Sets: InputObject
+Aliases: None
 Required: True
 Position: Named
 Default value: None

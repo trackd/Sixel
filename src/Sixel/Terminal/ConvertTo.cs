@@ -1,7 +1,5 @@
-﻿using Sixel.Protocols;
+using Sixel.Protocols;
 using Sixel.Terminal.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 namespace Sixel.Terminal;
 
 /// <summary>
@@ -41,7 +39,7 @@ public static class ConvertTo {
                 : autoProtocol.Contains(ImageProtocol.InlineImageProtocol) ? ImageProtocol.InlineImageProtocol : ImageProtocol.Blocks;
         }
         // Load the image once to avoid duplicate loading
-        using var image = Image.Load<Rgba32>(imageStream);
+        using var image = ImageBackend.Load(imageStream);
 
         CellSize cell = Compatibility.GetCellSize();
         ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height, width, height,
@@ -55,10 +53,9 @@ public static class ConvertTo {
                     throw new InvalidOperationException("Terminal does not support sixel, override with -Force");
                 }
                 // Raster dimensions and occupied cells come from the same layout.
-                Image<Rgba32> resized = Resizer.ResizeToPixels(image, layout.Pixels, maxColors);
+                image.Resize(layout.Pixels.Width, layout.Pixels.Height, maxColors);
                 ImageSize finalSize = layout.Cells;
-                ImageFrame<Rgba32> frame = resized.Frames[0];
-                string data = Protocols.Sixel.FrameToSixelString(frame);
+                string data = image.SixelFrame(0);
                 return (finalSize, ImagePlacement.Wrap(ImagePlacement.SixelModes + data, finalSize.Height));
 
             case ImageProtocol.KittyGraphicsProtocol:
@@ -67,30 +64,26 @@ public static class ConvertTo {
                 }
                 // Explicit placement matches the padded raster exactly.
                 ImageSize kittySize = constrainedSize;
-                Resizer.ResizeToPixels(image, layout.Pixels, 0);
-                Resizer.PadToCells(image, kittySize, cell);
+                image.Resize(layout.Pixels.Width, layout.Pixels.Height, 0);
+                image.Pad(kittySize, cell);
                 return (kittySize, ImagePlacement.Wrap(KittyGraphics.Encode(image, kittySize), kittySize.Height));
 
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");
                 }
-                Resizer.ResizeToPixels(image, layout.Pixels, 0);
-                Resizer.PadToCells(image, layout.Cells, cell);
-                using (var encoded = new MemoryStream()) {
-                    if (image.Frames.Count > 1)
-                        image.SaveAsGif(encoded);
-                    else
-                        image.SaveAsPng(encoded);
+                image.Resize(layout.Pixels.Width, layout.Pixels.Height, 0);
+                image.Pad(layout.Cells, cell);
+                using (var encoded = new MemoryStream(image.InlineBytes())) {
                     string inline = InlineImage.ImageToInline(encoded, layout.Cells.Width, layout.Cells.Height);
                     return (layout.Cells, ImagePlacement.Wrap(inline, layout.Cells.Height));
                 }
 
             case ImageProtocol.Blocks:
-                return (constrainedSize, Blocks.ImageToBlocks(image, constrainedSize));
+                return image.Text(constrainedSize, braille: false);
 
             case ImageProtocol.Braille:
-                return Braille.ImageToBraille(image, constrainedSize.Width, constrainedSize.Height);
+                return image.Text(constrainedSize, braille: true);
             case ImageProtocol.Auto:
                 // Defensive assertion: the Auto protocol should have been resolved to a concrete protocol above.
                 // Reaching this case indicates a logic error in the protocol resolution code.

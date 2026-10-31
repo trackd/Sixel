@@ -1,4 +1,5 @@
-﻿using Sixel.Terminal.Models;
+#if !NET472
+using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -207,3 +208,4 @@ internal static class ResizerDev {
             );
     }
 }
+#endif

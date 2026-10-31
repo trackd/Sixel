@@ -1,4 +1,5 @@
-﻿using System.Text;
+#if !NET472
+using System.Text;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
@@ -121,3 +122,4 @@ public static class Blocks {
                 (pixel.A < 240 && luminance < 0.01f);
     }
 }
+#endif

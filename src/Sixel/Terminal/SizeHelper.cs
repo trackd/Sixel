@@ -1,6 +1,12 @@
-﻿using Sixel.Terminal.Models;
+using Sixel.Terminal.Models;
+#if NET472
+using Image = System.Drawing.Image;
+using RasterImage = System.Drawing.Image;
+#else
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using RasterImage = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
+#endif
 
 namespace Sixel.Terminal;
 
@@ -14,7 +20,7 @@ public static class SizeHelper {
     /// </summary>
     /// <param name="image">The image to convert.</param>
     /// <returns>Image size in terminal character cells.</returns>
-    public static ImageSize ConvertToCharacterCells(Image<Rgba32> image)
+    public static ImageSize ConvertToCharacterCells(RasterImage image)
         => GetCharacterCellSize(image.Width, image.Height);
 
     /// <summary>
@@ -24,7 +30,11 @@ public static class SizeHelper {
     /// <param name="imageStream">The image stream to convert.</param>
     /// <returns>Image size in terminal character cells.</returns>
     public static ImageSize ConvertToCharacterCells(Stream imageStream) {
+#if NET472
+        using var image = Image.FromStream(imageStream);
+#else
         using var image = Image.Load<Rgba32>(imageStream);
+#endif
         return GetCharacterCellSize(image.Width, image.Height);
     }
 
@@ -40,7 +50,7 @@ public static class SizeHelper {
     /// <summary>
     /// Gets the current size of an image in terminal character cells (no resizing, just analysis).
     /// </summary>
-    public static ImageSize GetCharacterCellSize(Image<Rgba32> image)
+    public static ImageSize GetCharacterCellSize(RasterImage image)
         => GetCharacterCellSize(image.Width, image.Height);
 
     /// <summary>
@@ -58,20 +68,24 @@ public static class SizeHelper {
     /// Gets the resized size in terminal character cells for an image, given max width/height constraints.
     /// Maintains aspect ratio and ensures proper sixel alignment (multiples of 6 pixels).
     /// </summary>
-    public static ImageSize GetResizedCharacterCellSize(Image<Rgba32> image, int maxCellWidth, int maxCellHeight)
+    public static ImageSize GetResizedCharacterCellSize(RasterImage image, int maxCellWidth, int maxCellHeight)
         => GetResizedCharacterCellSize(image.Width, image.Height, maxCellWidth, maxCellHeight);
 
     /// <summary>
     /// Gets the constrained terminal image size for the image, applying width/height constraints.
     /// </summary>
-    public static ImageSize GetTerminalImageSize(Image<Rgba32> image, int maxWidth, int maxHeight)
+    public static ImageSize GetTerminalImageSize(RasterImage image, int maxWidth, int maxHeight)
         => GetResizedCharacterCellSize(image.Width, image.Height, maxWidth, maxHeight);
 
     /// <summary>
     /// Gets the constrained terminal image size for the image, applying width/height constraints.
     /// </summary>
     public static ImageSize GetTerminalImageSize(Stream imageStream, int maxWidth, int maxHeight) {
+#if NET472
+        using var image = Image.FromStream(imageStream);
+#else
         using var image = Image.Load<Rgba32>(imageStream);
+#endif
         return GetResizedCharacterCellSize(image.Width, image.Height, maxWidth, maxHeight);
     }
 
@@ -81,6 +95,6 @@ public static class SizeHelper {
     public static ImageSize GetTerminalImageSize(int pixelWidth, int pixelHeight, int maxWidth, int maxHeight)
         => GetResizedCharacterCellSize(pixelWidth, pixelHeight, maxWidth, maxHeight);
 
-    internal static ImageSize GetTerminalImageSize(this Image<Rgba32> image)
+    internal static ImageSize GetTerminalImageSize(this RasterImage image)
         => ConvertToCharacterCells(image);
 }
