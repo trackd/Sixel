@@ -37,7 +37,7 @@ public static class InlineImage {
             image.CopyTo(ms);
             imageBytes = ms.ToArray();
         }
-        ReadOnlySpan<char> base64Image = Convert.ToBase64String(imageBytes).AsSpan();
+        string base64Image = Convert.ToBase64String(imageBytes);
         string size = imageBytes.Length.ToString(CultureInfo.InvariantCulture);
         string widthString = width > 0 ? "width=" + width.ToString(CultureInfo.InvariantCulture) + ";" : "width=auto;";
         string heightString = height > 0 ? "height=" + height.ToString(CultureInfo.InvariantCulture) + ";" : "height=auto;";

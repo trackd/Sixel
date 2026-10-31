@@ -63,28 +63,28 @@ internal sealed class PaletteDither {
             Search(delta < 0 ? node.Right : node.Left, red, green, blue, ref best, ref distance);
     }
 
-    internal void Apply(Span<int> pixels, int width) {
+    internal void Apply(int[] pixels, int width) {
         var current = new int[checked((width + 2) * 3)];
         var next = new int[current.Length];
         for (int y = 0; y < pixels.Length / width; y++) {
-            Span<int> row = pixels.Slice(y * width, width);
+            int rowStart = y * width;
             bool reverse = (y & 1) != 0;
             int step = reverse ? -1 : 1;
             for (int x = reverse ? width - 1 : 0; x >= 0 && x < width; x += step) {
-                int pixel = row[x];
-                if ((pixel & unchecked((int)0xff000000)) == 0) { row[x] = 0; continue; }
+                int pixel = pixels[rowStart + x];
+                if ((pixel & unchecked((int)0xff000000)) == 0) { pixels[rowStart + x] = 0; continue; }
                 int at = (x + 1) * 3;
                 int red = Correct((pixel >> 16) & 255, current[at]);
                 int green = Correct((pixel >> 8) & 255, current[at + 1]);
                 int blue = Correct(pixel & 255, current[at + 2]);
                 int color = Nearest(red, green, blue);
-                row[x] = color;
+                pixels[rowStart + x] = color;
                 Spread(red - ((color >> 16) & 255), at, step * 3, current, next);
                 Spread(green - ((color >> 8) & 255), at + 1, step * 3, current, next);
                 Spread(blue - (color & 255), at + 2, step * 3, current, next);
             }
             (current, next) = (next, current);
-            next.AsSpan().Clear();
+            Array.Clear(next, 0, next.Length);
         }
     }
 

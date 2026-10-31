@@ -90,6 +90,6 @@ internal sealed class DrawingRaster {
 
     private static byte[]? Property(Image image, int id) => image.PropertyIdList.Contains(id) ? image.GetPropertyItem(id).Value : null;
 
-    internal void Quantize(int maxColors) => new DrawingQuantizer().Quantize(Pixels.AsSpan(), Width, maxColors);
+    internal void Quantize(int maxColors) => new DrawingQuantizer().Quantize(Pixels, Width, maxColors);
 }
 #endif
