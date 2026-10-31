@@ -78,12 +78,12 @@ public sealed class KittyTransfer : IDisposable {
         if (descriptor < 0) throw new Win32Exception(Marshal.GetLastWin32Error());
         try {
             using var handle = new SafeFileHandle((IntPtr)descriptor, ownsHandle: true);
-            using var stream = new FileStream(handle, FileAccess.ReadWrite);
-            stream.SetLength(payload.Length);
-            using var mapping = MemoryMappedFile.CreateFromFile(stream, null, payload.Length,
-                MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
-            using var view = mapping.CreateViewAccessor(0, payload.Length, MemoryMappedFileAccess.Write);
-            view.WriteArray(0, payload, 0, payload.Length);
+            if (mac) WriteMacSharedMemory(handle, payload);
+            else {
+                using var stream = new FileStream(handle, FileAccess.ReadWrite);
+                stream.SetLength(payload.Length);
+                stream.Write(payload, 0, payload.Length);
+            }
             return new KittyTransfer(name, 's', payload.Length, uncompressedLength, compress);
         }
         catch { Unlink(name); throw; }
@@ -115,6 +115,16 @@ public sealed class KittyTransfer : IDisposable {
         if (payload.Length == 0) throw new ArgumentException("A nonempty image payload is required.", nameof(payload));
     }
 
+    private static void WriteMacSharedMemory(SafeFileHandle handle, byte[] payload) {
+        if (Native.MacTruncate(handle, payload.Length) != 0) throw new Win32Exception(Marshal.GetLastWin32Error());
+        nuint length = (nuint)payload.Length;
+        // PROT_READ | PROT_WRITE, MAP_SHARED. Darwin shm descriptors require mapped I/O.
+        IntPtr address = Native.MacMap(IntPtr.Zero, length, 3, 1, handle, 0);
+        if (address == new IntPtr(-1)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        try { Marshal.Copy(payload, 0, address, payload.Length); }
+        finally { _ = Native.MacUnmap(address, length); }
+    }
+
     private static void Unlink(string name) {
         int result = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? Native.MacUnlink(name) : Native.LinuxUnlink(name);
         int error = Marshal.GetLastWin32Error();
@@ -132,6 +142,12 @@ public sealed class KittyTransfer : IDisposable {
         internal static extern int MacOpen(string name, int flags, uint mode);
         [DllImport("/usr/lib/libSystem.B.dylib", EntryPoint = "shm_unlink", SetLastError = true)]
         internal static extern int MacUnlink(string name);
+        [DllImport("/usr/lib/libSystem.B.dylib", EntryPoint = "ftruncate", SetLastError = true)]
+        internal static extern int MacTruncate(SafeFileHandle descriptor, long length);
+        [DllImport("/usr/lib/libSystem.B.dylib", EntryPoint = "mmap", SetLastError = true)]
+        internal static extern IntPtr MacMap(IntPtr address, nuint length, int protection, int flags, SafeFileHandle descriptor, long offset);
+        [DllImport("/usr/lib/libSystem.B.dylib", EntryPoint = "munmap")]
+        internal static extern int MacUnmap(IntPtr address, nuint length);
 #pragma warning restore SYSLIB1054, CA2101
     }
 }
