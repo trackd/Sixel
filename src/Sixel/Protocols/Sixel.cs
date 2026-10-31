@@ -56,7 +56,15 @@ public static partial class Sixel {
 
         internal string Finish() {
             data.AppendExitSixel();
+#if NET472
             return paletteData.Append(data).ToString();
+#else
+            return string.Create(checked(paletteData.Length + data.Length), this, static (output, encoder) => {
+                int prefix = encoder.paletteData.Length;
+                encoder.paletteData.CopyTo(0, output, prefix);
+                encoder.data.CopyTo(0, output[prefix..], encoder.data.Length);
+            });
+#endif
         }
     }
     private static void AddColorToPalette(this StringBuilder sixelBuilder, byte red, byte green, byte blue, int colorIndex) {

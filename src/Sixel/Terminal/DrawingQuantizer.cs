@@ -4,6 +4,7 @@ namespace Sixel.Terminal;
 /// <summary>Bounded RGB histogram and weighted median cut over packed ARGB pixels.</summary>
 internal sealed class DrawingQuantizer {
     private ColorBin[]? histogram;
+    private PaletteDither? dither;
 
     internal void Quantize(int[] pixels, int width, int maxColors) {
         if (maxColors <= 0) return;
@@ -67,7 +68,9 @@ internal sealed class DrawingQuantizer {
             palette[i] = unchecked((int)0xff000000) | (int)(box.Red / box.Weight) << 16 |
                 (int)(box.Green / box.Weight) << 8 | (int)(box.Blue / box.Weight);
         }
-        new PaletteDither(palette).Apply(pixels, width);
+        if (dither is null) dither = new PaletteDither(palette);
+        else dither.ChangePalette(palette);
+        dither.Apply(pixels, width);
     }
 
     private struct ColorBin {

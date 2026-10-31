@@ -50,14 +50,19 @@ internal sealed class ImageBackend : IDisposable {
     }
 
     internal byte[] FrameBytes(int index, int pixelFormat) {
-        using Image<Rgba32> frame = image.Frames.CloneFrame(index);
         if (pixelFormat == 100) {
             using var stream = new MemoryStream();
-            frame.SaveAsPng(stream);
+            using Image<Rgba32> singleFrame = image.Frames.CloneFrame(index);
+            singleFrame.SaveAsPng(stream);
             return stream.ToArray();
         }
+        ImageFrame<Rgba32> frame = image.Frames[index];
         int channels = pixelFormat == 24 ? 3 : 4;
         var data = new byte[checked(frame.Width * frame.Height * channels)];
+        if (channels == 4) {
+            frame.CopyPixelDataTo(data);
+            return data;
+        }
         int offset = 0;
         frame.ProcessPixelRows(accessor => {
             for (int row = 0; row < accessor.Height; row++) {
@@ -65,7 +70,6 @@ internal sealed class ImageBackend : IDisposable {
                     data[offset++] = pixel.R;
                     data[offset++] = pixel.G;
                     data[offset++] = pixel.B;
-                    if (channels == 4) data[offset++] = pixel.A;
                 }
             }
         });
