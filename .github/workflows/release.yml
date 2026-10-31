@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-sixel
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "& ([scriptblock]::Create([IO.File]::ReadAllText('{0}')))"
+
+jobs:
+  prepare:
+    name: Select release version
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select next minor version
+        id: version
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Import-PowerShellDataFile ./module/Sixel.psd1
+          $moduleName = [IO.Path]::GetFileNameWithoutExtension($manifest.RootModule)
+          $baseVersion = [version]$manifest.ModuleVersion
+          $serviceIndex = Invoke-RestMethod https://pwsh.gallery/index.json
+          $packageBase = $serviceIndex.resources |
+              Where-Object { $_.'@type' -eq 'PackageBaseAddress/3.0.0' } |
+              Select-Object -First 1 -ExpandProperty '@id'
+          if (-not $packageBase) { throw 'pwsh.gallery did not advertise a NuGet package base address.' }
+          $versionsUrl = "$($packageBase.TrimEnd('/'))/$($moduleName.ToLowerInvariant())/index.json"
+          try {
+              $publishedVersions = (Invoke-RestMethod -Uri $versionsUrl -ErrorAction Stop).versions
+          }
+          catch {
+              # Only a missing package means first publication; outages must fail the job.
+              if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
+              $publishedVersions = @()
+          }
+          foreach ($publishedVersion in $publishedVersions) {
+              if ($publishedVersion -like '*-*') { continue }
+              $published = [version](($publishedVersion -split '\+', 2)[0])
+              if ($published -gt $baseVersion) { $baseVersion = $published }
+          }
+          $version = [version]::new($baseVersion.Major, $baseVersion.Minor + 1, 0)
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Release version: $version"
+
+  validate:
+    name: Validate release
+    needs: prepare
+    uses: ./.github/workflows/validate.yml
+    secrets:
+      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+
+  publish:
+    name: Publish module
+    needs: [prepare, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sixel-module
+          path: artifacts
+
+      - name: Prepare release
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODULE_VERSION: ${{ needs.prepare.outputs.version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          PSGALLERY_API_KEY: ${{ secrets.NUGETAPIKEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:PSGALLERY_API_KEY) { throw 'Set the NUGETAPIKEY repository secret before releasing.' }
+          Install-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+          ./.github/Set-ModuleVersion.ps1 -Version $env:MODULE_VERSION
+          $tag = "v$env:MODULE_VERSION"
+          $package = & ./.github/Get-ReleaseAsset.ps1 -Version $env:MODULE_VERSION -Path ./artifacts
+          $tags = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/$tag" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check existing release tags.' }
+          if ($tags.ref -contains "refs/tags/$tag") { throw "Tag $tag already exists." }
+
+          git config user.name 'trackd'
+          git config user.email '17672644+trackd@users.noreply.github.com'
+          git add -- module/Sixel.psd1
+          git commit -m "Release $tag"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit release version.' }
+          # No force push: stop before publishing if the branch moved during validation.
+          git push origin "HEAD:refs/heads/$env:DEFAULT_BRANCH"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push the release commit. Check branch protection or restart from the current default branch.' }
+          $commit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read release commit.' }
+          "path=$($package.FullName)" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+
+      - name: Publish to PSGallery
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.NUGETAPIKEY }}
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0
+          Publish-PSResource -NupkgPath $env:PACKAGE_PATH -Repository PSGallery -ApiKey $env:PSGALLERY_API_KEY
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.package.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.package.outputs.commit }}
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: |
+          gh release create $env:RELEASE_TAG --target $env:RELEASE_COMMIT --generate-notes $env:PACKAGE_PATH
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed. The package was already published to PSGallery; use the retained package to finish the release.' }

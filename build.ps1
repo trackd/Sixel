@@ -16,7 +16,6 @@ $buildparams = @{
     File          = (Get-Item (Join-Path $PSScriptRoot '*.build.ps1')).FullName
     Task          = 'All'
     Result        = 'Result'
-    Safe          = $true
 }
 if (-not (Get-Module -ListAvailable -Name InvokeBuild)) {
     Install-Module -Name InvokeBuild -Scope CurrentUser -Force -AllowClobber
@@ -27,14 +26,12 @@ if ($Task) {
     $buildparams.Task = $Task
 }
 
-if (-not $env:CI) {
-    # this is just so the dll doesn't get locked on and i can rebuild without restarting terminal
-    $sb = {
-        param($bp)
-        Invoke-Build @bp
-    }
-    pwsh -NoProfile -Command $sb -args $buildparams
+# Keep binary module imports in a short-lived build process and propagate failures to CI.
+$worker = {
+    param($parameters)
+    $ErrorActionPreference = 'Stop'
+    Invoke-Build @parameters
 }
-else {
-    Invoke-Build @buildparams
-}
+$executable = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
+& $executable -NoProfile -NonInteractive -Command $worker -args $buildparams
+exit $LASTEXITCODE

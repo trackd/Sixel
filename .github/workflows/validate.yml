@@ -1,0 +1,95 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      SIXLABORS_LICENSE_KEY:
+        required: true
+    inputs:
+      version:
+        description: Module version selected by the release workflow
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "& ([scriptblock]::Create([IO.File]::ReadAllText('{0}')))"
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  validate:
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set release version
+        if: inputs.version != ''
+        env:
+          MODULE_VERSION: ${{ inputs.version }}
+        run: ./.github/Set-ModuleVersion.ps1 -Version $env:MODULE_VERSION
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Install build dependencies
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "PowerShell $($PSVersionTable.PSVersion)"
+          if ($PSVersionTable.PSVersion -lt [version]'7.4') {
+              throw 'The build requires PowerShell 7.4 or newer.'
+          }
+          Install-Module InvokeBuild, Microsoft.PowerShell.PlatyPS, Pester -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+
+      - name: Build and test
+        env:
+          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+        run: |
+          if (-not $env:SixLaborsLicenseKey) { throw 'SIXLABORS_LICENSE_KEY is required for the ImageSharp build.' }
+          ./build.ps1 -Configuration Release
+          exit $LASTEXITCODE
+
+      - name: Attach failed test results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failures-${{ matrix.os }}
+          path: artifacts/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Package module
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Install-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+          Import-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0
+          New-Item -Path ./artifacts -ItemType Directory -Force | Out-Null
+          Compress-PSResource -Path ./output -DestinationPath ./artifacts
+
+      - name: Retain module package
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sixel-module
+          path: artifacts/*.nupkg
+          if-no-files-found: error

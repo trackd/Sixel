@@ -34,7 +34,7 @@ task Build {
         return
     }
 
-    $ModuleFile = Import-PowerShellDataFile -Path (Join-Path $script:folders.ProjectRoot 'Module' "$($script:folders.ModuleName).psd1")
+    $ModuleFile = Import-PowerShellDataFile -Path (Join-Path $folders.ModuleSourcePath "$($folders.ModuleName).psd1")
     [xml]$csproj = Get-Content -Path $folders.CsprojPath -Raw
     $frameworks = $csproj.
     SelectNodes('//TargetFramework | //TargetFrameworks').
@@ -113,13 +113,19 @@ task Test -if (-not $SkipTests) {
         Write-Warning "Test directory not found at: $($folders.TestPath)"
         return
     }
-    exec { dotnet test (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration }
+    $resultsPath = Join-Path $folders.ProjectRoot 'artifacts/test-results'
+    New-Item -Path $resultsPath -ItemType Directory -Force | Out-Null
+    exec { dotnet test (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration --results-directory $resultsPath --logger 'trx;LogFileName=protocol.trx' }
     $pesterConfig = New-PesterConfiguration
     # $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.Run.Path = $folders.TestPath
     $pesterConfig.Run.Throw = $true
+    $pesterConfig.Run.PassThru = $true
+    $pesterConfig.TestResult.Enabled = $true
+    $pesterConfig.TestResult.OutputPath = Join-Path $resultsPath 'pester.xml'
     $pesterConfig.Debug.WriteDebugMessages = $false
-    Invoke-Pester -Configuration $pesterConfig
+    $result = Invoke-Pester -Configuration $pesterConfig
+    if ($result.PassedCount -eq 0) { throw 'Pester did not run any passing tests.' }
 }
 
 task CleanAfter {
