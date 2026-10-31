@@ -1,6 +1,6 @@
 Describe 'Drawing palette quantization' -Tag Integration, Windows, Net472 {
     BeforeAll {
-        if ($IsWindows) {
+        if ($PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows) {
             $modulePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../output/Sixel.psd1'))
             $resultPath = Join-Path $TestDrive 'quantizer.json'
             $windowsPowerShell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
@@ -10,7 +10,7 @@ Describe 'Drawing palette quantization' -Tag Integration, Windows, Net472 {
         }
     }
     BeforeEach {
-        if (-not $IsWindows) { Set-ItResult -Skipped -Because 'System.Drawing targets Windows PowerShell 5.1.' }
+        if ($PSVersionTable.PSEdition -ne 'Desktop' -and -not $IsWindows) { Set-ItResult -Skipped -Because 'System.Drawing targets Windows PowerShell 5.1.' }
     }
     It 'Preserves exact low-color art without modifying the source bitmap' {
         $quantizer.ExactColors | Should -BeTrue

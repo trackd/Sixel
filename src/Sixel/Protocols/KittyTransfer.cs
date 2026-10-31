@@ -57,7 +57,8 @@ public sealed class KittyTransfer : IDisposable {
         ValidatePayload(payload);
         int uncompressedLength = payload.Length;
         if (compress) payload = KittyProtocol.Compress(payload);
-        string name = "tty-graphics-protocol-" + Guid.NewGuid().ToString("N");
+        Guid id = Guid.NewGuid();
+        string name = "tty-graphics-protocol-" + id.ToString("N");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             MemoryMappedFile memory = MemoryMappedFile.CreateNew(name, payload.Length);
             try {
@@ -69,8 +70,9 @@ public sealed class KittyTransfer : IDisposable {
         }
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             throw new PlatformNotSupportedException("Shared memory is implemented for Windows, Linux, and macOS.");
-        name = "/" + name;
         bool mac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+        // Darwin limits POSIX shm names to 31 bytes, including the leading slash.
+        name = mac ? "/sixel-" + Convert.ToBase64String(id.ToByteArray()).Replace('/', '_') : "/" + name;
         // O_RDWR | O_CREAT | O_EXCL, mode 0600. Never open an existing object.
         int descriptor = mac ? Native.MacOpen(name, 0xA02, 0x180) : Native.LinuxOpen(name, 0xC2, 0x180);
         if (descriptor < 0) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -78,8 +80,10 @@ public sealed class KittyTransfer : IDisposable {
             using var handle = new SafeFileHandle((IntPtr)descriptor, ownsHandle: true);
             using var stream = new FileStream(handle, FileAccess.ReadWrite);
             stream.SetLength(payload.Length);
-            stream.Write(payload, 0, payload.Length);
-            stream.Flush();
+            using var mapping = MemoryMappedFile.CreateFromFile(stream, null, payload.Length,
+                MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
+            using var view = mapping.CreateViewAccessor(0, payload.Length, MemoryMappedFileAccess.Write);
+            view.WriteArray(0, payload, 0, payload.Length);
             return new KittyTransfer(name, 's', payload.Length, uncompressedLength, compress);
         }
         catch { Unlink(name); throw; }

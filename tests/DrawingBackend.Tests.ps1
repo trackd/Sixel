@@ -1,6 +1,6 @@
 Describe 'Windows PowerShell System.Drawing backend' -Tag 'Integration', 'Windows', 'Net472' {
     BeforeAll {
-        if ($IsWindows) {
+        if ($PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows) {
             $modulePath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../output/Sixel.psd1'))
             $resultPath = Join-Path $TestDrive 'drawing.json'
             $windowsPowerShell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
@@ -10,7 +10,7 @@ Describe 'Windows PowerShell System.Drawing backend' -Tag 'Integration', 'Window
         }
     }
     BeforeEach {
-        if (-not $IsWindows) { Set-ItResult -Skipped -Because 'System.Drawing backend targets Windows PowerShell 5.1.' }
+        if ($PSVersionTable.PSEdition -ne 'Desktop' -and -not $IsWindows) { Set-ItResult -Skipped -Because 'System.Drawing backend targets Windows PowerShell 5.1.' }
     }
     It 'Loads the framework backend without bundled runtime dependencies' {
         $drawing.Engine | Should -Be 5
