@@ -42,6 +42,11 @@ ConvertTo-Sixel -InputObject <String> [-MaxColors <int>] [-Width <int>] [-Height
 
 The `ConvertTo-Sixel` converts an image to display in the console.  
 
+Windows PowerShell 5.1 uses System.Drawing for BMP, GIF, JPEG, PNG, and TIFF input.
+Static Sixel, Kitty, and inline output are supported. Animated inline images require
+PowerShell 7; use ConvertTo-SixelGif or ConvertTo-Kitty -Animate for GIF animation on
+Windows PowerShell. PowerShell 7 retains ImageSharp and its additional input formats.
+
 ## EXAMPLES
 
 ### -------------------------- EXAMPLE 1 --------------------------

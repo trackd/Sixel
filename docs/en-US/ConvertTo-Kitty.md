@@ -57,6 +57,10 @@ ConvertTo-Kitty -Reference <String> [-Medium <String>] [-Action <String>] [-Form
 
 ## DESCRIPTION
 
+Windows PowerShell 5.1 uses System.Drawing for BMP, GIF, JPEG, PNG, and TIFF input,
+including GIF animation. PowerShell 7 retains ImageSharp and its additional codecs.
+The Kitty wire controls, raw RGB/RGBA output, and PNG output are available on both engines.
+
 A separate preview encoder for the Kitty graphics protocol. ConvertTo-Sixel and its existing Kitty path are unchanged.
 Returns the image/control sequence as a string. The first eligible cmdlet execution
 probes terminal capabilities and metrics; use Force to suppress this terminal I/O.
@@ -70,7 +74,7 @@ Explicit advanced placement controls can change the display footprint independen
 
 Use Command for display, deletion, animation control, composition, queries, or raw transfer.
 Case-sensitive string entries preserve pairs such as i/I, x/X, and s/S in PowerShell.
-See [the preview guide](../kitty-preview.md) for the complete control map and comparison examples.
+Use the examples below to compare image transmission, placement, and animation.
 
 ## EXAMPLES
 
