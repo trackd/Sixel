@@ -15,6 +15,7 @@ Copy-Item -Path ([System.IO.Path]::Combine($projectRoot, 'output', '*')) -Destin
 $env:PSModulePath = $moduleRoot + [System.IO.Path]::PathSeparator + $env:PSModulePath
 
 # Bind the child to its own console even when the diagnostic parent has redirected handles.
+if ($IsWindows) {
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -29,7 +30,9 @@ $consoleInput = [ProbeConsole]::CreateFileW('CONIN$', 3221225472, 3, [IntPtr]::Z
 $consoleOutput = [ProbeConsole]::CreateFileW('CONOUT$', 3221225472, 3, [IntPtr]::Zero, 3, 0, [IntPtr]::Zero)
 [ProbeConsole]::SetStdHandle(-10, $consoleInput) > $null
 [ProbeConsole]::SetStdHandle(-11, $consoleOutput) > $null
+}
 Import-Module PSReadLine
+Set-PSReadLineKeyHandler -Chord Tab -Function TabCompleteNext
 Set-PSReadLineOption -HistorySavePath ([System.IO.Path]::Combine($PSScriptRoot, 'obj', 'isolated-history.txt')) -HistorySaveStyle SaveNothing -PredictionSource None
 
 if (Get-Module Sixel) { throw 'Sixel must not be imported before the completion test.' }
