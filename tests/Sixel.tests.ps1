@@ -262,7 +262,11 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
         $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol KittyGraphicsProtocol -Force
         $test | Should -Not -BeNullOrEmpty
         # $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_kitty_w2.kitty')) -Raw
-        $test | Should -Match "q=2,c=2,r=$($test.Height),m="
+        $controls = [regex]::Match([string]$test, '\x1b_G([^;]+);').Groups[1].Value.Split(',')
+        $controls | Should -Contain 'q=2'
+        $controls | Should -Contain 'c=2'
+        $controls | Should -Contain "r=$($test.Height)"
+        @($controls -cmatch '^m=[01]$').Count | Should -Be 1
         # $test | Should -Be $rec
     }
     It 'Should convert a filestream to sixel' {
