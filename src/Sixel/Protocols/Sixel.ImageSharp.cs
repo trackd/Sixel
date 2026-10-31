@@ -17,7 +17,8 @@ public static partial class Sixel {
         var encoder = new FrameEncoder(frame.Width, frame.Height);
         frame.ProcessPixelRows(accessor => {
             for (int y = 0; y < accessor.Height; y++) {
-                foreach (Rgba32 pixel in accessor.GetRowSpan(y))
+                ReadOnlySpan<Rgba32> pixelRow = accessor.GetRowSpan(y);
+                foreach (ref readonly Rgba32 pixel in pixelRow)
                     encoder.Pixel(pixel.R, pixel.G, pixel.B, pixel.A);
                 encoder.EndRow();
             }

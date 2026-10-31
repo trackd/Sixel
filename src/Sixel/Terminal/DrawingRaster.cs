@@ -17,6 +17,12 @@ internal sealed class DrawingRaster {
         Width = bitmap.Width;
         Height = bitmap.Height;
         Pixels = new int[checked(Width * Height)];
+        ReadPixels(bitmap);
+    }
+
+    internal void ReadPixels(Bitmap bitmap) {
+        if (bitmap.Width != Width || bitmap.Height != Height)
+            throw new ArgumentException("Frame dimensions must match the raster.", nameof(bitmap));
         BitmapData data = bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
         try {
             for (int y = 0; y < Height; y++) {
