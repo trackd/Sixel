@@ -19,7 +19,9 @@ public static partial class Sixel {
     internal static string FrameToSixelString(DrawingRaster raster) {
         var encoder = new FrameEncoder(raster.Width, raster.Height);
         for (int y = 0; y < raster.Height; y++) {
-            foreach (int pixel in raster.Pixels.AsSpan(y * raster.Width, raster.Width)) {
+            int end = (y + 1) * raster.Width;
+            for (int index = y * raster.Width; index < end; index++) {
+                int pixel = raster.Pixels[index];
                 encoder.Pixel((byte)(pixel >> 16), (byte)(pixel >> 8), (byte)pixel, (byte)(pixel >> 24));
             }
             encoder.EndRow();

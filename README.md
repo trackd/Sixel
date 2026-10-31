@@ -4,7 +4,8 @@ A module that lets you convert images to Sixel, Inline Images Protocol, Kitty Gr
 
 PowerShell 7 uses ImageSharp for bmp, gif, jpeg, pbm, png, tiff, tga, and webp input.
 Windows PowerShell 5.1 uses the built-in System.Drawing/GDI+ codecs for bmp, gif,
-jpeg, png, and tiff, with no ImageSharp dependency.
+jpeg, png, and tiff. Its runtime dependencies are provided by .NET Framework and
+Windows PowerShell; no additional dependency DLLs are bundled for Windows PowerShell.
 
 ## Install
 

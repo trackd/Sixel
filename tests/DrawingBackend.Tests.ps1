@@ -12,12 +12,17 @@ Describe 'Windows PowerShell System.Drawing backend' -Tag 'Integration', 'Window
     BeforeEach {
         if (-not $IsWindows) { Set-ItResult -Skipped -Because 'System.Drawing backend targets Windows PowerShell 5.1.' }
     }
-    It 'Loads the framework backend without an ImageSharp dependency' {
+    It 'Loads the framework backend without bundled runtime dependencies' {
         $drawing.Engine | Should -Be 5
         $drawing.References | Should -Contain 'System.Drawing'
         @($drawing.References | Where-Object { $_ -like 'SixLabors*' }).Count | Should -Be 0
         @($drawing.Loaded | Where-Object { $_ -like 'SixLabors*' }).Count | Should -Be 0
         @(Get-ChildItem (Join-Path $PSScriptRoot '../output/lib/net472') -Filter 'SixLabors*').Count | Should -Be 0
+        $frameworkReferences = @('mscorlib', 'System', 'System.Core', 'System.Drawing', 'System.Net.Http', 'System.Management.Automation')
+        @($drawing.References | Where-Object { $_ -notin $frameworkReferences }).Count | Should -Be 0
+        $bundledDlls = @(Get-ChildItem (Join-Path $PSScriptRoot '../output/lib/net472') -Filter '*.dll')
+        $bundledDlls.Count | Should -Be 1
+        $bundledDlls[0].Name | Should -Be 'Sixel.dll'
     }
     It 'Encodes Sixel with bounded palette and six-pixel occupancy' {
         $drawing.Sixel | Should -Match '"1;1;3;1'
