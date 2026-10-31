@@ -1,8 +1,6 @@
-﻿using Sixel.Terminal;
+using Sixel.Terminal;
 using Sixel.Terminal.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.PixelFormats;
+
 
 
 namespace Sixel.Protocols;
@@ -12,36 +10,20 @@ namespace Sixel.Protocols;
 /// </summary>
 public static class GifToSixel {
     public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount) {
-        using var image = Image.Load<Rgba32>(imageStream);
-
+        using var image = ImageBackend.Load(imageStream);
         ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height, cellWidth, 0,
             Compatibility.GetCellSize(), sixel: true);
-        return ConvertGifToSixel(image, layout, maxColors, LoopCount);
-    }
-
-    private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageLayout layout, int maxColors, int LoopCount) {
-        // Use Resizer to handle resizing and quantization
-        Image<Rgba32> resizedImage = Resizer.ResizeToPixels(image, layout.Pixels, maxColors);
-        GifFrameMetadata metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
-        int frameCount = resizedImage.Frames.Count;
-
-        // Keep the occupancy calculated from the same pixel dimensions as every frame.
-        ImageSize finalSize = layout.Cells;
-
-        var gif = new SixelGif() {
-            Sixel = new List<string>(frameCount), // Pre-allocate capacity for better performance
-            Delay = (metadata?.FrameDelay * 10) ?? 1000,
+        image.Resize(layout.Pixels.Width, layout.Pixels.Height, maxColors);
+        var result = new SixelGif {
+            Width = layout.Cells.Width,
+            Height = layout.Cells.Height,
             LoopCount = LoopCount,
-            Height = finalSize.Height,
-            Width = finalSize.Width,
+            Delay = image.GifDelay(0),
+            Sixel = new List<string>(image.FrameCount)
         };
-
-        // Pre-allocate and process frames efficiently
-        for (int i = 0; i < frameCount; i++) {
-            ImageFrame<Rgba32> targetFrame = resizedImage.Frames[i];
-            gif.Sixel.Add(Sixel.FrameToSixelString(targetFrame));
-        }
-        return gif;
+        for (int index = 0; index < image.FrameCount; index++)
+            result.Sixel.Add(image.SixelFrame(index));
+        return result;
     }
     public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) {
         using var writer = new VTWriter();
