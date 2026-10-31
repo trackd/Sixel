@@ -31,12 +31,6 @@ ConvertTo-Kitty -Stream <Stream> [-Action <String>] [-Format <String>] [-Width <
 ConvertTo-Kitty -Url <Uri> [-Timeout <TimeSpan>] [-Action <String>] [-Format <String>] [-Width <Int32>] [-Height <Int32>] [-ImageId <UInt32>] [-ImageNumber <UInt32>] [-PlacementId <UInt32>] [-Quiet <Int32>] [-NoCursorMove] [-Tmux] [-ChunkSize <Int32>] [-Control <String[]>] [-CellWidth <Int32>] [-CellHeight <Int32>] [-Compress] [-Animate] [-UnicodePlaceholder] [-Force] [<CommonParameters>]
 ```
 
-### Bytes
-
-```powershell
-ConvertTo-Kitty -Bytes <Byte[]> [-Action <String>] [-Format <String>] [-Width <Int32>] [-Height <Int32>] [-ImageId <UInt32>] [-ImageNumber <UInt32>] [-PlacementId <UInt32>] [-Quiet <Int32>] [-NoCursorMove] [-Tmux] [-ChunkSize <Int32>] [-Control <String[]>] [-CellWidth <Int32>] [-CellHeight <Int32>] [-Compress] [-Animate] [-UnicodePlaceholder] [-Force] [<CommonParameters>]
-```
-
 ### Base64
 
 ```powershell
@@ -193,21 +187,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Bytes
-
-Encoded image file bytes, such as PNG or GIF. For raw pixels use -Command and -Payload.
-
-```yaml
-Type: Byte[]
-Parameter Sets: Bytes
-Aliases:
-Required: True
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -Base64
 
 Base64 encoded image file, optionally with a data URI prefix.
@@ -289,7 +268,7 @@ Image/reference action: TransmitAndDisplay (default), Transmit, Query, or Frame.
 
 ```yaml
 Type: String
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -304,7 +283,7 @@ Png, Rgb (24-bit), or Rgba (32-bit). RGB discards alpha; RGBA carries red, green
 
 ```yaml
 Type: String
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -319,7 +298,7 @@ Maximum raster width in cells for decoded images. Combined with Height, fits wit
 
 ```yaml
 Type: Int32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -334,7 +313,7 @@ Maximum raster height in cells for decoded images. For references, sets placemen
 
 ```yaml
 Type: Int32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -349,7 +328,7 @@ Cell pixel width used in sizing. Defaults to cached passive terminal metrics or 
 
 ```yaml
 Type: Int32
-Parameter Sets: Path, Stream, Url, Bytes, Base64
+Parameter Sets: Path, Stream, Url, Base64
 Aliases:
 Required: False
 Position: Named
@@ -364,7 +343,7 @@ Cell pixel height used in sizing. Defaults to cached passive terminal metrics or
 
 ```yaml
 Type: Int32
-Parameter Sets: Path, Stream, Url, Bytes, Base64
+Parameter Sets: Path, Stream, Url, Base64
 Aliases:
 Required: False
 Position: Named
@@ -379,7 +358,7 @@ Explicit image identifier. Required for Animate and UnicodePlaceholder. Mutually
 
 ```yaml
 Type: UInt32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -394,7 +373,7 @@ Client image number I. The terminal assigns its own ID. Mutually exclusive with 
 
 ```yaml
 Type: UInt32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -409,7 +388,7 @@ Placement identifier. Placeholder text supports the lower 24-bit range only.
 
 ```yaml
 Type: UInt32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -424,7 +403,7 @@ Accept wildcard characters: False
 
 ```yaml
 Type: Int32
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -439,7 +418,7 @@ Apply RFC 1950 zlib compression before direct transmission. References instead u
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: Path, Stream, Url, Bytes, Base64
+Parameter Sets: Path, Stream, Url, Base64
 Aliases:
 Required: False
 Position: Named
@@ -454,7 +433,7 @@ Convert coalesced animation frames to native Kitty animation, retaining frame de
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: Path, Stream, Url, Bytes, Base64
+Parameter Sets: Path, Stream, Url, Base64
 Aliases:
 Required: False
 Position: Named
@@ -469,7 +448,7 @@ Create a virtual placement and append its Unicode text grid. Requires ImageId. E
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: Path, Stream, Url, Bytes, Base64
+Parameter Sets: Path, Stream, Url, Base64
 Aliases:
 Required: False
 Position: Named
@@ -484,7 +463,7 @@ Set C=1 for placement. Cannot be combined with UnicodePlaceholder. Normal placem
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named
@@ -529,7 +508,7 @@ Additional case-sensitive key=value controls for image/reference commands. Dupli
 
 ```yaml
 Type: String[]
-Parameter Sets: Path, Stream, Url, Bytes, Base64, Reference
+Parameter Sets: Path, Stream, Url, Base64, Reference
 Aliases:
 Required: False
 Position: Named

@@ -50,11 +50,11 @@ try {
     $blocks = ConvertTo-Sixel -Stream $stream -Protocol Blocks -Force -ErrorAction Stop
     $stream.Position = 0
     $braille = ConvertTo-Sixel -Stream $stream -Protocol Braille -Force -ErrorAction Stop
+    $rgba = ConvertTo-Kitty -Stream $stream -Format Rgba -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
+    $rgb = ConvertTo-Kitty -Stream $stream -Format Rgb -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
+    $resized = ConvertTo-Kitty -Stream $stream -Format Png -Width 6 -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
 }
 finally { $stream.Dispose() }
-$rgba = ConvertTo-Kitty -Bytes $imageBytes -Format Rgba -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
-$rgb = ConvertTo-Kitty -Bytes $imageBytes -Format Rgb -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
-$resized = ConvertTo-Kitty -Bytes $imageBytes -Format Png -Width 6 -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
 $inlineMatch = [regex]::Match([string]$inline, 'File=[^:]*:(?<payload>[A-Za-z0-9+/=]+)')
 $inlineBytes = [Convert]::FromBase64String($inlineMatch.Groups['payload'].Value)
 $inlineStream = New-Object IO.MemoryStream (,$inlineBytes)
@@ -77,17 +77,20 @@ for ($index = 0; $index -lt $gifBytes.Length; $index++) { $gifBytes[$index] = [C
 $gifStream = New-Object IO.MemoryStream (,$gifBytes)
 try { $gif = ConvertTo-SixelGif -Stream $gifStream -MaxColors 2 -Force -ErrorAction Stop }
 finally { $gifStream.Dispose() }
-$animated = ConvertTo-Kitty -Bytes $gifBytes -Animate -ImageId 9 -Format Rgba -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
 $inlineAnimationRejected = $false
 $gifStream = New-Object IO.MemoryStream (,$gifBytes)
 try {
+    $animated = ConvertTo-Kitty -Stream $gifStream -Animate -ImageId 9 -Format Rgba -CellWidth 1 -CellHeight 1 -Force -ErrorAction Stop
+    $gifStream.Position = 0
     try { $null = ConvertTo-Sixel -Stream $gifStream -Protocol InlineImageProtocol -Force -ErrorAction Stop }
     catch { $inlineAnimationRejected = $_.Exception.Message -like '*inline animation requires PowerShell 7*' }
 }
 finally { $gifStream.Dispose() }
 $invalidFailed = $false
-try { $null = ConvertTo-Kitty -Bytes ([byte[]]@(1, 2, 3)) -Force -ErrorAction Stop }
+$invalidStream = [IO.MemoryStream]::new([byte[]]@(1, 2, 3))
+try { $null = ConvertTo-Kitty -Stream $invalidStream -Force -ErrorAction Stop }
 catch { $invalidFailed = $true }
+finally { $invalidStream.Dispose() }
 
 $result = [ordered]@{
     Engine = $PSVersionTable.PSVersion.Major

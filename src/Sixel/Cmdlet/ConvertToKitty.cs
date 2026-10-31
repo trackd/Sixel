@@ -30,10 +30,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Url")]
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
 
-    [Parameter(Mandatory = true, ParameterSetName = "Bytes")]
-    [ValidateNotNullOrEmpty]
-    public byte[]? Bytes { get; set; }
-
     [Parameter(Mandatory = true, ParameterSetName = "Base64")]
     [ValidateNotNullOrEmpty]
     public string? Base64 { get; set; }
@@ -56,7 +52,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     [ValidateSet("TransmitAndDisplay", "Transmit", "Query", "Frame")]
@@ -65,7 +60,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     [ValidateSet("Png", "Rgb", "Rgba")]
@@ -74,7 +68,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     [ValidateRange(0, int.MaxValue)]
@@ -83,7 +76,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     [ValidateRange(0, int.MaxValue)]
@@ -92,7 +84,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [ValidateRange(1, int.MaxValue)]
     public int CellWidth { get; set; }
@@ -100,7 +91,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [ValidateRange(1, int.MaxValue)]
     public int CellHeight { get; set; }
@@ -108,7 +98,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     public uint ImageId { get; set; }
@@ -116,7 +105,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     public uint ImageNumber { get; set; }
@@ -124,7 +112,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     public uint PlacementId { get; set; }
@@ -132,7 +119,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     [ValidateRange(0, 2)]
@@ -141,28 +127,24 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     public SwitchParameter Compress { get; set; }
 
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     public SwitchParameter Animate { get; set; }
 
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     public SwitchParameter UnicodePlaceholder { get; set; }
 
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     public SwitchParameter NoCursorMove { get; set; }
@@ -180,7 +162,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
     [Parameter(ParameterSetName = "Path")]
     [Parameter(ParameterSetName = "Stream")]
     [Parameter(ParameterSetName = "Url")]
-    [Parameter(ParameterSetName = "Bytes")]
     [Parameter(ParameterSetName = "Base64")]
     [Parameter(ParameterSetName = "Reference")]
     public string[] Control { get; set; } = [];
@@ -224,7 +205,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
             switch (ParameterSetName) {
                 case "Path": source = File.OpenRead(SessionState.Path.GetUnresolvedProviderPathFromPSPath(Path)); break;
                 case "Stream": source = Stream; break;
-                case "Bytes": source = new MemoryStream(Bytes!); break;
                 case "Base64": source = new MemoryStream(Convert.FromBase64String(Compatibility.TrimBase64(Base64!))); break;
                 case "Url":
                     using (var cancellation = new CancellationTokenSource(Timeout)) {

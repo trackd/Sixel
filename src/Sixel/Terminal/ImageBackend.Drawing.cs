@@ -15,6 +15,7 @@ internal sealed partial class ImageBackend : IDisposable {
     // Per-image workspace: GIF frames reuse the bounded histogram, never palette
     // colors or diffusion errors. No global state or rented buffers outlive a call.
     private DrawingQuantizer? quantizer;
+    private DrawingRaster? sixelRaster;
 
     private ImageBackend(Image image) {
         this.image = image;
@@ -61,10 +62,13 @@ internal sealed partial class ImageBackend : IDisposable {
 
     internal string SixelFrame(int index) {
         using var frame = RenderFrame(index);
-        var raster = new DrawingRaster(frame);
+        if (sixelRaster is null || sixelRaster.Width != frame.Width || sixelRaster.Height != frame.Height)
+            sixelRaster = new DrawingRaster(frame);
+        else
+            sixelRaster.ReadPixels(frame);
         quantizer ??= new DrawingQuantizer();
-        quantizer.Quantize(raster.Pixels, raster.Width, maxColors);
-        return Protocols.Sixel.FrameToSixelString(raster);
+        quantizer.Quantize(sixelRaster.Pixels, sixelRaster.Width, maxColors);
+        return Protocols.Sixel.FrameToSixelString(sixelRaster);
     }
 
     internal byte[] InlineBytes() {

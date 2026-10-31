@@ -3,18 +3,30 @@ namespace Sixel.Terminal;
 
 /// <summary>Serpentine Floyd-Steinberg diffusion with exact, cached palette lookup.</summary>
 internal sealed class PaletteDither {
-    private readonly int[] colors;
-    private readonly Node[] nodes;
-    private readonly int root;
+    private int[] colors;
+    private Node[] nodes;
+    private int root;
     private readonly int[] cacheKeys = new int[16384];
     private readonly int[] cacheColors = new int[16384];
 
     internal PaletteDither(int[] colors) {
         this.colors = colors;
         nodes = new Node[colors.Length];
+        root = BuildTree();
+    }
+
+    internal void ChangePalette(int[] palette) {
+        colors = palette;
+        if (nodes.Length < palette.Length) nodes = new Node[palette.Length];
+        // Keys gate every cache read. Colors from the previous frame become unreachable.
+        Array.Clear(cacheKeys, 0, cacheKeys.Length);
+        root = BuildTree();
+    }
+
+    private int BuildTree() {
         var order = new int[colors.Length];
         for (int i = 0; i < order.Length; i++) order[i] = i;
-        root = Build(order, 0, order.Length);
+        return Build(order, 0, order.Length);
     }
 
     private int Build(int[] order, int start, int count) {
