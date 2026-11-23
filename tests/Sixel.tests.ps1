@@ -298,4 +298,16 @@ Describe 'Sixel Module ConvertTo-SixelGif Tests' {
         $test.LoopCount | Should -Be 1
         $test.Delay | Should -Be 100
     }
+    It 'Uses an OutOfBand view so the formatter adds no group blank lines around GIFs' {
+        $views = (Get-FormatData -TypeName Sixel.Terminal.Models.SixelGif).FormatViewDefinition
+        # Windows PowerShell 5.1 returns no definition for this view; read the loaded file instead.
+        if ($views -and $views[0].Control.PSObject.Properties['OutOfBand']) {
+            $views.Control.OutOfBand | Should -BeTrue
+        }
+        else {
+            $format = [xml](Get-Content -LiteralPath (Join-Path (Split-Path (Get-Module Sixel).Path) 'Sixel.format.ps1xml') -Raw)
+            $view = $format.Configuration.ViewDefinitions.View | Where-Object Name -EQ 'Sixel.Terminal.Models.SixelGif'
+            $view.SelectSingleNode('OutOfBand') | Should -Not -BeNullOrEmpty
+        }
+    }
 }

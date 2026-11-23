@@ -11,6 +11,8 @@ namespace Sixel.Protocols;
 /// Provides methods to convert GIF images to Sixel format for terminal display, including resizing and optional audio support.
 /// </summary>
 public static class GifToSixel {
+    internal const string LeadingBlankLine = "\r\n";
+
     public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount) {
         using var image = ImageBackend.Load(imageStream);
         ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height, cellWidth, 0,
@@ -41,12 +43,21 @@ public static class GifToSixel {
     internal static bool HasTransparentPixels(string sixelFrame) => sixelFrame.Contains('?');
 #endif
 
-    public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) {
+    public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) =>
+        PlaySixelGif(gif, leadingBlankLine: true, CT);
+
+    /// <param name="leadingBlankLine">
+    /// False when this GIF directly follows another one, which already left a blank row below itself.
+    /// </param>
+    internal static void PlaySixelGif(SixelGif gif, bool leadingBlankLine, CancellationToken CT) {
         using var writer = new VTWriter();
-        PlaySixelGif(gif, writer, CT);
+        PlaySixelGif(gif, writer, leadingBlankLine, CT);
     }
 
-    internal static void PlaySixelGif(SixelGif gif, VTWriter writer, CancellationToken CT) {
+    internal static void PlaySixelGif(SixelGif gif, VTWriter writer, CancellationToken CT) =>
+        PlaySixelGif(gif, writer, leadingBlankLine: true, CT);
+
+    internal static void PlaySixelGif(SixelGif gif, VTWriter writer, bool leadingBlankLine, CancellationToken CT) {
         if (gif.Height <= 0)
             throw new ArgumentOutOfRangeException(nameof(gif), "The GIF height must be positive.");
         int viewportHeight = ImagePlacement.GetViewportHeight();
@@ -59,6 +70,10 @@ public static class GifToSixel {
         try {
             writer.Write(Constants.HideCursor);
             writer.Write(ImagePlacement.SixelModes);
+            // Blank row above. The one below comes from the single line the OutOfBand
+            // format entry writes after playback, since the cursor is left below the image.
+            if (leadingBlankLine)
+                writer.Write(LeadingBlankLine);
             writer.Write(ImagePlacement.Begin(gif.Height));
 
             // LoopCount 0 loops until cancelled (Ctrl+C).

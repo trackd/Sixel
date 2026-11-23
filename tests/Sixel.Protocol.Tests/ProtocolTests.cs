@@ -182,7 +182,47 @@ public sealed class ProtocolTests : IDisposable {
         using var captured = new StringWriter(CultureInfo.InvariantCulture);
         using var writer = new VTWriter(captured);
         GifToSixel.PlaySixelGif(gif, writer, new CancellationToken(true));
-        Assert.True(captured.ToString().EndsWith(ImagePlacement.End(2) + "\x1b[?25h", StringComparison.Ordinal), "Cancellation restores cursor below GIF");
+        string played = captured.ToString();
+        Assert.True(played.EndsWith(ImagePlacement.End(2) + "\x1b[?25h", StringComparison.Ordinal), "Cancellation restores cursor below GIF");
+        Assert.True(played.Contains(ImagePlacement.SixelModes + GifToSixel.LeadingBlankLine + ImagePlacement.Begin(2), StringComparison.Ordinal), "Exactly one blank line precedes the GIF");
+    }
+
+    [Fact]
+    public void GifPlaybackTimingSpacingAndTransparency() {
+        Assert.True(GifTiming.Normalize(0) == 100 && GifTiming.Normalize(10) == 100 && GifTiming.Normalize(20) == 20,
+            "Browsers play 0-10 ms GIF delays at 100 ms; Kitty would hide them as gapless frames");
+
+        // Opaque frames, per-frame delays, two loops.
+        var gif = new SixelGif {
+            Width = 2, Height = 1, LoopCount = 2, Delay = 1,
+            Sixel = ["\x1bP0;1q\"1;1;2;6#0;2;100;0;0#0!2~\x1b\\", "\x1bP0;1q\"1;1;2;6#0;2;0;100;0#0!2~\x1b\\"],
+            Delays = [1, 1]
+        };
+        Assert.False(GifToSixel.HasTransparentPixels(gif.Sixel[0]), "Opaque data contains no '?' sixels");
+        string followed = Play(gif, leadingBlankLine: false, CancellationToken.None);
+        Assert.True(followed.Contains(ImagePlacement.SixelModes + ImagePlacement.Begin(1), StringComparison.Ordinal),
+            "A GIF that follows another shares its blank row");
+        Assert.True(Patterns.SixelStart().Count(followed) == 4, "Every frame plays once per loop");
+        Assert.False(followed.Contains("\x1b[2X", StringComparison.Ordinal), "Opaque GIFs are not erased between frames");
+
+        // Transparent frames erase their cells first; LoopCount 0 loops until cancelled.
+        gif.Sixel = ["\x1bP0;1q\"1;1;2;6#0;2;100;0;0#0~?\x1b\\", "\x1bP0;1q\"1;1;2;6#0;2;100;0;0#0?~\x1b\\"];
+        gif.HasTransparency = GifToSixel.HasTransparentPixels(gif.Sixel[0]);
+        gif.LoopCount = 0;
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+        string looped = Play(gif, leadingBlankLine: true, cancel.Token);
+        Assert.True(gif.HasTransparency, "'?' marks a transparent run");
+        Assert.True(Patterns.SixelStart().Count(looped) > 2, "LoopCount 0 keeps looping until cancelled");
+        Assert.True(looped.Contains(GifToSixel.EraseCells(2, 1) + gif.Sixel[0], StringComparison.Ordinal),
+            "Transparent frames clear the previous frame's cells");
+        Assert.True(GifToSixel.EraseCells(3, 2) == "\x1b" + "8\x1b[3X\x1b[B\x1b[3X\x1b" + "8", "Erase each image row and return to the origin");
+
+        static string Play(SixelGif gif, bool leadingBlankLine, CancellationToken token) {
+            using var captured = new StringWriter(CultureInfo.InvariantCulture);
+            using var writer = new VTWriter(captured);
+            GifToSixel.PlaySixelGif(gif, writer, leadingBlankLine, token);
+            return captured.ToString();
+        }
     }
 
     [Fact]
@@ -244,6 +284,8 @@ internal static partial class Patterns {
     internal static partial Regex Inline();
     [GeneratedRegex("\x1b_G([^;]+);([^\x1b]*)\x1b\\\\")]
     internal static partial Regex Kitty();
+    [GeneratedRegex("\x1bP")]
+    internal static partial Regex SixelStart();
 }
 
 internal sealed class NonSeekableStream(Stream inner) : Stream {
