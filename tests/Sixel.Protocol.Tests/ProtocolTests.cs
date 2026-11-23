@@ -186,6 +186,13 @@ public sealed class ProtocolTests : IDisposable {
     }
 
     [Fact]
+    public void SixelPaletteRoundsToNearestPercent() {
+        using var image = new Image<Rgba32>(1, 1, new Rgba32(254, 128, 1));
+        string sixel = SixelEncoder.FrameToSixelString(image.Frames.RootFrame);
+        Assert.True(sixel.Contains("#0;2;100;50;0", StringComparison.Ordinal), "254/128/1 must map to 100/50/0, not 99/50/0");
+    }
+
+    [Fact]
     public void ReservationHandlesBottomOfViewport() {
         // Model the issue #29 reservation at the bottom of a scrolling viewport.
         foreach (int start in new[] { 0, 18, 23 }) {
