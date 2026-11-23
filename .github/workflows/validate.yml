@@ -51,20 +51,22 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Install build dependencies
+      - name: Check PowerShell version
         run: |
           $ErrorActionPreference = 'Stop'
           Write-Host "PowerShell $($PSVersionTable.PSVersion)"
           if ($PSVersionTable.PSVersion -lt [version]'7.4') {
               throw 'The build requires PowerShell 7.4 or newer.'
           }
-          Install-Module InvokeBuild, Microsoft.PowerShell.PlatyPS, Pester -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
 
       - name: Build and test
         env:
+          # ImageSharp reads the SixLaborsLicenseKey MSBuild property from the environment.
           SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         run: |
-          if (-not $env:SixLaborsLicenseKey) { throw 'SIXLABORS_LICENSE_KEY is required for the ImageSharp build.' }
+          if (-not $env:SixLaborsLicenseKey) {
+              throw 'SIXLABORS_LICENSE_KEY is required for the ImageSharp build. Fork pull requests get no secrets; Dependabot pull requests need it as a Dependabot secret.'
+          }
           ./build.ps1 -Configuration Release
           exit $LASTEXITCODE
 
@@ -83,8 +85,9 @@ jobs:
           Import-Module Pester -RequiredVersion $version
           $config = New-PesterConfiguration
           $config.Run.Path = './tests'
-          # The ConPTY integration harness launches pwsh and runs in the preceding step.
-          $config.Filter.ExcludeTag = 'TerminalInput'
+          # The ConPTY integration harness launches pwsh and runs in the preceding step,
+          # as do the build and workflow checks.
+          $config.Filter.ExcludeTag = 'TerminalInput', 'Build'
           $config.Run.PassThru = $true
           $config.Run.Throw = $true
           $config.TestResult.Enabled = $true
@@ -105,8 +108,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           $ErrorActionPreference = 'Stop'
-          Install-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
-          Import-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0
+          $env:PSModulePath = (Join-Path $PWD '.tools' 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
+          Import-Module Microsoft.PowerShell.PSResourceGet -RequiredVersion 1.2.0
           New-Item -Path ./artifacts -ItemType Directory -Force | Out-Null
           Compress-PSResource -Path ./output -DestinationPath ./artifacts
 
