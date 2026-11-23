@@ -28,6 +28,10 @@ public class SixelGif {
     /// </summary>
     internal List<string> Sixel { get; set; } = [];
     /// <summary>
+    /// The delay in milliseconds for each frame, parallel to <see cref="Sixel"/>.
+    /// </summary>
+    internal List<int> Delays { get; set; } = [];
+    /// <summary>
     /// The number of frames in the gif.
     /// </summary>
     public int FrameCount => Sixel.Count;

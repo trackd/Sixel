@@ -62,7 +62,7 @@ Describe 'Windows PowerShell System.Drawing backend' -Tag 'Integration', 'Window
         $drawing.GifFrames | Should -Be 2
         $drawing.GifDelay | Should -Be 70
         $drawing.Animated | Should -Match 'r=1,z=70'
-        $drawing.Animated | Should -Match 'a=f,i=9,q=2,t=d,f=32,X=1,z=-1'
+        $drawing.Animated | Should -Match 'a=f,i=9,q=2,t=d,f=32,X=1,z=100'
         $drawing.Animated | Should -Match ';AP8A/w=='
         $drawing.Animated | Should -Match 's=3,v=3'
     }
