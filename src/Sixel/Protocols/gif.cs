@@ -19,12 +19,17 @@ public static class GifToSixel {
             Height = layout.Cells.Height,
             LoopCount = LoopCount,
             Delay = image.GifDelay(0),
-            Sixel = new List<string>(image.FrameCount)
+            Sixel = new List<string>(image.FrameCount),
+            Delays = new List<int>(image.FrameCount)
         };
-        for (int index = 0; index < image.FrameCount; index++)
-            result.Sixel.Add(image.SixelFrame(index));
+        for (int index = 0; index < image.FrameCount; index++) {
+            string frame = image.SixelFrame(index);
+            result.Sixel.Add(frame);
+            result.Delays.Add(image.GifDelay(index));
+        }
         return result;
     }
+
     public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) {
         using var writer = new VTWriter();
         PlaySixelGif(gif, writer, CT);
@@ -36,22 +41,24 @@ public static class GifToSixel {
         int viewportHeight = ImagePlacement.GetViewportHeight();
         if (viewportHeight > 0 && gif.Height >= viewportHeight)
             throw new ArgumentException("The GIF must fit in the viewport with one row below it. Convert it with a smaller width.", nameof(gif));
+        bool hasDelays = gif.Delays.Count == gif.Sixel.Count;
         try {
             writer.Write(Constants.HideCursor);
             writer.Write(ImagePlacement.SixelModes);
             writer.Write(ImagePlacement.Begin(gif.Height));
 
-            for (int i = 0; i < gif.LoopCount; i++) {
-                foreach (string sixel in gif.Sixel) {
+            // LoopCount 0 loops until cancelled (Ctrl+C).
+            for (int i = 0; gif.LoopCount == 0 || i < gif.LoopCount; i++) {
+                for (int frame = 0; frame < gif.Sixel.Count; frame++) {
                     if (CT.IsCancellationRequested) {
                         return;
                     }
-                    // DECRC - Restore cursor position
-                    writer.Write($"{Constants.ESC}8");
-                    writer.Write(sixel);
-                    writer.Write($"{Constants.ESC}8");
+                    writer.Write(RestoreCursor);
+                    writer.Write(gif.Sixel[frame]);
+                    writer.Write(RestoreCursor);
                     writer.Flush();
-                    if (CT.WaitHandle.WaitOne(Math.Max(0, gif.Delay)))
+                    int delay = hasDelays ? gif.Delays[frame] : gif.Delay;
+                    if (CT.WaitHandle.WaitOne(Math.Max(0, delay)))
                         return;
                 }
             }
@@ -62,4 +69,7 @@ public static class GifToSixel {
             writer.Flush();
         }
     }
+
+    // DECRC - Restore cursor position (the saved image origin).
+    private const string RestoreCursor = "\x1b" + "8";
 }

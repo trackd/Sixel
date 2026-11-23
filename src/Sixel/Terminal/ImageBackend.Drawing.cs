@@ -32,7 +32,8 @@ internal sealed partial class ImageBackend : IDisposable {
         Justification = "The ImageSharp implementation reads APNG metadata through the same instance contract.")]
     internal int FirstAnimationFrame => 0;
     internal uint RepeatCount => DrawingRaster.RepeatCount(image);
-    internal int FrameDelay(int index) => DrawingRaster.FrameDelay(image, index);
+    // System.Drawing decodes only GIF animation, so every delay follows GIF timing.
+    internal int FrameDelay(int index) => GifTiming.Normalize(DrawingRaster.FrameDelay(image, index));
     internal int GifDelay(int index) => FrameDelay(index);
 
     // GDI+ selects frames on the decoder. Apply the same transform to each selected

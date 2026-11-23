@@ -32,7 +32,7 @@ internal sealed class ImageBackend : IDisposable {
         "WEBP" => checked((int)image.Frames[index].Metadata.GetWebpMetadata().FrameDelay),
         _ => GifDelay(index)
     };
-    internal int GifDelay(int index) => checked(image.Frames[index].Metadata.GetGifMetadata().FrameDelay * 10);
+    internal int GifDelay(int index) => GifTiming.Normalize(checked(image.Frames[index].Metadata.GetGifMetadata().FrameDelay * 10));
 
     internal void Resize(int width, int height, int maxColors) => Resizer.ResizeToPixels(image, new Size(width, height), maxColors);
     internal void Pad(ImageSize cells, CellSize cell) => Resizer.PadToCells(image, cells, cell);
