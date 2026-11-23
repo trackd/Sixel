@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
 
@@ -26,9 +28,18 @@ public static class GifToSixel {
             string frame = image.SixelFrame(index);
             result.Sixel.Add(frame);
             result.Delays.Add(image.GifDelay(index));
+            result.HasTransparency |= HasTransparentPixels(frame);
         }
         return result;
     }
+
+    // Opaque sixel data characters are '@'..'~' (at least one bit set). The encoder
+    // writes '?' (no bits) only for transparent runs, and the header never contains it.
+#if NET472
+    internal static bool HasTransparentPixels(string sixelFrame) => sixelFrame.IndexOf('?') >= 0;
+#else
+    internal static bool HasTransparentPixels(string sixelFrame) => sixelFrame.Contains('?');
+#endif
 
     public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) {
         using var writer = new VTWriter();
@@ -41,6 +52,9 @@ public static class GifToSixel {
         int viewportHeight = ImagePlacement.GetViewportHeight();
         if (viewportHeight > 0 && gif.Height >= viewportHeight)
             throw new ArgumentException("The GIF must fit in the viewport with one row below it. Convert it with a smaller width.", nameof(gif));
+        // Sixel transparency leaves the previous frame visible, so a transparent
+        // GIF clears its cells before each frame (in the same flush, so no flicker).
+        string frameStart = gif.HasTransparency ? EraseCells(gif.Width, gif.Height) : RestoreCursor;
         bool hasDelays = gif.Delays.Count == gif.Sixel.Count;
         try {
             writer.Write(Constants.HideCursor);
@@ -53,7 +67,7 @@ public static class GifToSixel {
                     if (CT.IsCancellationRequested) {
                         return;
                     }
-                    writer.Write(RestoreCursor);
+                    writer.Write(frameStart);
                     writer.Write(gif.Sixel[frame]);
                     writer.Write(RestoreCursor);
                     writer.Flush();
@@ -72,4 +86,15 @@ public static class GifToSixel {
 
     // DECRC - Restore cursor position (the saved image origin).
     private const string RestoreCursor = "\x1b" + "8";
+
+    /// <summary>Erases the image's cells row by row (ECH, CUD) and returns to the origin.</summary>
+    internal static string EraseCells(int columns, int rows) {
+        string erase = "\x1b[" + columns.ToString(CultureInfo.InvariantCulture) + "X";
+        var result = new StringBuilder(RestoreCursor, 2 + rows * (erase.Length + 3));
+        for (int row = 0; row < rows; row++) {
+            if (row > 0) result.Append("\x1b[B");
+            result.Append(erase);
+        }
+        return result.Append(RestoreCursor).ToString();
+    }
 }
