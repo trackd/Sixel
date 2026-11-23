@@ -32,6 +32,10 @@ public class SixelGif {
     /// </summary>
     internal List<int> Delays { get; set; } = [];
     /// <summary>
+    /// True when any frame has transparent pixels, which must be erased between frames.
+    /// </summary>
+    internal bool HasTransparency { get; set; }
+    /// <summary>
     /// The number of frames in the gif.
     /// </summary>
     public int FrameCount => Sixel.Count;
