@@ -12,7 +12,7 @@ concurrency:
 
 defaults:
   run:
-    shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "& ([scriptblock]::Create([IO.File]::ReadAllText('{0}')))"
+    shell: pwsh -NoLogo -NoProfile -NonInteractive -File "{0}"
 
 jobs:
   prepare:

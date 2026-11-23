@@ -19,7 +19,7 @@ permissions:
 
 defaults:
   run:
-    shell: pwsh -NoLogo -NoProfile -NonInteractive -Command "& ([scriptblock]::Create([IO.File]::ReadAllText('{0}')))"
+    shell: pwsh -NoLogo -NoProfile -NonInteractive -File "{0}"
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
