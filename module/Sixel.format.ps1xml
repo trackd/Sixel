@@ -2,6 +2,9 @@
   <ViewDefinitions>
     <View>
       <Name>Sixel.Terminal.Models.SixelGif</Name>
+      <!-- OutOfBand: no group start/end blank lines, exactly one line per GIF,
+           and a GIF no longer locks the shape of later objects in the same pipeline. -->
+      <OutOfBand />
       <ViewSelectedBy>
         <TypeName>Sixel.Terminal.Models.SixelGif</TypeName>
       </ViewSelectedBy>
@@ -17,7 +20,7 @@
                     'Show-SixelGif',
                     [Sixel.Cmdlet.ShowSixelGifCmdlet]
                   )
-                  $_ | &amp; $cmdlet
+                  $_ | &amp; $cmdlet -HistoryId $MyInvocation.HistoryId
                 </ScriptBlock>
               </ExpressionBinding>
             </CustomItem>
