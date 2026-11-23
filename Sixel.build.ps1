@@ -21,6 +21,9 @@ $script:folders = @{
     CsprojPath       = Join-Path $PSScriptRoot 'src' $modulename "$modulename.csproj"
 }
 
+# build.ps1 installs and imports the pinned dependencies; this task only proves they load.
+task Bootstrap {}
+
 task Reset {
     if (Test-Path $folders.OutputPath) {
         Remove-Item -Path $folders.OutputPath -Recurse -Force -ErrorAction 'Ignore'
@@ -69,11 +72,6 @@ task GenerateHelp -if (-not $SkipHelp) {
         Write-Warning "Documentation path not found at: $($folders.DocsPath)"
         return
     }
-    if (-not (Get-Module -ListAvailable -Name Microsoft.PowerShell.PlatyPS)) {
-        Write-Host '    Installing Microsoft.PowerShell.PlatyPS...' -ForegroundColor Yellow
-        Install-Module -Name Microsoft.PowerShell.PlatyPS -Scope CurrentUser -Force -AllowClobber
-    }
-
     Import-Module Microsoft.PowerShell.PlatyPS -ErrorAction Stop
 
     $modulePath = Join-Path $folders.OutputPath ($folders.ModuleName + '.psd1')

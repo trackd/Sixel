@@ -17,7 +17,7 @@ defaults:
 jobs:
   prepare:
     name: Select release version
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.repository == 'trackd/Sixel' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -68,6 +68,7 @@ jobs:
 
   publish:
     name: Publish module
+    if: github.repository == 'trackd/Sixel' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     needs: [prepare, validate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -91,7 +92,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not $env:PSGALLERY_API_KEY) { throw 'Set the NUGETAPIKEY repository secret before releasing.' }
-          Install-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+          ./build.ps1 -Task Bootstrap
+          if ($LASTEXITCODE -ne 0) { throw 'Could not bootstrap release dependencies.' }
           ./.github/Set-ModuleVersion.ps1 -Version $env:MODULE_VERSION
           $tag = "v$env:MODULE_VERSION"
           $package = & ./.github/Get-ReleaseAsset.ps1 -Version $env:MODULE_VERSION -Path ./artifacts
@@ -119,7 +121,8 @@ jobs:
           PACKAGE_PATH: ${{ steps.package.outputs.path }}
         run: |
           $ErrorActionPreference = 'Stop'
-          Import-Module Microsoft.PowerShell.PSResourceGet -MinimumVersion 1.1.0
+          $env:PSModulePath = (Join-Path $PWD '.tools' 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
+          Import-Module Microsoft.PowerShell.PSResourceGet -RequiredVersion 1.2.0
           Publish-PSResource -NupkgPath $env:PACKAGE_PATH -Repository PSGallery -ApiKey $env:PSGALLERY_API_KEY
 
       - name: Create GitHub release
