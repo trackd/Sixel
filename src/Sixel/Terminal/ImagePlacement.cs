@@ -22,13 +22,15 @@ internal static class ImagePlacement {
     internal static string End(int rows) =>
         "\x1b" + "8\x1b[" + rows.ToString(CultureInfo.InvariantCulture) + "B\r";
 
-    internal static string Wrap(string payload, int rows) {
-        int viewportHeight = GetViewportHeight();
+    internal static string Wrap(string payload, int rows) =>
         // An origin that has scrolled off-screen cannot be restored. Large
         // static images use the terminal's native scrolling instead.
-        return viewportHeight > 0 && rows >= viewportHeight
-            ? payload + "\r\n"
-            : Begin(rows) + payload + End(rows);
+        FitsViewport(rows) ? Begin(rows) + payload + End(rows) : payload + "\r\n";
+
+    /// <summary>Whether <paramref name="rows"/> can be reserved below the cursor (unknown viewports fit).</summary>
+    internal static bool FitsViewport(int rows) {
+        int viewportHeight = GetViewportHeight();
+        return viewportHeight <= 0 || rows < viewportHeight;
     }
 
     internal static int GetViewportHeight() {

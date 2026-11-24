@@ -68,6 +68,23 @@ public static class ConvertTo {
                 image.Pad(kittySize, cell);
                 return (kittySize, ImagePlacement.Wrap(KittyGraphics.Encode(image, kittySize), kittySize.Height));
 
+            case ImageProtocol.GoodImageProtocol:
+                // Preview: only when asked for, and only after DA1 announced it (or -Force).
+                if (!Compatibility.TerminalSupportsGoodImageProtocol() && !Force) {
+                    throw new InvalidOperationException("Terminal did not announce the Good Image Protocol (DA1 90), override with -Force");
+                }
+                // Unlike a sixel, a GIP image cannot scroll past the page: Contour clamps r to the
+                // page height and fits the image into what is left. Fit to the page up front instead.
+                int viewport = ImagePlacement.GetViewportHeight();
+                if (viewport > 0 && layout.Cells.Height > viewport)
+                    layout = ImageLayout.Calculate(image.Width, image.Height, width, viewport, cell, sixel: false);
+                image.Resize(layout.Pixels.Width, layout.Pixels.Height, 0);
+                image.Pad(layout.Cells, cell);
+                bool tall = !ImagePlacement.FitsViewport(layout.Cells.Height);
+                string gip = GoodImageProtocol.Encode(image, layout.Cells, tall);
+                // A tall image scrolls the page itself (l) and leaves the cursor below it (u).
+                return (layout.Cells, tall ? gip + "\r" : ImagePlacement.Wrap(gip, layout.Cells.Height));
+
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");

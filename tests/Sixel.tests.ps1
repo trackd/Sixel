@@ -270,6 +270,26 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
         @($controls -cmatch '^m=[01]$').Count | Should -Be 1
         # $test | Should -Be $rec
     }
+
+    It 'Should convert an image to the Good Image Protocol preview' {
+        $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol GoodImageProtocol -Force
+        $test.Width | Should -Be 2
+        $match = [regex]::Match([string]$test, '\x1bP!go=s,f=4,c=2,r=(\d+),z=1,a=1;!([A-Za-z0-9+/=]+)\x1b\\')
+        $match.Success | Should -BeTrue
+        [int]$match.Groups[1].Value | Should -Be $test.Height
+        $png = [Convert]::FromBase64String($match.Groups[2].Value)
+        [Text.Encoding]::ASCII.GetString($png, 1, 3) | Should -Be 'PNG'
+    }
+
+    It 'Should not use the Good Image Protocol preview unless the terminal announced it' {
+        if ([Sixel.Terminal.Compatibility]::TerminalSupportsGoodImageProtocol()) {
+            Set-ItResult -Skipped -Because 'this terminal announced DA1 code 90'
+            return
+        }
+        { ConvertTo-Sixel -Path $cog -Width 2 -Protocol GoodImageProtocol -ErrorAction Stop } |
+            Should -Throw '*DA1 90*'
+        ConvertTo-Sixel -Path $cog -Width 2 -Force | Should -Not -Match ([regex]::Escape("$([char]27)P!g"))
+    }
     It 'Should convert a filestream to sixel' {
         $test =
         [System.IO.FileStream]::new(

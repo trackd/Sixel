@@ -11,5 +11,7 @@ public enum ImageProtocol {
     InlineImageProtocol = 2,
     Sixel = 4,
     KittyGraphicsProtocol = 8,
-    Braille = 16
+    Braille = 16,
+    /// <summary>Preview: the Good Image Protocol (DCS ! g), an alpha specification. Never chosen by Auto.</summary>
+    GoodImageProtocol = 32
 }
