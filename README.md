@@ -46,8 +46,7 @@ disposable local transfers, and cleanup of session-owned images.
 The existing `ConvertTo-Sixel` Kitty path remains available for comparison.
 
 ```powershell
-$image = ConvertTo-Kitty ./assets/cog.png -Width 20 -ImageId 42
-[Console]::Write($image)
+ConvertTo-Kitty ./assets/cog.png -Width 20 -ImageId 42
 ```
 
 See `Get-Help ConvertTo-Kitty -Full` for parameters and examples.
@@ -68,7 +67,7 @@ crop, alignment, resize policy, layer, raw RGB/RGBA, PNG passthrough and the lim
 [Sixel.Terminal.Compatibility]::RefreshTerminalInfo() | Out-Null
 [Sixel.Terminal.Compatibility]::TerminalSupportsGoodImageProtocol()
 ConvertTo-Sixel ./assets/cog.png -Width 20 -Protocol GoodImageProtocol
-[Console]::Write((ConvertTo-GoodImage ./assets/cog.png -Name cog -Width 8 -Height 4 -Alignment MiddleCenter -Layer Below))
+ConvertTo-GoodImage ./assets/cog.png -Name cog -Width 8 -Height 4 -Alignment MiddleCenter -Layer Below
 ```
 
 See `Get-Help ConvertTo-GoodImage -Full` for parameters and examples.

@@ -84,18 +84,17 @@ Use the examples below to compare image transmission, placement, and animation.
 ### Example 1: Display a sized image
 
 ```powershell
-$image = ConvertTo-Kitty ./assets/cog.png -Width 20 -CellWidth 10 -CellHeight 20
-[Console]::Write($image)
+ConvertTo-Kitty ./assets/cog.png -Width 20 -CellWidth 10 -CellHeight 20
 ```
 
-Writes the returned sequence without PowerShell adding a newline.
+Displays the image 20 columns wide.
 
 ### Example 2: Upload once and place twice
 
 ```powershell
-[Console]::Write((ConvertTo-Kitty ./assets/cog.png -Action Transmit -ImageId 42))
-[Console]::Write((ConvertTo-Kitty -Command 'a=p','i=42','p=1','c=10'))
-[Console]::Write((ConvertTo-Kitty -Command 'a=p','i=42','p=2','c=20'))
+ConvertTo-Kitty ./assets/cog.png -Action Transmit -ImageId 42
+ConvertTo-Kitty -Command 'a=p','i=42','p=1','c=10'
+ConvertTo-Kitty -Command 'a=p','i=42','p=2','c=20'
 ```
 
 Creates two independent placements of one uploaded image.
@@ -103,9 +102,9 @@ Creates two independent placements of one uploaded image.
 ### Example 3: Native GIF animation
 
 ```powershell
-[Console]::Write((ConvertTo-Kitty ./animation.gif -ImageId 42 -Width 30 -Animate))
-[Console]::Write((ConvertTo-Kitty -Command 'a=a','i=42','s=1'))
-[Console]::Write((ConvertTo-Kitty -Command 'a=d','d=I','i=42'))
+ConvertTo-Kitty ./animation.gif -ImageId 42 -Width 30 -Animate
+ConvertTo-Kitty -Command 'a=a','i=42','s=1'
+ConvertTo-Kitty -Command 'a=d','d=I','i=42'
 ```
 
 Starts an animation, stops it, then removes its placements and image data.
@@ -113,7 +112,7 @@ Starts an animation, stops it, then removes its placements and image data.
 ### Example 4: Unicode placeholders through tmux
 
 ```powershell
-[Console]::Write((ConvertTo-Kitty ./assets/cog.png -ImageId 42 -Width 20 -UnicodePlaceholder -Tmux))
+ConvertTo-Kitty ./assets/cog.png -ImageId 42 -Width 20 -UnicodePlaceholder -Tmux
 ```
 
 Requires terminal placeholder support and tmux passthrough configuration.

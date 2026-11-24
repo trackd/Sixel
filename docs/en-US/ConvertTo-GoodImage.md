@@ -83,7 +83,7 @@ the same sequences.
 ### Example 1: Display a sized image
 
 ```powershell
-[Console]::Write((ConvertTo-GoodImage ./assets/cog.png -Width 20))
+ConvertTo-GoodImage ./assets/cog.png -Width 20
 ```
 
 Writes the image 20 columns wide and leaves the cursor below it.
@@ -91,10 +91,10 @@ Writes the image 20 columns wide and leaves the cursor below it.
 ### Example 2: Upload once and render several ways
 
 ```powershell
-[Console]::Write((ConvertTo-GoodImage ./assets/cog.png -Name cog -Action Upload))
-[Console]::Write((ConvertTo-GoodImage -Name cog -Render -Width 8 -Height 4))
-[Console]::Write((ConvertTo-GoodImage -Name cog -Render -Width 16 -Height 4 -Resize StretchToFill))
-[Console]::Write((ConvertTo-GoodImage -Name cog -Release))
+ConvertTo-GoodImage ./assets/cog.png -Name cog -Action Upload
+ConvertTo-GoodImage -Name cog -Render -Width 8 -Height 4
+ConvertTo-GoodImage -Name cog -Render -Width 16 -Height 4 -Resize StretchToFill
+ConvertTo-GoodImage -Name cog -Release
 ```
 
 Uploads the image under a name, renders it fitted and stretched, then releases the name.
@@ -102,7 +102,7 @@ Uploads the image under a name, renders it fitted and stretched, then releases t
 ### Example 3: Crop, center and draw below the text
 
 ```powershell
-[Console]::Write((ConvertTo-GoodImage ./assets/cog.png -Name cog -Crop 130,130,210,210 -Width 8 -Height 4 -Alignment MiddleCenter -Layer Below))
+ConvertTo-GoodImage ./assets/cog.png -Name cog -Crop 130,130,210,210 -Width 8 -Height 4 -Alignment MiddleCenter -Layer Below
 ```
 
 Shows the middle of the image under any text already in those cells.
@@ -110,7 +110,7 @@ Shows the middle of the image under any text already in those cells.
 ### Example 4: Let the terminal scale the original PNG
 
 ```powershell
-[Console]::Write((ConvertTo-GoodImage ./photo.png -Width 40 -Passthrough))
+ConvertTo-GoodImage ./photo.png -Width 40 -Passthrough
 ```
 
 Sends the PNG unchanged; the terminal fits it into 40 columns.
