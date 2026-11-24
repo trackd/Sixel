@@ -68,7 +68,7 @@ public static class KittyProtocol {
             values.ContainsKey('o') && !HasNonzero(values, 'S'))
             throw new ArgumentException("Compressed PNG references require S, the uncompressed PNG byte count.", nameof(control));
         if (!values.ContainsKey('q'))
-            values.Add('q', "2");
+            values.Add('q', action == 'q' ? "0" : "2");
 
         byte[] data = payload ?? [];
         if (transmission && direct && values.TryGetValue('o', out string? compression) && compression == "z") {

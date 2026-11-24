@@ -204,7 +204,7 @@ Accept wildcard characters: False
 
 ### -Command
 
-Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2. Payload, Tmux and Force may accompany this parameter.
+Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2, or q=0 for a=q. Payload, Tmux and Force may accompany this parameter.
 
 ```yaml
 Type: String[]
@@ -264,7 +264,7 @@ Accept wildcard characters: False
 
 ### -Action
 
-Image/reference action: TransmitAndDisplay (default), Transmit, Query, or Frame. Other actions use Command. Query requires an image ID and explicit Quiet 0 to request a reply.
+Image/reference action: TransmitAndDisplay (default), Transmit, Query, or Frame. Other actions use Command. Query requires an image ID and defaults to Quiet 0 so the terminal replies.
 
 ```yaml
 Type: String
@@ -399,7 +399,7 @@ Accept wildcard characters: False
 
 ### -Quiet
 
-2 suppresses replies to the encoded image command (default); 1 permits errors; 0 permits all replies. The converter reads its own lazy-probe replies but does not read replies to the returned image/control sequence. Only request those replies when your application owns terminal input.
+2 suppresses replies to the encoded image command (default, except Query, which defaults to 0); 1 permits errors; 0 permits all replies. The converter reads its own lazy-probe replies but does not read replies to the returned image/control sequence. Only request those replies when your application owns terminal input.
 
 ```yaml
 Type: Int32

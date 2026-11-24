@@ -65,6 +65,12 @@ public sealed partial class KittyPreviewTests {
         Assert.Equal("\u001b_G" + controls + ",q=2\u001b\\", result);
     }
 
+    [Fact]
+    public void QueriesAskForAReply() {
+        Assert.Contains(",q=0,m=0;", KittyProtocol.Encode(["a=q", "i=31", "f=100"], [1]));
+        Assert.Contains(",q=2,m=0;", KittyProtocol.Encode(["a=q", "i=31", "f=100", "q=2"], [1]));
+    }
+
     [Theory]
     [InlineData("aAcCnNiIpPqQrRxXyYzZfF")]
     public void EveryDeleteSelectorPreservesCase(string selectors) {
