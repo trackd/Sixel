@@ -52,6 +52,22 @@ $image = ConvertTo-Kitty ./assets/cog.png -Width 20 -ImageId 42
 
 See `Get-Help ConvertTo-Kitty -Full` for parameters and examples.
 
+## Good Image Protocol preview
+
+`ConvertTo-Sixel -Protocol GoodImageProtocol` emits the
+[Good Image Protocol](https://github.com/contour-terminal/terminal-good-image-protocol)
+(`DCS ! g`): a cell-bound PNG with fit, alignment and layer policies. The specification
+is alpha and may change, so it is never chosen automatically; it is used only when asked
+for, after the terminal lists code 90 in its DA1 reply (or with `-Force`). In Contour it
+must be enabled with `images: good_image_protocol: true`.
+`[Sixel.Protocols.GoodImageSession]` uploads, renders and releases named images.
+
+```powershell
+[Sixel.Terminal.Compatibility]::RefreshTerminalInfo() | Out-Null
+[Sixel.Terminal.Compatibility]::TerminalSupportsGoodImageProtocol()
+ConvertTo-Sixel ./assets/cog.png -Width 20 -Protocol GoodImageProtocol
+```
+
 ## Authors
 
 **[@trackd](https://github.com/trackd)**  

@@ -198,7 +198,8 @@ Accept wildcard characters: False
 ### -Protocol
 
 选择要输出的图像协议。
-支持 Sixel、InlineImageProtocol、KittyGraphicsProtocol、Block
+支持 Sixel、InlineImageProtocol、KittyGraphicsProtocol、Blocks、Braille、GoodImageProtocol(预览)
+GoodImageProtocol 基于 alpha 规范,不会被自动选择;需要终端在 DA1 回复中列出 90,或使用 -Force。
 
 它会尝试为你的终端自动选择支持的图像协议。
 
