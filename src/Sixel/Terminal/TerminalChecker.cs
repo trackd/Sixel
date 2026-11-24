@@ -52,6 +52,15 @@ public static class TerminalChecker {
             }
         }
 
+        // TERM_PROGRAM is useful even when the terminal omits its version.
+        if (detectedTerminal is Terminals.unknown && env["TERM_PROGRAM"] is string program) {
+            Terminals terminal = Helpers.GetTerminal(program);
+            if (terminal is not Terminals.unknown && Helpers.SupportedProtocol.TryGetValue(terminal, out ImageProtocol[]? protocols)) {
+                detectedTerminal = terminal;
+                detectedProtocols = protocols;
+            }
+        }
+
         // 2. Check for other well-known env variables (e.g., WT_SESSION for Windows Terminal)
         if (detectedTerminal is Terminals.unknown) {
             foreach (string known in Helpers.GetEnvironmentVariables()) {
@@ -66,32 +75,19 @@ public static class TerminalChecker {
             }
         }
 
-        // 3. Fallback: scan all env vars for known terminal signatures
-        if (detectedTerminal is Terminals.unknown) {
-            foreach (DictionaryEntry item in env) {
-                string? key = item.Key?.ToString();
-                string? value = item.Value?.ToString();
-                if (key is not null && Helpers.GetTerminal(key) is Terminals _terminal && _terminal is not Terminals.unknown) {
-                    if (Helpers.SupportedProtocol.TryGetValue(_terminal, out ImageProtocol[]? protocol)) {
-                        detectedTerminal = _terminal;
-                        detectedProtocols = protocol;
-                        break;
-                    }
-                }
-                if (value is not null && Helpers.GetTerminal(value) is Terminals _terminal2 && _terminal2 is not Terminals.unknown) {
-                    if (Helpers.SupportedProtocol.TryGetValue(_terminal2, out ImageProtocol[]? protocol)) {
-                        detectedTerminal = _terminal2;
-                        detectedProtocols = protocol;
-                        break;
-                    }
-                }
+        // TERM is a terminal identifier. Arbitrary environment values (including
+        // numeric values accepted by Enum.TryParse) are not capability evidence.
+        if (detectedTerminal is Terminals.unknown && env["TERM"] is string term) {
+            Terminals terminal = Helpers.GetTerminal(term);
+            if (terminal is not Terminals.unknown && Helpers.SupportedProtocol.TryGetValue(terminal, out ImageProtocol[]? protocols)) {
+                detectedTerminal = terminal;
+                detectedProtocols = protocols;
             }
         }
-
-        // 4. VT/ANSI fallback: autodetect Kitty/Sixel support and augment protocol list
+        // Only use explicitly refreshed probe results. Discovery must never read stdin.
         List<ImageProtocol>? protocolList = [.. detectedProtocols];
-        bool kittySupported = Compatibility.TerminalSupportsKitty();
-        bool sixelSupported = Compatibility.TerminalSupportsSixel();
+        bool kittySupported = Compatibility._terminalSupportsKitty == true;
+        bool sixelSupported = Compatibility._terminalSupportsSixel == true;
         if (kittySupported && !protocolList.Contains(ImageProtocol.KittyGraphicsProtocol))
             protocolList.Insert(0, ImageProtocol.KittyGraphicsProtocol);
         if (sixelSupported && !protocolList.Contains(ImageProtocol.Sixel))

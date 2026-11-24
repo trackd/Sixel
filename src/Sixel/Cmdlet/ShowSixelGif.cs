@@ -26,13 +26,19 @@ public sealed class ShowSixelGifCmdlet : PSCmdlet {
     protected override void ProcessRecord() {
         try {
             if (Gif is null) return;
-            CancellationTokenSource CancellationToken = new();
+            using CancellationTokenSource cancellation = new();
             // Handle Ctrl+C
-            Console.CancelKeyPress += (sender, args) => {
+            ConsoleCancelEventHandler handler = (sender, args) => {
                 args.Cancel = true;
-                CancellationToken.Cancel();
+                cancellation.Cancel();
             };
-            GifToSixel.PlaySixelGif(Gif, CancellationToken.Token);
+            Console.CancelKeyPress += handler;
+            try {
+                GifToSixel.PlaySixelGif(Gif, cancellation.Token);
+            }
+            finally {
+                Console.CancelKeyPress -= handler;
+            }
         }
         catch (Exception ex) {
             WriteError(new ErrorRecord(ex, "ShowSixelGifCmdlet", ErrorCategory.NotSpecified, MyInvocation.BoundParameters));

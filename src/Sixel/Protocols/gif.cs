@@ -14,18 +14,19 @@ public static class GifToSixel {
     public static SixelGif ConvertGif(Stream imageStream, int maxColors, int cellWidth, int LoopCount) {
         using var image = Image.Load<Rgba32>(imageStream);
 
-        ImageSize imageSize = cellWidth > 0 ? SizeHelper.GetResizedCharacterCellSize(image, cellWidth, 0) : SizeHelper.ConvertToCharacterCells(image);
-        return ConvertGifToSixel(image, imageSize, maxColors, LoopCount);
+        ImageLayout layout = ImageLayout.Calculate(image.Width, image.Height, cellWidth, 0,
+            Compatibility.GetCellSize(), sixel: true);
+        return ConvertGifToSixel(image, layout, maxColors, LoopCount);
     }
 
-    private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageSize imageSize, int maxColors, int LoopCount) {
+    private static SixelGif ConvertGifToSixel(Image<Rgba32> image, ImageLayout layout, int maxColors, int LoopCount) {
         // Use Resizer to handle resizing and quantization
-        Image<Rgba32> resizedImage = Resizer.ResizeToCharacterCells(image, imageSize, maxColors);
+        Image<Rgba32> resizedImage = Resizer.ResizeToPixels(image, layout.Pixels, maxColors);
         GifFrameMetadata metadata = resizedImage.Frames.RootFrame.Metadata.GetGifMetadata();
         int frameCount = resizedImage.Frames.Count;
 
-        // Derive final cell size from actual resized pixels to avoid drift vs. requested imageSize
-        ImageSize finalSize = SizeHelper.GetCharacterCellSize(resizedImage);
+        // Keep the occupancy calculated from the same pixel dimensions as every frame.
+        ImageSize finalSize = layout.Cells;
 
         var gif = new SixelGif() {
             Sixel = new List<string>(frameCount), // Pre-allocate capacity for better performance
@@ -43,20 +44,20 @@ public static class GifToSixel {
         return gif;
     }
     public static void PlaySixelGif(SixelGif gif, CancellationToken CT = default) {
-        Console.CursorVisible = false;
-        var writer = new VTWriter();
+        using var writer = new VTWriter();
+        PlaySixelGif(gif, writer, CT);
+    }
 
+    internal static void PlaySixelGif(SixelGif gif, VTWriter writer, CancellationToken CT) {
+        if (gif.Height <= 0)
+            throw new ArgumentOutOfRangeException(nameof(gif), "The GIF height must be positive.");
+        int viewportHeight = ImagePlacement.GetViewportHeight();
+        if (viewportHeight > 0 && gif.Height >= viewportHeight)
+            throw new ArgumentException("The GIF must fit in the viewport with one row below it. Convert it with a smaller width.", nameof(gif));
         try {
-            // create space in the buffer for the image, so it doesn't scroll the terminal.
-            for (int i = 0; i < gif.Height + 1; i++) {
-                writer.Write(Environment.NewLine);
-            }
-
-            // Move cursor back up to starting position
-            writer.Write($"{Constants.ESC}[{gif.Height}A");
-
-            // DECSC - Save cursor position
-            writer.Write($"{Constants.ESC}7");
+            writer.Write(Constants.HideCursor);
+            writer.Write(ImagePlacement.SixelModes);
+            writer.Write(ImagePlacement.Begin(gif.Height));
 
             for (int i = 0; i < gif.LoopCount; i++) {
                 foreach (string sixel in gif.Sixel) {
@@ -66,17 +67,17 @@ public static class GifToSixel {
                     // DECRC - Restore cursor position
                     writer.Write($"{Constants.ESC}8");
                     writer.Write(sixel);
-                    Thread.Sleep(gif.Delay);
+                    writer.Write($"{Constants.ESC}8");
+                    writer.Flush();
+                    if (CT.WaitHandle.WaitOne(Math.Max(0, gif.Delay)))
+                        return;
                 }
             }
         }
         finally {
-            // DECRC - Restore to image start
-            writer.Write($"{Constants.ESC}8");
-            // Move down below image, subtract 1 line to compensate for powershell format engine.
-            writer.Write($"{Constants.ESC}[{gif.Height - 1}B");
-            writer?.Dispose();
-            Console.CursorVisible = true;
+            writer.Write(ImagePlacement.End(gif.Height));
+            writer.Write(Constants.ShowCursor);
+            writer.Flush();
         }
     }
 }

@@ -3,4 +3,7 @@
     <Project Path="src/Sixel.Shared/Sixel.Shared.csproj" />
     <Project Path="src/Sixel/Sixel.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Sixel.Protocol.Tests/Sixel.Protocol.Tests.csproj" />
+  </Folder>
 </Solution>
