@@ -27,7 +27,13 @@ public static class KittyProtocol {
         if (writer is null) throw new ArgumentNullException(nameof(writer));
         if (chunkSize < 4 || chunkSize > 4096 || chunkSize % 4 != 0)
             throw new ArgumentOutOfRangeException(nameof(chunkSize), "Chunk size must be a multiple of four between 4 and 4096.");
-        Dictionary<char, string> values = Parse(control);
+        if (control is null) throw new ArgumentNullException(nameof(control));
+        List<string> entries = control.ToList();
+        if (IsFeatureQuery(entries)) {
+            WriteFeatureQuery(writer, entries, payload, tmux);
+            return;
+        }
+        Dictionary<char, string> values = Parse(entries);
         char action = values.TryGetValue('a', out string? a) ? a[0] : 't';
         bool transmission = "tTqf".IndexOf(action) >= 0;
         bool direct = !values.TryGetValue('t', out string? medium) || medium == "d";
@@ -94,6 +100,33 @@ public static class KittyProtocol {
             position += count;
         } while (position < data.Length);
     }
+
+    // Contour extension: a=q,e=<action> lists another action's keys (with placeholder
+    // values) and the terminal echoes back the ones it supports. Only syntax is checked.
+    private static void WriteFeatureQuery(TextWriter writer, List<string> control, byte[]? payload, bool tmux) {
+        if (payload is { Length: > 0 })
+            throw new ArgumentException("A feature query (a=q with e) carries no payload.", nameof(payload));
+        var keys = new HashSet<char>();
+        foreach (string entry in control) {
+            if (entry is null || entry.Length < 3 || entry[1] != '=' || !IsAsciiLetter(entry[0]) || !keys.Add(entry[0]) ||
+                entry.Skip(2).Any(c => !IsAsciiLetter(c) && (c < '0' || c > '9') && c != '-'))
+                throw new ArgumentException("Invalid or duplicate feature query control: " + entry, nameof(control));
+        }
+        string feature = control.First(entry => entry.StartsWith("e=", StringComparison.Ordinal)).Substring(2);
+        if (feature.Length != 1 || "tTqpdfac".IndexOf(feature[0]) < 0)
+            throw new ArgumentException("e must name one action: t, T, q, p, d, f, a or c.", nameof(control));
+        Dictionary<char, string> ids = control.Where(entry => entry[0] is 'i' or 'I').ToDictionary(entry => entry[0], entry => entry.Substring(2));
+        if (!HasNonzero(ids, 'i') && !HasNonzero(ids, 'I'))
+            throw new ArgumentException("This action requires a nonzero image ID or image number.", nameof(control));
+        string header = string.Join(",", control) + (keys.Contains('q') ? string.Empty : ",q=0");
+        string packet = Escape + "_G" + header + Escape + "\\";
+        writer.Write(tmux ? Escape + "Ptmux;" + packet.Replace(Escape, Escape + Escape) + Escape + "\\" : packet);
+    }
+
+    internal static bool IsFeatureQuery(IEnumerable<string> control) =>
+        control.Contains("a=q") && control.Any(entry => entry is not null && entry.StartsWith("e=", StringComparison.Ordinal));
+
+    private static bool IsAsciiLetter(char c) => c is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z');
 
     internal static Dictionary<char, string> Parse(IEnumerable<string> control) {
         if (control is null)

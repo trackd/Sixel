@@ -71,6 +71,16 @@ public sealed partial class KittyPreviewTests {
         Assert.Contains(",q=2,m=0;", KittyProtocol.Encode(["a=q", "i=31", "f=100", "q=2"], [1]));
     }
 
+    [Fact]
+    public void ContourFeatureQueriesCarryPlaceholderKeys() {
+        Assert.Equal("\u001b_Ga=q,i=31,e=f,f=1,m=1,X=1,q=0\u001b\\", KittyProtocol.Encode(["a=q", "i=31", "e=f", "f=1", "m=1", "X=1"]));
+        Assert.Throws<ArgumentException>(() => KittyProtocol.Encode(["a=q", "i=31", "e=x"]));
+        Assert.Throws<ArgumentException>(() => KittyProtocol.Encode(["a=q", "e=T"]));
+        Assert.Throws<ArgumentException>(() => KittyProtocol.Encode(["a=q", "i=31", "e=T", "c=1;"]));
+        Assert.Throws<ArgumentException>(() => KittyProtocol.Encode(["a=q", "i=31", "e=T"], [1]));
+        Assert.Throws<ArgumentException>(() => KittyProtocol.Encode(["a=t", "f=100", "e=T"], [1]));
+    }
+
     [Theory]
     [InlineData("aAcCnNiIpPqQrRxXyYzZfF")]
     public void EveryDeleteSelectorPreservesCase(string selectors) {
