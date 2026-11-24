@@ -173,7 +173,8 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
             TerminalExecution.Prepare(this, Force.IsPresent);
             KittyCapabilities capabilities = Compatibility.GetKittyCapabilities();
             if (ParameterSetName == "Command") {
-                capabilities.Validate(Command, animate: false, placeholder: false, Force.IsPresent);
+                if (!KittyProtocol.IsFeatureQuery(Command))
+                    capabilities.Validate(Command, animate: false, placeholder: false, Force.IsPresent);
                 WriteObject(KittyProtocol.Encode(Command, Payload, Tmux.IsPresent, ChunkSize));
                 return;
             }

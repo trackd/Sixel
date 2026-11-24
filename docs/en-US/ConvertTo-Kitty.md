@@ -204,7 +204,7 @@ Accept wildcard characters: False
 
 ### -Command
 
-Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2, or q=0 for a=q. Payload, Tmux and Force may accompany this parameter.
+Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2, or q=0 for a=q. Contour feature queries (a=q with e=<action>, for example 'a=q','i=1','e=p','c=1','z=1') list keys with placeholder values, carry no payload, and skip value checks. Payload, Tmux and Force may accompany this parameter.
 
 ```yaml
 Type: String[]
