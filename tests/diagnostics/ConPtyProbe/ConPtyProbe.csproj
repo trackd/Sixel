@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <PackageReference Include="Microsoft.Windows.Console.ConPTY" Version="1.25.260930003" />
+    <PackageReference Include="Microsoft.Windows.Console.ConPTY" Version="1.25.261109001" />
   </ItemGroup>
 </Project>
