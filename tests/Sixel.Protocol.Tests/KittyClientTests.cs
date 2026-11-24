@@ -84,6 +84,32 @@ public sealed class KittyClientTests {
     public void RejectsMalformedReplies(string packet) => Assert.False(KittyResponse.TryParse(packet, out _));
 
     [Fact]
+    public void ParsesFeatureQueryReplies() {
+        Assert.True(KittyResponse.TryParse("\u001b_Gi=32,e=p,p=1,c=1,r=1,C=1,U=1,z=-1;OK\u001b\\", out var reply));
+        Assert.True(reply!.Success);
+        Assert.Equal(32u, reply.ImageId);
+        Assert.Equal('p', reply.FeatureAction);
+        Assert.Equal(1u, reply.PlacementId);
+        Assert.Equal("pcrCUz", string.Concat(reply.FeatureKeys.Keys));
+        Assert.Equal("-1", reply.FeatureKeys['z']);
+
+        Assert.True(KittyResponse.TryParse("\u001b_Gi=34,e=T,o=z,f=100;OK\u001b\\", out reply));
+        Assert.Equal("z", reply!.FeatureKeys['o']);
+        Assert.True(KittyResponse.TryParse("\u001b_Gi=35,e=a;OK\u001b\\", out reply));
+        Assert.Equal('a', reply!.FeatureAction);
+        Assert.Empty(reply.FeatureKeys);
+
+        // Without e= a reply is an ordinary acknowledgement and keeps its strict keys.
+        Assert.True(KittyResponse.TryParse("\u001b_Gi=32;OK\u001b\\", out reply));
+        Assert.Null(reply!.FeatureAction);
+        Assert.Empty(reply.FeatureKeys);
+        Assert.False(KittyResponse.TryParse("\u001b_Gi=32,o=z;OK\u001b\\", out _));
+        Assert.False(KittyResponse.TryParse("\u001b_Gi=32,e=pp;OK\u001b\\", out _));
+        Assert.False(KittyResponse.TryParse("\u001b_Gi=32,e=p,c=1,c=2;OK\u001b\\", out _));
+        Assert.False(KittyResponse.TryParse("\u001b_Ge=p,c=1;OK\u001b\\", out _));
+    }
+
+    [Fact]
     public void SessionTracksAssignedIdsAndDeletesOnlyOwnedImages() {
         var written = new List<string>();
         using (var session = new KittySession(written.Add, (request, timeout) => {
