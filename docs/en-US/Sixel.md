@@ -21,3 +21,7 @@ Converts an image to sixel
 ### [ConvertTo-SixelGif](ConvertTo-SixelGif.md)
 
 Converts a gif to a sixel animation  
+
+### [ConvertTo-GoodImage](ConvertTo-GoodImage.md)
+
+Converts an image to the Good Image Protocol, with every render option (preview)  
