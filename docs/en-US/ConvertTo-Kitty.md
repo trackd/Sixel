@@ -61,6 +61,15 @@ probes terminal capabilities and metrics; use Force to suppress this terminal I/
 Import, discovery, completion, and passive getters do not probe.
 The receiving terminal determines which protocol features it implements.
 
+Feature checks use [Sixel.Terminal.Compatibility]::GetKittyCapabilities(). The probe also sends
+feature queries (a=q,i=<id>,e=<action>, as Contour implements them) for placements (crop x/y/w/h,
+Unicode placeholders U, relative placements P/Q/H/V), transmission, animation (a and f) and frame
+composition (c). When the terminal answers with e=<action>, the keys it echoes decide
+SourceRectangle, UnicodePlaceholders, RelativePlacements, Animation and FrameComposition, overriding
+the terminal/version table; Evidence lists the replies used. A terminal that ignores e or answers
+without e= keeps the table's values. Unknown features need Force, except source rectangles, image
+numbers and file transfer, which are refused only when known to be unsupported.
+
 Decoded images are resized in pixel space with aspect ratio preserved and no transparent cell padding.
 Native placement uses exact pixel dimensions, avoiding rounding a partial cell into a larger raster.
 Width/Height output properties describe occupied cells using the chosen cell metrics; PixelWidth/PixelHeight describe the actual raster.
@@ -113,7 +122,7 @@ Requires terminal placeholder support and tmux passthrough configuration.
 
 ### -Force
 
-Bypass terminal feature compatibility checks and skip automatic terminal probing. Wire validation still applies. Uses cached/environment information and fallback cell sizing when measurements are unavailable. A later invocation without Force can still perform the session's first probe.
+Bypass terminal feature compatibility checks and skip automatic terminal probing. Wire validation still applies. Without Force, a feature the terminal's feature-query replies or version mark Unsupported (or, for most extensions, Unknown) is refused. Uses cached/environment information and fallback cell sizing when measurements are unavailable. A later invocation without Force can still perform the session's first probe.
 
 ```yaml
 Type: SwitchParameter
@@ -204,7 +213,7 @@ Accept wildcard characters: False
 
 ### -Command
 
-Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2. Payload, Tmux and Force may accompany this parameter.
+Complete case-sensitive wire controls, for example 'a=p','i=42','c=20'. The encoder supplies chunk framing and defaults q=2, or q=0 for a=q. Contour feature queries (a=q with e=<action>, for example 'a=q','i=1','e=p','c=1','z=1') list keys with placeholder values, carry no payload, and skip value checks. Payload, Tmux and Force may accompany this parameter.
 
 ```yaml
 Type: String[]
@@ -264,7 +273,7 @@ Accept wildcard characters: False
 
 ### -Action
 
-Image/reference action: TransmitAndDisplay (default), Transmit, Query, or Frame. Other actions use Command. Query requires an image ID and explicit Quiet 0 to request a reply.
+Image/reference action: TransmitAndDisplay (default), Transmit, Query, or Frame. Other actions use Command. Query requires an image ID and defaults to Quiet 0 so the terminal replies.
 
 ```yaml
 Type: String
@@ -279,7 +288,7 @@ Accept wildcard characters: False
 
 ### -Format
 
-Png, Rgb (24-bit), or Rgba (32-bit). RGB discards alpha; RGBA carries red, green, blue, and transparency bytes for each pixel. When omitted, decoded images use PNG except in recognized Contour terminals, where RGBA avoids its Kitty PNG-decoding issue. Explicit choices are preserved. Reference data must already be in this format and defaults to PNG.
+Png, Rgb (24-bit), or Rgba (32-bit). RGB discards alpha; RGBA carries red, green, blue, and transparency bytes for each pixel. When omitted, decoded images use PNG. Reference data must already be in this format and defaults to PNG.
 
 ```yaml
 Type: String
@@ -399,7 +408,7 @@ Accept wildcard characters: False
 
 ### -Quiet
 
-2 suppresses replies to the encoded image command (default); 1 permits errors; 0 permits all replies. The converter reads its own lazy-probe replies but does not read replies to the returned image/control sequence. Only request those replies when your application owns terminal input.
+2 suppresses replies to the encoded image command (default, except Query, which defaults to 0); 1 permits errors; 0 permits all replies. The converter reads its own lazy-probe replies but does not read replies to the returned image/control sequence. Only request those replies when your application owns terminal input.
 
 ```yaml
 Type: Int32

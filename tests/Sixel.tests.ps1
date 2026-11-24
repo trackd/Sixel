@@ -193,7 +193,7 @@ Describe 'Kitty preview' {
     }
 }
 Describe 'Kitty client integration' {
-    It 'Prefers RGBA for Contour without overriding an explicit format or reference' {
+    It 'Uses PNG for Contour and keeps an explicit format' {
         $terminalField = [Sixel.Terminal.Compatibility].GetField('_terminalInfo', [System.Reflection.BindingFlags]'Static,NonPublic')
         $identityField = [Sixel.Terminal.Compatibility].GetField('_terminalIdentity', [System.Reflection.BindingFlags]'Static,NonPublic')
         $savedTerminal = $terminalField.GetValue($null)
@@ -202,14 +202,15 @@ Describe 'Kitty client integration' {
             $terminalField.SetValue($null, [Sixel.Terminal.Models.TerminalInfo]@{ Terminal = 'Contour' })
             $identityField.SetValue($null, $null)
             $sequence = ConvertTo-Kitty -Path $cog -Width 2 -Force -ErrorAction Stop
-            $sequence | Should -Match 'f=32'
+            $sequence | Should -Match 'f=100'
             $sequence | Should -Match 'C=1'
             $sequence.EndsWith("`r") | Should -BeTrue
-            $sequence | Should -Match "s=$($sequence.PixelWidth),v=$($sequence.PixelHeight)"
-            ConvertTo-Kitty -Path $cog -Width 2 -Format Png -Force -ErrorAction Stop | Should -Match 'f=100'
+            ConvertTo-Kitty -Path $cog -Width 2 -Format Rgba -Force -ErrorAction Stop | Should -Match "f=32,.*s=$($sequence.PixelWidth),v=$($sequence.PixelHeight)"
             ConvertTo-Kitty -Reference '/tmp/example.png' -Force -ErrorAction Stop | Should -Match 'f=100'
+            ConvertTo-Kitty -Path $cog -Width 2 -Action Query -ImageId 31 -Force -ErrorAction Stop | Should -Match 'a=q,q=0'
+            ConvertTo-Kitty -Path $cog -Width 2 -Action Query -ImageId 31 -Quiet 1 -Force -ErrorAction Stop | Should -Match 'a=q,q=1'
             $legacySequence = ConvertTo-Sixel -Path $cog -Width 2 -Protocol KittyGraphicsProtocol -Force -ErrorAction Stop
-            $legacySequence | Should -Match 'f=32'
+            $legacySequence | Should -Match 'f=100'
             $legacySequence | Should -Match 'C=1'
             ([string]$legacySequence).EndsWith("`r") | Should -BeTrue
         }

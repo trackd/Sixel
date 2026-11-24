@@ -30,6 +30,9 @@ public static partial class Compatibility {
     /// </summary>
     internal static bool? _terminalSupportsKitty;
 
+    /// <summary>Replies to the runtime probe's Kitty feature queries (a=q,e=), by image id.</summary>
+    internal static IReadOnlyDictionary<uint, Protocols.KittyResponse>? _kittyFeatureReplies;
+
     /// <summary>
     /// Memory-caches the result of the terminal cell size.
     /// </summary>
@@ -84,13 +87,17 @@ public static partial class Compatibility {
         if (response.Length == 0) return;
         _terminalSupportsKitty = false;
         _terminalSupportsSixel = false;
+        var features = new Dictionary<uint, Protocols.KittyResponse>();
         int pixelWidth = 0, pixelHeight = 0, columns = 0, rows = 0;
         CellSize? measured = null;
         foreach (string segment in response.Split('\x1b')) {
             string report = "\x1b" + segment;
             if (segment.StartsWith("_G", StringComparison.Ordinal) &&
-                TerminalQuery.IsKittyQueryResponse(report + "\x1b\\", out bool kittySuccess))
-                _terminalSupportsKitty = kittySuccess;
+                TerminalQuery.IsKittyQueryResponse(report + "\x1b\\", out bool kittySuccess, out Protocols.KittyResponse? reply)) {
+                if (reply!.ImageId == 31) _terminalSupportsKitty = kittySuccess;
+                // Only a reply naming the queried action is feature evidence; KittyCapabilities checks that.
+                else if (reply.FeatureAction.HasValue) features[reply.ImageId] = reply;
+            }
             else if (segment.StartsWith("[?", StringComparison.Ordinal) && segment[segment.Length - 1] == 'c')
                 _terminalSupportsSixel = segment.Substring(2, segment.Length - 3).Split(';').Skip(1).Contains("4");
             else if (TryParseSizeReport(report, 6, out int width, out int height))
@@ -106,6 +113,7 @@ public static partial class Compatibility {
             else if (segment.StartsWith("P>|", StringComparison.Ordinal))
                 _terminalIdentity = segment.Substring(3);
         }
+        _kittyFeatureReplies = features;
         if (measured is null && columns > 0 && rows > 0 && pixelWidth >= columns && pixelHeight >= rows)
             measured = new CellSize { PixelWidth = pixelWidth / columns, PixelHeight = pixelHeight / rows };
         if (measured is not null) {
@@ -122,7 +130,7 @@ public static partial class Compatibility {
         if (reported != Terminals.unknown) terminal = reported;
         else if (Helpers.GetTerminal(Environment.GetEnvironmentVariable("TERM_PROGRAM") ?? string.Empty) == terminal)
             version = Environment.GetEnvironmentVariable("TERM_PROGRAM_VERSION");
-        return KittyCapabilities.Detect(terminal, version, _terminalSupportsKitty);
+        return KittyCapabilities.Detect(terminal, version, _terminalSupportsKitty, _kittyFeatureReplies);
     }
 
     internal static Terminals GetReportedTerminal(out string? version) {

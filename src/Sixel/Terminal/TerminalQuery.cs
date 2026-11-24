@@ -35,7 +35,10 @@ internal static class TerminalQuery {
     internal const string KittyAndDeviceAttributes = "_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c";
     // One batch, one timeout, one trailing DA fence. Do not start additional
     // queries after a timeout: delayed replies could then reach the line editor.
-    internal const string RuntimeProbe = "_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\" +
+    // Feature queries (a=q,e=<action>, each with its own image id) ride in the same batch.
+    // Terminals without them ignore the e key or answer without e=; neither changes anything.
+    internal static readonly string RuntimeProbe = "_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\" +
+        string.Concat(KittyCapabilities.FeatureQueries.Select(feature => KittyProtocol.Encode(feature.Control))) +
         "\x1b[>q\x1b[16t\x1b[14t\x1b[18t\x1b[c";
 
     internal static string Read(string query, IQueryTransport transport) {
@@ -46,7 +49,7 @@ internal static class TerminalQuery {
 
             using IDisposable? inputMode = (transport as IQueryInputMode)?.EnterQueryMode();
 
-            bool fenced = query is KittyAndDeviceAttributes or RuntimeProbe;
+            bool fenced = query == KittyAndDeviceAttributes || query == RuntimeProbe;
             var result = new StringBuilder();
             var sequence = new StringBuilder();
             long started = transport.ElapsedMilliseconds;
@@ -94,8 +97,13 @@ internal static class TerminalQuery {
     private static bool IsDeviceAttributes(string response) =>
         response.StartsWith("\x1b[?", StringComparison.Ordinal) && response[response.Length - 1] == 'c';
 
-    internal static bool IsKittyQueryResponse(string response, out bool success) {
-        bool matched = KittyResponse.TryParse(response, out KittyResponse? reply) && reply?.ImageId == 31;
+    internal static bool IsKittyQueryResponse(string response, out bool success) =>
+        IsKittyQueryResponse(response, out success, out _);
+
+    /// <summary>A reply to the basic query (i=31) or to one of the probe's feature queries.</summary>
+    internal static bool IsKittyQueryResponse(string response, out bool success, out KittyResponse? reply) {
+        bool matched = KittyResponse.TryParse(response, out reply) &&
+            (reply!.ImageId == 31 || KittyCapabilities.IsFeatureQueryId(reply.ImageId));
         success = matched && reply!.Success;
         return matched;
     }

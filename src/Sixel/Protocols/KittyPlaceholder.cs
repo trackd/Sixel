@@ -32,10 +32,14 @@ public static class KittyPlaceholder {
         if (rows <= 0 || rows > Marks.Length) throw new ArgumentOutOfRangeException(nameof(rows));
         var result = new StringBuilder();
         result.Append("\u001b[38;2;").Append(Color(imageId)).Append(";58;2;").Append(Color(placementId)).Append('m');
+        // Each row starts in the column the grid started in: DECSC/DECRC return to the
+        // row's start (even after a row that ends at the right margin) and IND steps down,
+        // scrolling if needed, without the carriage return a newline would add.
         for (int row = 0; row < rows; row++) {
+            result.Append("\u001b7");
             for (int column = 0; column < columns; column++)
                 result.Append("\U0010eeee").Append(Marks[row]).Append(Marks[column]).Append(Marks[imageId >> 24]);
-            result.Append("\r\n");
+            result.Append("\u001b8").Append(row + 1 < rows ? "\u001bD" : "\r\n");
         }
         return result.Append("\u001b[39;59m").ToString();
     }

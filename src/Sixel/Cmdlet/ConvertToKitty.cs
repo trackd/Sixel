@@ -173,17 +173,16 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
             TerminalExecution.Prepare(this, Force.IsPresent);
             KittyCapabilities capabilities = Compatibility.GetKittyCapabilities();
             if (ParameterSetName == "Command") {
-                capabilities.Validate(Command, animate: false, placeholder: false, Force.IsPresent);
+                if (!KittyProtocol.IsFeatureQuery(Command))
+                    capabilities.Validate(Command, animate: false, placeholder: false, Force.IsPresent);
                 WriteObject(KittyProtocol.Encode(Command, Payload, Tmux.IsPresent, ChunkSize));
                 return;
             }
             int format = Format.ToUpperInvariant() switch { "RGB" => 24, "RGBA" => 32, _ => 100 };
-            // Contour's current Kitty PNG path stores encoded bytes without
-            // decoding them. Prefer raw RGBA; an explicit -Format remains authoritative.
-            if (ParameterSetName != "Reference" && !MyInvocation.BoundParameters.ContainsKey(nameof(Format)) &&
-                capabilities.Terminal == Terminals.Contour)
-                format = 32;
             char action = Action.ToUpperInvariant() switch { "TRANSMIT" => 't', "QUERY" => 'q', "FRAME" => 'f', _ => 'T' };
+            // A query exists to get a reply; q=2 would suppress it.
+            if (action == 'q' && !MyInvocation.BoundParameters.ContainsKey(nameof(Quiet)))
+                Quiet = 0;
             if (ParameterSetName == "Reference") {
                 if (action != 'T' && (Width != 0 || Height != 0))
                     throw new ArgumentException("Reference Width/Height apply only to TransmitAndDisplay. Use -Control for frame coordinates.");
