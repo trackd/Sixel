@@ -207,6 +207,8 @@ Describe 'Kitty client integration' {
             $sequence.EndsWith("`r") | Should -BeTrue
             ConvertTo-Kitty -Path $cog -Width 2 -Format Rgba -Force -ErrorAction Stop | Should -Match "f=32,.*s=$($sequence.PixelWidth),v=$($sequence.PixelHeight)"
             ConvertTo-Kitty -Reference '/tmp/example.png' -Force -ErrorAction Stop | Should -Match 'f=100'
+            ConvertTo-Kitty -Path $cog -Width 2 -Action Query -ImageId 31 -Force -ErrorAction Stop | Should -Match 'a=q,q=0'
+            ConvertTo-Kitty -Path $cog -Width 2 -Action Query -ImageId 31 -Quiet 1 -Force -ErrorAction Stop | Should -Match 'a=q,q=1'
             $legacySequence = ConvertTo-Sixel -Path $cog -Width 2 -Protocol KittyGraphicsProtocol -Force -ErrorAction Stop
             $legacySequence | Should -Match 'f=100'
             $legacySequence | Should -Match 'C=1'

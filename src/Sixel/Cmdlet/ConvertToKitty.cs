@@ -179,6 +179,9 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
             }
             int format = Format.ToUpperInvariant() switch { "RGB" => 24, "RGBA" => 32, _ => 100 };
             char action = Action.ToUpperInvariant() switch { "TRANSMIT" => 't', "QUERY" => 'q', "FRAME" => 'f', _ => 'T' };
+            // A query exists to get a reply; q=2 would suppress it.
+            if (action == 'q' && !MyInvocation.BoundParameters.ContainsKey(nameof(Quiet)))
+                Quiet = 0;
             if (ParameterSetName == "Reference") {
                 if (action != 'T' && (Width != 0 || Height != 0))
                     throw new ArgumentException("Reference Width/Height apply only to TransmitAndDisplay. Use -Control for frame coordinates.");
