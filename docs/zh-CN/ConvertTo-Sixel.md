@@ -9,7 +9,7 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-将图像转换为 Sixel、Kitty、InlineImage 或 Blocks。
+将图像转换为 Sixel、Kitty、InlineImage、Blocks、Braille 或 Good Image Protocol（预览）。
 用于在控制台中显示
 
 ## SYNTAX
@@ -42,6 +42,11 @@ ConvertTo-Sixel -InputObject <String> [-MaxColors <int>] [-Width <int>] [-Height
 
 `ConvertTo-Sixel` 将图像转换为可在控制台中显示的形式。
 
+Windows PowerShell 5.1 使用 System.Drawing 处理 BMP、GIF、JPEG、PNG 和 TIFF 输入。
+支持静态 Sixel、Kitty 和内联输出。动画内联图像需要 PowerShell 7；在 Windows PowerShell 上
+请使用 ConvertTo-SixelGif 或 ConvertTo-Kitty -Animate 播放 GIF 动画。PowerShell 7 保留
+ImageSharp 及其额外支持的输入格式。
+
 ## EXAMPLES
 
 ### -------------------------- 示例 1 --------------------------
@@ -59,6 +64,15 @@ PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
 ```
 
 转换本地文件。
+
+### -------------------------- 示例 3 --------------------------
+
+```powershell
+PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png -Width 20 -Protocol GoodImageProtocol
+```
+
+预览：在 DA1 回复中列出代码 90 的终端中，使用 Good Image Protocol（`DCS ! g`）绘制图像，
+例如设置了 `images: good_image_protocol: true` 的 Contour。
 
 ## PARAMETERS
 
@@ -181,7 +195,7 @@ Accept wildcard characters: False
 
 ### -Force
 
-即使终端不支持 sixel，也强制命令尝试输出 sixel 数据。
+即使终端不支持所选协议也尝试转换，并跳过自动终端探测。在无法获得测量值时使用缓存/环境信息和后备单元格尺寸。不会占用本会话的第一次探测。
 
 ```yaml
 Type: SwitchParameter
@@ -198,10 +212,12 @@ Accept wildcard characters: False
 ### -Protocol
 
 选择要输出的图像协议。
-支持 Sixel、InlineImageProtocol、KittyGraphicsProtocol、Blocks、Braille、GoodImageProtocol(预览)
-GoodImageProtocol 基于 alpha 规范,不会被自动选择;需要终端在 DA1 回复中列出 90,或使用 -Force。
+支持 Sixel、InlineImageProtocol、KittyGraphicsProtocol、Blocks、Braille 和
+GoodImageProtocol（预览）
 
 它会尝试为你的终端自动选择支持的图像协议。
+GoodImageProtocol 是 alpha 规范的预览，不会被自动选择。它需要终端在 DA1 回复中列出代码 90，
+或使用 -Force。图像以一个 PNG（o=s,f=4）发送，附带其单元格尺寸、适配单元格的缩放和左上对齐。
 
 ```yaml
 Type: ImageProtocol

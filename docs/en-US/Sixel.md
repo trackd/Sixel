@@ -22,6 +22,10 @@ Converts an image to sixel
 
 Converts a gif to a sixel animation  
 
+### [ConvertTo-Kitty](ConvertTo-Kitty.md)
+
+Converts images and control operations to Kitty graphics escape sequences (preview)  
+
 ### [ConvertTo-GoodImage](ConvertTo-GoodImage.md)
 
 Converts an image to the Good Image Protocol, with every render option (preview)  

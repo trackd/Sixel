@@ -43,6 +43,9 @@ ConvertTo-SixelGif -InputObject <string> [-MaxColors <int>] [-Width <int>] [-For
 
 `ConvertTo-SixelGif` 获取一个 gif 并将其转换为 sixel 动画
 
+Windows PowerShell 5.1 使用 System.Drawing 解码 GIF 帧。PowerShell 7 使用 ImageSharp。
+两种引擎的像素重采样和调色板量化结果可能不同。
+
 ## EXAMPLES
 
 ### -------------------------- 示例 1 --------------------------
@@ -50,6 +53,8 @@ ConvertTo-SixelGif -InputObject <string> [-MaxColors <int>] [-Width <int>] [-For
 ```powershell
 PS C:\> ConvertTo-SixelGif -Url 'https://i.gifer.com/10j2.gif'
 ```
+
+下载一个 GIF，并将其帧转换为 Sixel 动画对象。
 
 ### -------------------------- 示例 2 --------------------------
 
@@ -109,6 +114,21 @@ Accept pipeline input: True
 Accept wildcard characters: False
 ```
 
+### -InputObject
+
+通过管道提供的本地文件路径或 base64 编码的图像。
+
+```yaml
+Type: String
+Parameter Sets: InputObject
+Aliases: None
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True
+Accept wildcard characters: False
+```
+
 ### -LoopCount
 
 gif 循环播放的次数。
@@ -160,7 +180,7 @@ Accept wildcard characters: False
 
 ### -Force
 
-即使终端不支持 sixel，也强制命令尝试输出 sixel 数据。
+即使终端不支持 sixel 也尝试转换，并跳过自动终端探测。在无法获得测量值时使用缓存/环境信息和后备单元格尺寸。不会占用本会话的第一次探测。
 
 ```yaml
 Type: SwitchParameter
