@@ -1,0 +1,6 @@
+# Changes to CI, release and build configuration require the repository owner's review.
+# Enforcement requires a branch rule with "Require review from Code Owners" enabled.
+/.github/                  @trackd
+/build.ps1                 @trackd
+/*.build.ps1               @trackd
+*.csproj                   @trackd

@@ -65,7 +65,10 @@ if (args.Length > 0 && args[0] == "child") {
     File.WriteAllText(args[1], JsonSerializer.Serialize(new { Received = read.ToString(), Parsed = parsed, ModeRestored = beforeMode == afterMode }));
     return;
 }
-if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("ConPTY diagnostic is Windows-only.");
+if (!OperatingSystem.IsWindows()) {
+    await RunUnixShell(int.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture));
+    return;
+}
 string library = args.Length > 0 ? args[0] : "kernel32.dll";
 bool shellTest = args.Length > 1 && args[1] == "shell";
 bool forceTest = shellTest && args.Length > 3 && args[3] == "force";
@@ -96,6 +99,47 @@ try {
     if (!Native.CreateProcessW(null, new StringBuilder(command), IntPtr.Zero, IntPtr.Zero, false, 0x80000, IntPtr.Zero, null, ref startup, out var process))
         throw new System.ComponentModel.Win32Exception();
     Native.CloseHandle(process.Thread);
+    await DriveTerminal(input, output, resultPath, library, shellTest, forceTest, args.ElementAtOrDefault(1) == "fixed", replyDelay, async () => {
+        uint wait = await Task.Run(() => Native.WaitForSingleObject(process.Process, shellTest ? 30000u : 10000u));
+        if (wait != 0) Native.TerminateProcess(process.Process, 1);
+        Native.CloseHandle(process.Process);
+        close(console); console = IntPtr.Zero;
+        return wait;
+    });
+}
+finally {
+    if (console != IntPtr.Zero) close(console);
+    if (attributes != IntPtr.Zero) { Native.DeleteProcThreadAttributeList(attributes); Marshal.FreeHGlobal(attributes); }
+    File.Delete(resultPath);
+    NativeLibrary.Free(dll);
+}
+
+static async Task RunUnixShell(int delay) {
+    string path = $"tests/diagnostics/ConPtyProbe/obj/unix-{Guid.NewGuid():N}.json";
+    var start = new ProcessStartInfo("/usr/bin/script") {
+        RedirectStandardInput = true, RedirectStandardOutput = true, UseShellExecute = false
+    };
+    start.Environment["SHELL"] = "/bin/sh";
+    start.Environment["TERM"] = "xterm-256color";
+    string command = "stty rows 24 cols 80; exec pwsh -NoLogo -NoProfile -NoExit -File tests/diagnostics/ConPtyProbe/AutoImport.ps1 -ResultPath " + path;
+    string[] arguments = OperatingSystem.IsMacOS()
+        ? ["-q", "/dev/null", "/bin/sh", "-c", command]
+        : ["-qec", command, "/dev/null"];
+    foreach (string argument in arguments) start.ArgumentList.Add(argument);
+    using var process = Process.Start(start)!;
+    try {
+        await DriveTerminal(process.StandardInput.BaseStream, process.StandardOutput.BaseStream,
+            path, "script", true, false, false, delay, async () => {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch (OperationCanceledException) { process.Kill(entireProcessTree: true); return 1; }
+                return (uint)process.ExitCode;
+            });
+    }
+    finally { File.Delete(path); }
+}
+
+static async Task DriveTerminal(Stream input, Stream output, string resultPath, string library, bool shellTest, bool forceTest, bool fixedProbe, int replyDelay, Func<Task<uint>> waitForExit) {
     var captured = new StringBuilder();
     int shellPhase = 0;
     int editingQueries = 0;
@@ -123,7 +167,7 @@ try {
                 if (shellPhase == 0 && accumulated.Contains("EDIT-BEGIN", StringComparison.Ordinal)) {
                     shellPhase = 1;
                     typing = Task.Run(async () => {
-                        Send("ConvertTo-Sixel -Path .\\assets\\co\t");
+                        Send("ConvertTo-Sixel -Path ./assets/cog_xk\t");
                         await Task.Delay(1500);
                         Send(" -Width 2" + (forceTest ? " -Force" : "") + " | Out-Null\r");
                     });
@@ -157,11 +201,7 @@ try {
             }
         }
     });
-    uint wait = Native.WaitForSingleObject(process.Process, shellTest ? 30000u : 10000u);
-    if (wait != 0) Native.TerminateProcess(process.Process, 1);
-    Native.CloseHandle(process.Process);
-    // Closing pseudoconsole after child exit; reader has already consumed its output.
-    close(console); console = IntPtr.Zero;
+    uint wait = await waitForExit();
     await reader.WaitAsync(TimeSpan.FromSeconds(3));
     if (typing is not null) {
         try { await typing; }
@@ -172,7 +212,8 @@ try {
     string wire = captured.ToString();
     if (shellTest) {
         string child = File.Exists(resultPath) ? File.ReadAllText(resultPath) : "{}";
-        string wirePath = Path.GetFullPath("tests/diagnostics/ConPtyProbe/obj/shell-last-wire.json");
+        string wirePath = Path.GetFullPath($"artifacts/test-results/terminal-wire-{replyDelay}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(wirePath)!);
         File.WriteAllText(wirePath, JsonSerializer.Serialize(wire));
         Console.WriteLine(JsonSerializer.Serialize(new { Child = child, editingQueries, executionQueries, replyDelay, WirePath = wirePath }));
         using var result = JsonDocument.Parse(child);
@@ -184,7 +225,7 @@ try {
             throw new InvalidOperationException("Fresh auto-import/command execution/editor handoff failed.");
         return;
     }
-    if (args.Length > 1 && args[1] == "fixed") {
+    if (fixedProbe) {
         using var result = JsonDocument.Parse(File.ReadAllText(resultPath));
         string parsed = result.RootElement.GetProperty("Parsed").GetString() ?? "";
         if (!parsed.Contains("\x1b_Gi=31;OK\x1b\\", StringComparison.Ordinal) || !parsed.EndsWith(da, StringComparison.Ordinal) ||
@@ -200,12 +241,6 @@ try {
         Child = File.Exists(resultPath) ? File.ReadAllText(resultPath) : null,
         Captured = wire
     }, new JsonSerializerOptions { WriteIndented = true }));
-}
-finally {
-    if (console != IntPtr.Zero) close(console);
-    if (attributes != IntPtr.Zero) { Native.DeleteProcThreadAttributeList(attributes); Marshal.FreeHGlobal(attributes); }
-    File.Delete(resultPath);
-    NativeLibrary.Free(dll);
 }
 
 static class Native {

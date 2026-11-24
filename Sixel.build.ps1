@@ -21,6 +21,9 @@ $script:folders = @{
     CsprojPath       = Join-Path $PSScriptRoot 'src' $modulename "$modulename.csproj"
 }
 
+# build.ps1 installs and imports the pinned dependencies; this task only proves they load.
+task Bootstrap {}
+
 task Reset {
     if (Test-Path $folders.OutputPath) {
         Remove-Item -Path $folders.OutputPath -Recurse -Force -ErrorAction 'Ignore'
@@ -34,7 +37,7 @@ task Build {
         return
     }
 
-    $ModuleFile = Import-PowerShellDataFile -Path (Join-Path $script:folders.ProjectRoot 'Module' "$($script:folders.ModuleName).psd1")
+    $ModuleFile = Import-PowerShellDataFile -Path (Join-Path $folders.ModuleSourcePath "$($folders.ModuleName).psd1")
     [xml]$csproj = Get-Content -Path $folders.CsprojPath -Raw
     $frameworks = $csproj.
     SelectNodes('//TargetFramework | //TargetFrameworks').
@@ -69,11 +72,6 @@ task GenerateHelp -if (-not $SkipHelp) {
         Write-Warning "Documentation path not found at: $($folders.DocsPath)"
         return
     }
-    if (-not (Get-Module -ListAvailable -Name Microsoft.PowerShell.PlatyPS)) {
-        Write-Host '    Installing Microsoft.PowerShell.PlatyPS...' -ForegroundColor Yellow
-        Install-Module -Name Microsoft.PowerShell.PlatyPS -Scope CurrentUser -Force -AllowClobber
-    }
-
     Import-Module Microsoft.PowerShell.PlatyPS -ErrorAction Stop
 
     $modulePath = Join-Path $folders.OutputPath ($folders.ModuleName + '.psd1')
@@ -113,13 +111,20 @@ task Test -if (-not $SkipTests) {
         Write-Warning "Test directory not found at: $($folders.TestPath)"
         return
     }
-    exec { dotnet test (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration }
+    $resultsPath = Join-Path $folders.ProjectRoot 'artifacts/test-results'
+    New-Item -Path $resultsPath -ItemType Directory -Force | Out-Null
+    # global.json opts dotnet test into Microsoft.Testing.Platform, which xunit.v3 runs natively.
+    exec { dotnet test --project (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration --results-directory $resultsPath --report-xunit-trx --report-xunit-trx-filename protocol.trx }
     $pesterConfig = New-PesterConfiguration
     # $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.Run.Path = $folders.TestPath
     $pesterConfig.Run.Throw = $true
+    $pesterConfig.Run.PassThru = $true
+    $pesterConfig.TestResult.Enabled = $true
+    $pesterConfig.TestResult.OutputPath = Join-Path $resultsPath 'pester.xml'
     $pesterConfig.Debug.WriteDebugMessages = $false
-    Invoke-Pester -Configuration $pesterConfig
+    $result = Invoke-Pester -Configuration $pesterConfig
+    if ($result.PassedCount -eq 0) { throw 'Pester did not run any passing tests.' }
 }
 
 task CleanAfter {
