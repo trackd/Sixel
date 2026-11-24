@@ -279,7 +279,7 @@ Accept wildcard characters: False
 
 ### -Format
 
-Png, Rgb (24-bit), or Rgba (32-bit). RGB discards alpha; RGBA carries red, green, blue, and transparency bytes for each pixel. When omitted, decoded images use PNG except in recognized Contour terminals, where RGBA avoids its Kitty PNG-decoding issue. Explicit choices are preserved. Reference data must already be in this format and defaults to PNG.
+Png, Rgb (24-bit), or Rgba (32-bit). RGB discards alpha; RGBA carries red, green, blue, and transparency bytes for each pixel. When omitted, decoded images use PNG. Reference data must already be in this format and defaults to PNG.
 
 ```yaml
 Type: String
