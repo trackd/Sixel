@@ -9,3 +9,12 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      # The compile reference sets the minimum PowerShell (7.4, net8.0); newer versions drop 7.4 and 7.5.
+      - dependency-name: "System.Management.Automation"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # 11.x packages no longer support net8.0, which PowerShell 7.4 runs on.
+      - dependency-name: "System.Text.Encoding.CodePages"
+        versions: [">= 11"]
+      - dependency-name: "System.Security.Cryptography.Pkcs"
+        versions: [">= 11"]
