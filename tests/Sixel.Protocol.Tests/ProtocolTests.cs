@@ -118,6 +118,7 @@ public sealed class ProtocolTests : IDisposable {
             (ImageSize Size, string Data) output = ConvertTo.ConsoleImage(protocol, nonSeekable, 256, 0, 0, true);
             Assert.True(output.Size.Width == 4 && output.Size.Height == 2, "Natural output metadata");
             Assert.True(output.Data.StartsWith(ImagePlacement.Begin(2), StringComparison.Ordinal), "Reserve rows before rendering");
+            Assert.True(!ImagePlacement.Begin(2).Contains('\r'), "Reserving rows keeps the cursor column");
             Assert.True(output.Data.EndsWith(ImagePlacement.End(2), StringComparison.Ordinal), "Leave cursor below image at column one");
             if (protocol == ImageProtocol.InlineImageProtocol) {
                 Match match = Patterns.Inline().Match(output.Data);
