@@ -11,7 +11,7 @@ public sealed class TerminalQueryTests : IDisposable {
     private readonly Func<IQueryTransport> originalFactory = Compatibility.CreateQueryTransport;
 
     public TerminalQueryTests() {
-        foreach (string name in new[] { "_cellSize", "_terminalInfo", "_terminalSupportsKitty", "_terminalSupportsSixel", "_lastWindowWidth", "_lastWindowHeight", "_runtimeProbeAttempted", "_terminalIdentity" }) {
+        foreach (string name in new[] { "_cellSize", "_terminalInfo", "_terminalSupportsKitty", "_terminalSupportsSixel", "_lastWindowWidth", "_lastWindowHeight", "_runtimeProbeAttempted", "_terminalIdentity", "_kittyFeatureReplies" }) {
             FieldInfo field = typeof(Compatibility).GetField(name, BindingFlags.Static | BindingFlags.NonPublic)!;
             saved.Add(field, field.GetValue(null));
             field.SetValue(null, null);
@@ -84,6 +84,73 @@ public sealed class TerminalQueryTests : IDisposable {
     [Fact]
     public void KittyReplyMayIncludePlacementIdentifier() {
         Compatibility.CreateQueryTransport = () => new FakeTransport("\x1b_Gp=0,i=31;OK\x1b\\\x1b[?62;1c");
+        Compatibility.RefreshTerminalInfo();
+        Assert.True(Compatibility._terminalSupportsKitty);
+    }
+
+    [Fact]
+    public void RuntimeProbeAsksFeatureQueriesWithValidPlaceholders() {
+        var ids = new HashSet<uint>();
+        foreach (KittyCapabilities.FeatureQuery feature in KittyCapabilities.FeatureQueries) {
+            Assert.True(ids.Add(feature.Id));
+            Assert.NotEqual(31u, feature.Id);
+            string packet = Sixel.Protocols.KittyProtocol.Encode(feature.Control);
+            Assert.Contains(packet, TerminalQuery.RuntimeProbe);
+            Assert.DoesNotContain(";", packet);
+            // Contour drops a whole command whose values do not parse, so each must be valid for its key.
+            string[] keys = [.. feature.Control.Where(entry => !entry.StartsWith("e=", StringComparison.Ordinal))];
+            _ = Sixel.Protocols.KittyProtocol.Parse(keys);
+            Assert.All(keys.Skip(2), entry => Assert.NotEqual("0", entry.Substring(2)));
+        }
+        string placement = Sixel.Protocols.KittyProtocol.Encode(KittyCapabilities.PlacementQuery.Control);
+        foreach (string key in new[] { "x", "y", "w", "h", "X", "Y", "c", "r", "C", "U", "z" })
+            Assert.Contains("," + key + "=1", placement);
+        Assert.Contains("e=p,P=1,Q=1,H=1,V=1", TerminalQuery.RuntimeProbe);
+        Assert.Contains("e=T,f=100,t=d,o=z", TerminalQuery.RuntimeProbe);
+        // DA stays the last query: it fences every reply before them.
+        Assert.EndsWith("\x1b[c", TerminalQuery.RuntimeProbe);
+    }
+
+    [Fact]
+    public void ContourFeatureRepliesSetCapabilitiesWithoutForce() {
+        Compatibility.CreateQueryTransport = () => new FakeTransport(
+            "\x1b_Gi=31;OK\x1b\\" +
+            "\x1b_Gi=32,e=p,p=1,c=1,r=1,C=1,U=1,z=1;OK\x1b\\\x1b_Gi=33,e=p;OK\x1b\\" +
+            "\x1b_Gi=34,e=T,o=z,f=100,s=1,v=1,U=1;OK\x1b\\\x1b_Gi=35,e=a;OK\x1b\\\x1b_Gi=36,e=f;OK\x1b\\\x1b_Gi=37,e=c;OK\x1b\\" +
+            "\x1bP>|contour 0.7.0-main\x1b\\\x1b[?65;1;3;4;7;9;18;21;22;29;52;314c");
+        Compatibility.RefreshTerminalInfo();
+        Assert.True(Compatibility._terminalSupportsKitty);
+        KittyCapabilities capabilities = Compatibility.GetKittyCapabilities();
+        Assert.Equal(Terminals.Contour, capabilities.Terminal);
+        Assert.Equal(CapabilitySupport.Supported, capabilities.UnicodePlaceholders);
+        Assert.Equal(CapabilitySupport.Unsupported, capabilities.SourceRectangle);
+        Assert.Equal(CapabilitySupport.Unsupported, capabilities.RelativePlacements);
+        Assert.Equal(CapabilitySupport.Supported, capabilities.Animation);
+        Assert.Equal(CapabilitySupport.Supported, capabilities.FrameComposition);
+        capabilities.Validate(["a=T", "U=1"], false, true, false);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\x1b_Gi=32;ENODATA:no data\x1b\\\x1b_Gi=33;EINVAL\x1b\\\x1b_Gi=35;OK\x1b\\")]
+    [InlineData("\x1b_Gi=32,e=T,U=1;OK\x1b\\\x1b_Gi=99,e=p,U=1;OK\x1b\\")]
+    public void RepliesWithoutFeatureEvidenceChangeNothing(string features) {
+        const string identity = "\x1bP>|kitty(0.31.0)\x1b\\\x1b[?62;4c";
+        Compatibility.CreateQueryTransport = () => new FakeTransport("\x1b_Gi=31;OK\x1b\\" + identity);
+        Compatibility.RefreshTerminalInfo();
+        KittyCapabilities expected = Compatibility.GetKittyCapabilities();
+
+        Compatibility.CreateQueryTransport = () => new FakeTransport("\x1b_Gi=31;OK\x1b\\" + features + identity);
+        Compatibility.RefreshTerminalInfo();
+        Assert.True(Compatibility._terminalSupportsKitty);
+        KittyCapabilities actual = Compatibility.GetKittyCapabilities();
+        foreach (var property in typeof(KittyCapabilities).GetProperties())
+            Assert.Equal(property.GetValue(expected), property.GetValue(actual));
+    }
+
+    [Fact]
+    public void FeatureQueryErrorsDoNotDecideBasicSupport() {
+        Compatibility.CreateQueryTransport = () => new FakeTransport("\x1b_Gi=32;EINVAL\x1b\\\x1b_Gi=31;OK\x1b\\\x1b_Gi=33;EINVAL\x1b\\\x1b[?62;4c");
         Compatibility.RefreshTerminalInfo();
         Assert.True(Compatibility._terminalSupportsKitty);
     }
