@@ -113,7 +113,8 @@ task Test -if (-not $SkipTests) {
     }
     $resultsPath = Join-Path $folders.ProjectRoot 'artifacts/test-results'
     New-Item -Path $resultsPath -ItemType Directory -Force | Out-Null
-    exec { dotnet test (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration --results-directory $resultsPath --logger 'trx;LogFileName=protocol.trx' }
+    # global.json opts dotnet test into Microsoft.Testing.Platform, which xunit.v3 runs natively.
+    exec { dotnet test --project (Join-Path $folders.TestPath 'Sixel.Protocol.Tests') --configuration $Configuration --results-directory $resultsPath --report-xunit-trx --report-xunit-trx-filename protocol.trx }
     $pesterConfig = New-PesterConfiguration
     # $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.Run.Path = $folders.TestPath
