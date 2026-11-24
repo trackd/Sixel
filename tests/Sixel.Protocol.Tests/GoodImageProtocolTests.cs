@@ -133,6 +133,88 @@ public sealed class GoodImageProtocolTests {
         Assert.Empty(session.OwnedNames);
     }
 
+    private static GoodImageOptions Options(int viewport = 0) =>
+        new() { Cell = new CellSize { PixelWidth = 10, PixelHeight = 20 }, ViewportHeight = viewport };
+
+    [Fact]
+    public void ImagesTallerThanThePageAreFittedToItAndScrollThemselves() {
+        GoodImageOptions options = Options(viewport: 10);
+        (string text, ImageSize cells, _) = GoodImage.Encode(Png(100, 1000), options);
+        Assert.Equal(10, cells.Height);
+        Assert.Equal(2, cells.Width);
+        Assert.StartsWith(Dcs + "o=s,f=4,c=2,r=10,z=1,a=1,u,l;!", text, StringComparison.Ordinal);
+        Assert.EndsWith(St + "\r", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UpdateCursorLeavesPlacementToTheTerminal() {
+        GoodImageOptions options = Options(viewport: 40);
+        options.Render.UpdateCursor = true;
+        (string text, _, _) = GoodImage.Encode(Png(31, 21), options);
+        Assert.StartsWith(Dcs + "o=s,f=4,c=4,r=2,z=1,a=1,u;!", text, StringComparison.Ordinal);
+        Assert.EndsWith(St, text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UploadOnlyIsOneUnplacedSequence() {
+        GoodImageOptions options = Options(viewport: 40);
+        options.Name = "up";
+        options.Action = GoodImageAction.Upload;
+        options.Headers = ["x_extra=1"];
+        (string text, _, _) = GoodImage.Encode(Png(31, 21), options);
+        Assert.StartsWith(Dcs + "o=u,n=up,f=4,x_extra=1;!", text, StringComparison.Ordinal);
+        Assert.Single(text.Split(St, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    [Fact]
+    public void PassthroughSendsTheSourceAndTheTerminalScales() {
+        MemoryStream source = Png(31, 21);
+        byte[] original = source.ToArray();
+        GoodImageOptions options = Options();
+        options.Passthrough = true;
+        options.Place = false;
+        (string text, ImageSize cells, var pixels) = GoodImage.Encode(source, options);
+        Assert.Equal((4, 2), (cells.Width, cells.Height));
+        Assert.Equal((31, 21), (pixels.Width, pixels.Height));
+        Assert.Equal(Dcs + "o=s,f=4,c=4,r=2,z=1,a=1;!" + Convert.ToBase64String(original) + St, text);
+    }
+
+    [Fact]
+    public void OtherResizePoliciesUseTheRequestedCells() {
+        GoodImageOptions options = Options();
+        options.Width = 9;
+        options.Height = 3;
+        options.Place = false;
+        options.Render.Resize = GoodImageResize.ResizeToFill;
+        (string text, ImageSize cells, var pixels) = GoodImage.Encode(Png(31, 21), options);
+        Assert.Equal((9, 3), (cells.Width, cells.Height));
+        Assert.Equal(31, pixels.Width);
+        Assert.StartsWith(Dcs + "o=s,f=4,c=9,r=3,z=2,a=1;!", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RenderByNamePlacesOnlyWithAHeight() {
+        GoodImageOptions options = Options(viewport: 40);
+        options.Name = "cog";
+        options.Width = 8;
+        Assert.Equal(Dcs + "o=r,n=cog,c=8,z=1,a=1" + St, GoodImage.Render(options));
+        options.Height = 4;
+        Assert.Equal(ImagePlacement.Begin(4) + Dcs + "o=r,n=cog,c=8,r=4,z=1,a=1" + St + ImagePlacement.End(4), GoodImage.Render(options));
+    }
+
+    [Fact]
+    public void CropsNeedANameAndSizeTheCellsToTheCrop() {
+        GoodImageOptions options = Options();
+        options.Render.Crop = (10, 0, 20, 20);
+        options.Place = false;
+        Assert.Throws<ArgumentException>(() => GoodImage.Encode(Png(100, 100), options));
+        options.Name = "c";
+        (string text, ImageSize cells, var pixels) = GoodImage.Encode(Png(100, 100), options);
+        Assert.Equal((2, 1), (cells.Width, cells.Height));
+        Assert.Equal(100, pixels.Width);
+        Assert.EndsWith(Dcs + "o=r,n=c,c=2,r=1,z=1,a=1,x=10,y=0,w=20,h=20" + St, text, StringComparison.Ordinal);
+    }
+
     private static MemoryStream Png(int width, int height) {
         using var image = new Image<Rgba32>(width, height, new Rgba32(255, 40, 20));
         var stream = new MemoryStream();

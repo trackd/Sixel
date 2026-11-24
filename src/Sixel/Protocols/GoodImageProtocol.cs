@@ -128,61 +128,71 @@ public static class GoodImageProtocol {
     }
 
     /// <summary>o=s: uploads and renders a PNG at the cursor in one sequence.</summary>
-    public static string Oneshot(byte[] png, GoodImageRender render) {
+    public static string Oneshot(byte[] png, GoodImageRender render) => Oneshot(png, render, GoodImageFormat.Png);
+
+    /// <summary>
+    /// o=s: uploads and renders at the cursor in one sequence. Raw RGB/RGBA need their pixel size.
+    /// Extra headers are appended last; the protocol lets a later header override an earlier one.
+    /// </summary>
+    public static string Oneshot(byte[] data, GoodImageRender render, GoodImageFormat format,
+        int width = 0, int height = 0, bool requestStatus = false, IEnumerable<string>? headers = null) {
         if (render is null) throw new ArgumentNullException(nameof(render));
         if (render.Crop.HasValue) throw new ArgumentException("Oneshot rendering has no crop; upload and render by name.", nameof(render));
-        var headers = new List<string> { "o=s", Number('f', (int)GoodImageFormat.Png) };
-        AddRender(headers, render);
-        return Encode(headers, png);
+        var entries = new List<string> { "o=s", Number('f', (int)format) };
+        AddPixels(entries, data, format, width, height);
+        AddRender(entries, render);
+        if (requestStatus) entries.Add("s");
+        if (headers is not null) entries.AddRange(headers);
+        return Encode(entries, data);
     }
 
     /// <summary>o=u: stores a named image for later o=r renders.</summary>
     public static string Upload(string name, byte[] data, GoodImageFormat format = GoodImageFormat.Png,
-        int width = 0, int height = 0, bool requestStatus = false) {
-        var headers = new List<string> { "o=u", "n=" + CheckName(name), Number('f', (int)format) };
+        int width = 0, int height = 0, bool requestStatus = false, IEnumerable<string>? headers = null) {
+        var entries = new List<string> { "o=u", "n=" + CheckName(name), Number('f', (int)format) };
+        AddPixels(entries, data, format, width, height);
+        if (requestStatus) entries.Add("s");
+        if (headers is not null) entries.AddRange(headers);
+        return Encode(entries, data);
+    }
+
+    private static void AddPixels(List<string> headers, byte[] data, GoodImageFormat format, int width, int height) {
+        if (data is null) throw new ArgumentNullException(nameof(data));
         if (format is GoodImageFormat.Rgb or GoodImageFormat.Rgba) {
             if (width <= 0 || height <= 0)
-                throw new ArgumentException("Raw RGB and RGBA uploads need a pixel width and height.", nameof(width));
+                throw new ArgumentException("Raw RGB and RGBA images need a pixel width and height.", nameof(width));
             long expected = (long)width * height * (format == GoodImageFormat.Rgb ? 3 : 4);
-            if (data is null || data.LongLength != expected)
+            if (data.LongLength != expected)
                 throw new ArgumentException("Raw pixel data does not match the width and height.", nameof(data));
         }
         if (width > 0) headers.Add(Number('w', width));
         if (height > 0) headers.Add(Number('h', height));
-        if (requestStatus) headers.Add("s");
-        return Encode(headers, data ?? throw new ArgumentNullException(nameof(data)));
     }
 
     /// <summary>o=r: renders a named image at the cursor.</summary>
-    public static string Render(string name, GoodImageRender render, bool requestStatus = false) {
+    public static string Render(string name, GoodImageRender render, bool requestStatus = false) =>
+        Render(name, render, requestStatus, null);
+
+    /// <summary>o=r with extra headers appended last.</summary>
+    public static string Render(string name, GoodImageRender render, bool requestStatus, IEnumerable<string>? headers) {
         if (render is null) throw new ArgumentNullException(nameof(render));
-        var headers = new List<string> { "o=r", "n=" + CheckName(name) };
-        AddRender(headers, render);
+        var entries = new List<string> { "o=r", "n=" + CheckName(name) };
+        AddRender(entries, render);
         if (render.Crop is { } crop) {
             if (crop.X < 0 || crop.Y < 0 || crop.Width < 0 || crop.Height < 0)
                 throw new ArgumentOutOfRangeException(nameof(render), "Crop values cannot be negative.");
-            headers.Add(Number('x', crop.X));
-            headers.Add(Number('y', crop.Y));
-            headers.Add(Number('w', crop.Width));
-            headers.Add(Number('h', crop.Height));
+            entries.Add(Number('x', crop.X));
+            entries.Add(Number('y', crop.Y));
+            entries.Add(Number('w', crop.Width));
+            entries.Add(Number('h', crop.Height));
         }
-        if (requestStatus) headers.Add("s");
-        return Encode(headers);
+        if (requestStatus) entries.Add("s");
+        if (headers is not null) entries.AddRange(headers);
+        return Encode(entries);
     }
 
     /// <summary>o=d: releases a named image. Cells already showing it keep it.</summary>
     public static string Release(string name) => Encode(["o=d", "n=" + CheckName(name)]);
-
-    /// <summary>Oneshot PNG for an image already resized and padded to <paramref name="cells"/>.</summary>
-    internal static string Encode(ImageBackend image, ImageSize cells, bool tall) =>
-        Oneshot(image.FrameBytes(0, 100), new GoodImageRender {
-            Columns = cells.Width,
-            Rows = cells.Height,
-            // An image taller than the page scrolls it and leaves the cursor below; anything
-            // shorter is framed by ImagePlacement, which restores and moves the cursor itself.
-            AutoScroll = tall,
-            UpdateCursor = tall,
-        });
 
     /// <summary>Names are 1-512 characters of [A-Za-z0-9_].</summary>
     public static string CheckName(string name) {
