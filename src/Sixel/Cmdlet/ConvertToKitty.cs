@@ -178,11 +178,6 @@ public sealed class ConvertKittyCmdlet : PSCmdlet {
                 return;
             }
             int format = Format.ToUpperInvariant() switch { "RGB" => 24, "RGBA" => 32, _ => 100 };
-            // Contour's current Kitty PNG path stores encoded bytes without
-            // decoding them. Prefer raw RGBA; an explicit -Format remains authoritative.
-            if (ParameterSetName != "Reference" && !MyInvocation.BoundParameters.ContainsKey(nameof(Format)) &&
-                capabilities.Terminal == Terminals.Contour)
-                format = 32;
             char action = Action.ToUpperInvariant() switch { "TRANSMIT" => 't', "QUERY" => 'q', "FRAME" => 'f', _ => 'T' };
             if (ParameterSetName == "Reference") {
                 if (action != 'T' && (Width != 0 || Height != 0))
