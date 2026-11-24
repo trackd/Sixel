@@ -233,7 +233,9 @@ public sealed partial class KittyPreviewTests {
         Assert.StartsWith("\u001b[38;2;0;0;42;58;2;1;2;3m", result);
         Assert.Contains("\U0010eeee\u0305\u030d\u030e", result);
         Assert.Contains("\U0010eeee\u030d\u0305\u030e", result);
-        Assert.Equal(2, result.Split("\r\n").Length - 1);
+        Assert.Equal(1, result.Split("\r\n").Length - 1);
+        Assert.Equal(1, result.Split("\u001b8\u001bD\u001b7").Length - 1);
+        Assert.EndsWith("\u001b8\r\n\u001b[39;59m", result);
         Assert.EndsWith("\u001b[39;59m", result);
         Assert.Throws<ArgumentOutOfRangeException>(() => KittyPlaceholder.Encode(1, 0x1000000, 1, 1));
     }
