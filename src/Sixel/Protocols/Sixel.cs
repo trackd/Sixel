@@ -68,11 +68,11 @@ public static partial class Sixel {
         }
     }
     private static void AddColorToPalette(this StringBuilder sixelBuilder, byte red, byte green, byte blue, int colorIndex) {
-        // rgb 0-255 needs to be translated to 0-100 for sixel.
+        // rgb 0-255 needs to be translated to 0-100 for sixel, rounded to nearest.
         (int r, int g, int b) = (
-            red * 100 / 255,
-            green * 100 / 255,
-            blue * 100 / 255
+            (red * 100 + 127) / 255,
+            (green * 100 + 127) / 255,
+            (blue * 100 + 127) / 255
         );
 
         _ = sixelBuilder

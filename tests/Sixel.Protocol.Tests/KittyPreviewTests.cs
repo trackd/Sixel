@@ -205,7 +205,8 @@ public sealed partial class KittyPreviewTests {
         Match[] packets = Packets(result.Text).Cast<Match>().ToArray();
         Assert.Equal(4, packets.Length);
         Assert.Contains("r=1,z=70", packets[1].Groups["header"].Value);
-        Assert.Contains("a=f,i=9,q=2,t=d,f=100,X=1,z=-1", packets[2].Groups["header"].Value);
+        // A 0 cs GIF delay plays at 100 ms (browser behaviour), never as a hidden gapless frame (z=-1).
+        Assert.Contains("a=f,i=9,q=2,t=d,f=100,X=1,z=100", packets[2].Groups["header"].Value);
         Assert.Contains("s=3,v=3", packets[3].Groups["header"].Value);
         using var decoded = Image.Load<Rgba32>(Convert.FromBase64String(packets[2].Groups["data"].Value));
         Assert.Equal(new Rgba32(0, 255, 0), decoded[0, 0]);
