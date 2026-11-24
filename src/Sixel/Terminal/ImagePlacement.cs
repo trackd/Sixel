@@ -7,14 +7,16 @@ namespace Sixel.Terminal;
 internal static class ImagePlacement {
     // DECSDM reset allows inline scrolling; mode 8452 reset advances down.
     internal const string SixelModes = "\x1b[?80l\x1b[?8452l";
+    // IND (ESC D) scrolls like a newline but keeps the cursor column, so an
+    // image drawn after CUP or other text starts where the cursor was.
     internal static string Begin(int rows) {
         var result = new StringBuilder();
         for (int row = 0; row < rows; row++)
-            result.Append("\r\n");
+            result.Append("\x1b" + "D");
         return result.
             Append("\x1b[").
             Append(rows.ToString(CultureInfo.InvariantCulture)).
-            Append("A\r\x1b" + "7").ToString();
+            Append("A\x1b" + "7").ToString();
     }
 
     internal static string End(int rows) =>
