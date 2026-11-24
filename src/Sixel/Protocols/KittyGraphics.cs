@@ -1,4 +1,5 @@
-﻿using System.Text;
+#if !NET472
+using System.Text;
 using System.Globalization;
 using Sixel.Terminal;
 using Sixel.Terminal.Models;
@@ -8,6 +9,8 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Sixel.Protocols;
 
 public static class KittyGraphics {
+    internal static string Encode(ImageBackend image, ImageSize cells) => Encode(image.NativeImage, cells);
+
     /// <summary>
     /// Converts an image stream to Kitty Graphics Protocol format.
     /// </summary>
@@ -70,3 +73,4 @@ public static class KittyGraphics {
         return sb.ToString();
     }
 }
+#endif

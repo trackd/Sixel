@@ -1,4 +1,5 @@
-﻿using System;
+#if !NET472
+using System;
 using Sixel.Terminal.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -206,3 +207,4 @@ internal static class SizeHelperDev {
 
     }
 }
+#endif
