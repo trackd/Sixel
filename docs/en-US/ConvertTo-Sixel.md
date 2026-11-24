@@ -1,4 +1,4 @@
-﻿---
+---
 external help file: Sixel.dll-Help.xml
 Module Name: Sixel
 online version: https://github.com/trackd/Sixel/blob/main/docs/en-US/ConvertTo-Sixel.md
@@ -181,7 +181,7 @@ Accept wildcard characters: False
 
 ### -Force
 
-Force the command to attempt to output sixel data even if the terminal does not support sixel.  
+Attempt conversion even if the terminal does not support the selected protocol, and skip automatic terminal probing. Uses cached/environment information and fallback cell sizing when measurements are unavailable. Does not consume the session's first probe attempt.
 
 ```yaml
 Type: SwitchParameter

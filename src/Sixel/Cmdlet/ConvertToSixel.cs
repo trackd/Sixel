@@ -73,7 +73,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
     public int Height { get; set; }
 
     [Parameter(
-        HelpMessage = "Force the command to attempt to output image data even if the terminal does not support the protocol selected."
+        HelpMessage = "Attempt conversion without compatibility checks or automatic terminal probing."
     )]
     public SwitchParameter Force { get; set; }
 
@@ -91,6 +91,7 @@ public sealed class ConvertSixelCmdlet : PSCmdlet {
     protected override void ProcessRecord() {
         Stream? imageStream = null;
         try {
+            TerminalExecution.Prepare(this, Force.IsPresent);
             switch (ParameterSetName) {
                 case "InputObject": {
                         if (InputObject?.Length > 512) {

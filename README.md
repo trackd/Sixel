@@ -1,4 +1,4 @@
-﻿# Sixel
+# Sixel
 
 A module that lets you convert images to Sixel, Inline Images Protocol, Kitty Graphics Protocol.  
 
@@ -26,6 +26,21 @@ There is an example sixel file in the ./assets folder that can be used for testi
 # test sixel
 Invoke-RestMethod https://raw.githubusercontent.com/trackd/Sixel/refs/heads/main/assets/chibi.six
 ```
+
+## Kitty preview
+
+`ConvertTo-Kitty` provides a separate preview of the full Kitty wire protocol,
+including native GIF animation (plus APNG/WebP on PowerShell 7), placements, deletion,
+composition, and Unicode placeholders. Explicit client APIs provide reply parsing,
+disposable local transfers, and cleanup of session-owned images.
+The existing `ConvertTo-Sixel` Kitty path remains available for comparison.
+
+```powershell
+$image = ConvertTo-Kitty ./assets/cog.png -Width 20 -ImageId 42
+[Console]::Write($image)
+```
+
+See `Get-Help ConvertTo-Kitty -Full` for parameters and examples.
 
 ## Authors
 
