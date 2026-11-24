@@ -68,6 +68,15 @@ public static class ConvertTo {
                 image.Pad(kittySize, cell);
                 return (kittySize, ImagePlacement.Wrap(KittyGraphics.Encode(image, kittySize), kittySize.Height));
 
+            case ImageProtocol.GoodImageProtocol:
+                // Preview: only when asked for, and only after DA1 announced it (or -Force).
+                if (!Compatibility.TerminalSupportsGoodImageProtocol() && !Force) {
+                    throw new InvalidOperationException("Terminal did not announce the Good Image Protocol (DA1 90), override with -Force");
+                }
+                // Fit locally into padded cells, top-left aligned; ConvertTo-GoodImage exposes the rest.
+                var gip = GoodImage.Encode(image, null, new GoodImageOptions { Width = width, Height = height, Cell = cell });
+                return (gip.Cells, gip.Text);
+
             case ImageProtocol.InlineImageProtocol:
                 if (!autoProtocol.Contains(ImageProtocol.InlineImageProtocol) && !Force) {
                     throw new InvalidOperationException("Terminal does not support Inline Image, override with -Force");

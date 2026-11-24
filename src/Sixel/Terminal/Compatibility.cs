@@ -30,6 +30,9 @@ public static partial class Compatibility {
     /// </summary>
     internal static bool? _terminalSupportsKitty;
 
+    /// <summary>Whether the last DA1 reply listed 90, the Good Image Protocol (preview).</summary>
+    internal static bool? _terminalSupportsGoodImageProtocol;
+
     /// <summary>Replies to the runtime probe's Kitty feature queries (a=q,e=), by image id.</summary>
     internal static IReadOnlyDictionary<uint, Protocols.KittyResponse>? _kittyFeatureReplies;
 
@@ -98,8 +101,11 @@ public static partial class Compatibility {
                 // Only a reply naming the queried action is feature evidence; KittyCapabilities checks that.
                 else if (reply.FeatureAction.HasValue) features[reply.ImageId] = reply;
             }
-            else if (segment.StartsWith("[?", StringComparison.Ordinal) && segment[segment.Length - 1] == 'c')
-                _terminalSupportsSixel = segment.Substring(2, segment.Length - 3).Split(';').Skip(1).Contains("4");
+            else if (segment.StartsWith("[?", StringComparison.Ordinal) && segment[segment.Length - 1] == 'c') {
+                string[] attributes = ParseDeviceAttributes(report);
+                _terminalSupportsSixel = attributes.Contains("4");
+                _terminalSupportsGoodImageProtocol = attributes.Contains(GoodImageProtocolAttribute);
+            }
             else if (TryParseSizeReport(report, 6, out int width, out int height))
                 measured = new CellSize { PixelWidth = width, PixelHeight = height };
             else if (TryParseSizeReport(report, 4, out width, out height)) {
@@ -258,6 +264,24 @@ public static partial class Compatibility {
         }
         return GetTerminalInfo().Protocol.Contains(ImageProtocol.KittyGraphicsProtocol);
     }
+
+    /// <summary>The DA1 code that announces the Good Image Protocol.</summary>
+    internal const string GoodImageProtocolAttribute = "90";
+
+    /// <summary>The attribute codes of a DA1 reply (<c>ESC [ ? Ps ; … c</c>) after its leading class code.</summary>
+    internal static string[] ParseDeviceAttributes(string response) {
+        if (response is null || !response.StartsWith("\x1b[?", StringComparison.Ordinal) || response.Length < 4 ||
+            response[response.Length - 1] != 'c')
+            return [];
+        return response.Substring(3, response.Length - 4).Split(';').Skip(1).ToArray();
+    }
+
+    /// <summary>
+    /// Whether the terminal announced the Good Image Protocol (DA1 code 90) in the runtime probe.
+    /// No environment guess: Contour, for one, enables it only by configuration. The protocol is a
+    /// preview of an alpha specification and is never selected automatically.
+    /// </summary>
+    public static bool TerminalSupportsGoodImageProtocol() => _terminalSupportsGoodImageProtocol ?? false;
 
     /// <summary>
     /// Get the terminal info

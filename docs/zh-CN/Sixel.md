@@ -21,3 +21,11 @@ Locale: zh-CN
 ### [ConvertTo-SixelGif](ConvertTo-SixelGif.md)
 
 将 gif 转换为 sixel 动画
+
+### [ConvertTo-Kitty](ConvertTo-Kitty.md)
+
+将图像和控制操作转换为 Kitty 图形转义序列（预览）
+
+### [ConvertTo-GoodImage](ConvertTo-GoodImage.md)
+
+将图像转换为 Good Image Protocol，并提供所有渲染选项（预览）

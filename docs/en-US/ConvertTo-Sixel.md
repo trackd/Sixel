@@ -9,7 +9,7 @@ schema: 2.0.0
 
 ## SYNOPSIS
 
-Converts an image to Sixel, Kitty, InlineImage or Blocks.  
+Converts an image to Sixel, Kitty, InlineImage, Blocks, Braille or the Good Image Protocol (preview).  
 To display in the console  
 
 ## SYNTAX
@@ -64,6 +64,15 @@ PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png
 ```
 
 Converts a local file.  
+
+### -------------------------- EXAMPLE 3 --------------------------
+
+```powershell
+PS C:\> ConvertTo-Sixel -Path C:\files\smiley.png -Width 20 -Protocol GoodImageProtocol
+```
+
+Preview: draws the image with the Good Image Protocol (`DCS ! g`) in a terminal that lists
+code 90 in its DA1 reply, such as Contour with `images: good_image_protocol: true`.  
 
 ## PARAMETERS
 
@@ -203,9 +212,13 @@ Accept wildcard characters: False
 ### -Protocol
 
 Select the image protocol to output.  
-Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol, Block  
+Supports Sixel, InlineImageProtocol, KittyGraphicsProtocol, Blocks, Braille and
+GoodImageProtocol (preview)  
 
 It will attempt to autoselect the supported image protocol for your terminal.  
+GoodImageProtocol is a preview of an alpha specification and is never autoselected. It needs
+the terminal to list code 90 in its DA1 reply, or -Force. The image is sent as one PNG
+(o=s,f=4) with its cell size, fit-to-cell resizing and top-left alignment.  
 
 ```yaml
 Type: ImageProtocol

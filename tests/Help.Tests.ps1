@@ -2,6 +2,7 @@ Describe 'Packaged help for <CommandName>' -ForEach @(
     @{ CommandName = 'ConvertTo-Sixel' }
     @{ CommandName = 'ConvertTo-SixelGif' }
     @{ CommandName = 'ConvertTo-Kitty' }
+    @{ CommandName = 'ConvertTo-GoodImage' }
 ) {
     BeforeAll {
         Import-Module (Join-Path $PSScriptRoot '../output/Sixel.psd1')

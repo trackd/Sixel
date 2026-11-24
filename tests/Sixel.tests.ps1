@@ -58,7 +58,7 @@ Describe 'Sixel Module Tests' {
             $queryFactory.SetValue($null, $blockedFactory)
             Get-Command -Name ConvertTo-Sixel | Should -Not -BeNullOrEmpty
             Get-Command -Name ConvertTo-Kitty | Should -Not -BeNullOrEmpty
-            foreach ($commandName in 'ConvertTo-Sixel', 'ConvertTo-SixelGif', 'ConvertTo-Kitty') {
+            foreach ($commandName in 'ConvertTo-Sixel', 'ConvertTo-SixelGif', 'ConvertTo-Kitty', 'ConvertTo-GoodImage') {
                 $command = Get-Command -Name $commandName
                 $command.Parameters.ContainsKey('NoProbe') | Should -BeFalse
                 $command.Parameters.ContainsKey('Force') | Should -BeTrue
@@ -87,7 +87,7 @@ Describe 'Sixel Module Tests' {
 
     It 'Should have the Sixel module exported functions' {
         $functions = Get-Command -Module Sixel
-        $functions.count | Should -Be 3
+        $functions.count | Should -Be 4
     }
 
     It 'Should be able to detect terminal support' {
@@ -270,6 +270,26 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
         @($controls -cmatch '^m=[01]$').Count | Should -Be 1
         # $test | Should -Be $rec
     }
+
+    It 'Should convert an image to the Good Image Protocol preview' {
+        $test = ConvertTo-Sixel -Path $cog -Width 2 -Protocol GoodImageProtocol -Force
+        $test.Width | Should -Be 2
+        $match = [regex]::Match([string]$test, '\x1bP!go=s,f=4,c=2,r=(\d+),z=1,a=1;!([A-Za-z0-9+/=]+)\x1b\\')
+        $match.Success | Should -BeTrue
+        [int]$match.Groups[1].Value | Should -Be $test.Height
+        $png = [Convert]::FromBase64String($match.Groups[2].Value)
+        [Text.Encoding]::ASCII.GetString($png, 1, 3) | Should -Be 'PNG'
+    }
+
+    It 'Should not use the Good Image Protocol preview unless the terminal announced it' {
+        if ([Sixel.Terminal.Compatibility]::TerminalSupportsGoodImageProtocol()) {
+            Set-ItResult -Skipped -Because 'this terminal announced DA1 code 90'
+            return
+        }
+        { ConvertTo-Sixel -Path $cog -Width 2 -Protocol GoodImageProtocol -ErrorAction Stop } |
+            Should -Throw '*DA1 90*'
+        ConvertTo-Sixel -Path $cog -Width 2 -Force | Should -Not -Match ([regex]::Escape("$([char]27)P!g"))
+    }
     It 'Should convert a filestream to sixel' {
         $test =
         [System.IO.FileStream]::new(
@@ -281,6 +301,64 @@ Describe 'Sixel Module ConvertTo-Sixel Tests' {
         $test | Should -Not -BeNullOrEmpty
         # $rec = Get-Content -Path ([System.IO.Path]::Combine($samplePath, 'cog_sixel_w2.sixel')) -Raw
         # $test | Should -Be $rec
+    }
+}
+Describe 'Sixel Module ConvertTo-GoodImage Tests' {
+    BeforeAll {
+        $esc = [char]27
+        $st = "$esc\"
+    }
+
+    It 'Fits locally and frames the oneshot like ConvertTo-Sixel' {
+        $test = ConvertTo-GoodImage -Path $cog -Width 4 -CellWidth 10 -CellHeight 20 -Force -ErrorAction Stop
+        $test.Width | Should -Be 4
+        $test.PixelWidth | Should -Be 40
+        $test.PixelHeight | Should -Be ($test.Height * 20)
+        [string]$test | Should -Match ("^($esc" + 'D)+' + [regex]::Escape("$esc[$($test.Height)A$($esc)7$($esc)P!go=s,f=4,c=4,r=$($test.Height),z=1,a=1;!"))
+    }
+
+    It 'Uploads by name and renders with the requested policies' {
+        $test = ConvertTo-GoodImage -Path $cog -Name cog_test -Width 6 -Height 3 -Resize StretchToFill -Alignment MiddleCenter -Layer Above -NoCursorMove -RequestStatus -Force -ErrorAction Stop
+        $sequences = [string]$test -split [regex]::Escape($st) | Where-Object { $_ }
+        $sequences.Count | Should -Be 2
+        $sequences[0] | Should -BeLike "$($esc)P!go=u,n=cog_test,f=4,s;!*"
+        $sequences[1] | Should -BeExactly "$($esc)P!go=r,n=cog_test,c=6,r=3,z=3,a=5,L=2,s"
+    }
+
+    It 'Passes a PNG through unchanged' {
+        $test = ConvertTo-GoodImage -Path $cog -Width 4 -Passthrough -NoCursorMove -Force -ErrorAction Stop
+        $body = ([string]$test).Split('!')[-1].TrimEnd($st.ToCharArray())
+        [Convert]::FromBase64String($body) | Should -Be ([IO.File]::ReadAllBytes($cog))
+    }
+
+    It 'Sends raw RGBA with its pixel size' {
+        $test = ConvertTo-GoodImage -Path $cog -Width 2 -CellWidth 10 -CellHeight 20 -Format Rgba -NoCursorMove -Force -ErrorAction Stop
+        [string]$test | Should -BeLike "$($esc)P!go=s,f=3,w=20,h=$($test.PixelHeight),c=2,r=$($test.Height),z=1,a=1;!*"
+        $body = ([string]$test).Split('!')[-1].TrimEnd($st.ToCharArray())
+        [Convert]::FromBase64String($body).Length | Should -Be (20 * $test.PixelHeight * 4)
+    }
+
+    It 'Crops only named images' {
+        { ConvertTo-GoodImage -Path $cog -Crop 0, 0, 10, 10 -Force -ErrorAction Stop } | Should -Throw '*-Name*'
+        $test = ConvertTo-GoodImage -Path $cog -Name c -Crop 10, 20, 100, 50 -Width 4 -CellWidth 10 -CellHeight 20 -NoCursorMove -Force -ErrorAction Stop
+        [string]$test | Should -Match ([regex]::Escape("$($esc)P!go=r,n=c,c=4,r=1,z=1,a=1,x=10,y=20,w=100,h=50$st") + '$')
+    }
+
+    It 'Renders, releases, queries and sends raw commands' {
+        ConvertTo-GoodImage -Name cog -Render -Width 8 -Height 4 -NoCursorMove -Force | Should -BeExactly "$($esc)P!go=r,n=cog,c=8,r=4,z=1,a=1$st"
+        [string](ConvertTo-GoodImage -Name cog -Render -Width 8 -Height 4 -Force) |
+            Should -BeExactly (("$($esc)D" * 4) + "$esc[4A$($esc)7$($esc)P!go=r,n=cog,c=8,r=4,z=1,a=1$st$($esc)8$esc[4B`r")
+        ConvertTo-GoodImage -Name cog -Release -Force | Should -BeExactly "$($esc)P!go=d,n=cog$st"
+        ConvertTo-GoodImage -QueryLimits | Should -BeExactly "$($esc)P!go=q$st"
+        ConvertTo-GoodImage -Command 'o=s', 'f=4', 'c=2' -Payload ([byte[]](1, 2, 3)) -Force | Should -BeExactly "$($esc)P!go=s,f=4,c=2;!AQID$st"
+    }
+
+    It 'Needs the DA1 90 announcement or -Force' {
+        if ([Sixel.Terminal.Compatibility]::TerminalSupportsGoodImageProtocol()) {
+            Set-ItResult -Skipped -Because 'this terminal announced DA1 code 90'
+            return
+        }
+        { ConvertTo-GoodImage -Path $cog -Width 2 -ErrorAction Stop } | Should -Throw '*DA1 90*'
     }
 }
 Describe 'Sixel Module ConvertTo-SixelGif Tests' {

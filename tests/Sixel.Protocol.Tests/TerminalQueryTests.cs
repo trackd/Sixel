@@ -11,7 +11,7 @@ public sealed class TerminalQueryTests : IDisposable {
     private readonly Func<IQueryTransport> originalFactory = Compatibility.CreateQueryTransport;
 
     public TerminalQueryTests() {
-        foreach (string name in new[] { "_cellSize", "_terminalInfo", "_terminalSupportsKitty", "_terminalSupportsSixel", "_lastWindowWidth", "_lastWindowHeight", "_runtimeProbeAttempted", "_terminalIdentity", "_kittyFeatureReplies" }) {
+        foreach (string name in new[] { "_cellSize", "_terminalInfo", "_terminalSupportsKitty", "_terminalSupportsSixel", "_terminalSupportsGoodImageProtocol", "_lastWindowWidth", "_lastWindowHeight", "_runtimeProbeAttempted", "_terminalIdentity", "_kittyFeatureReplies" }) {
             FieldInfo field = typeof(Compatibility).GetField(name, BindingFlags.Static | BindingFlags.NonPublic)!;
             saved.Add(field, field.GetValue(null));
             field.SetValue(null, null);
@@ -339,6 +339,50 @@ public sealed class TerminalQueryTests : IDisposable {
         Compatibility.EnsureRuntimeProbe();
         Assert.Equal(12, Compatibility.GetCellSize().PixelWidth);
         Assert.Equal(24, Compatibility.GetCellSize().PixelHeight);
+    }
+
+    [Theory]
+    [InlineData("\x1b[?65;1;3;4;90c", true)]
+    [InlineData("\x1b[?64;90;4c", true)]
+    [InlineData("\x1b[?65;1;4;190c", false)]
+    [InlineData("\x1b[?90;1c", false)]
+    [InlineData("\x1b[?62;1c", false)]
+    public void DeviceAttributesAnnounceGoodImageProtocolWithCode90(string da1, bool supported) {
+        Compatibility.CreateQueryTransport = () => new FakeTransport(da1);
+        TerminalInfo info = Compatibility.RefreshTerminalInfo();
+        Assert.Equal(supported, Compatibility.TerminalSupportsGoodImageProtocol());
+        Assert.DoesNotContain(ImageProtocol.GoodImageProtocol, info.Protocol);
+    }
+
+    [Fact]
+    public void SupportIsNeverGuessedWithoutAProbe() {
+        Compatibility.CreateQueryTransport = () => throw new InvalidOperationException("Automatic terminal I/O");
+        Assert.False(Compatibility.TerminalSupportsGoodImageProtocol());
+        Assert.Null(Compatibility._terminalSupportsGoodImageProtocol);
+    }
+
+    [Fact]
+    public void AutoNeverSelectsGoodImageProtocol() {
+        Compatibility.CreateQueryTransport = () => new FakeTransport("\x1b[?65;1;90c");
+        Compatibility.RefreshTerminalInfo();
+        Assert.True(Compatibility.TerminalSupportsGoodImageProtocol());
+        (ImageSize _, string data) = ConvertTo.ConsoleImage(ImageProtocol.Auto, Png(31, 21), 256);
+        Assert.DoesNotContain("\x1bP!g", data, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConvertToRequiresAnnouncementOrForce() {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ConvertTo.ConsoleImage(ImageProtocol.GoodImageProtocol, Png(31, 21), 256));
+        Assert.Contains("DA1 90", error.Message, StringComparison.Ordinal);
+    }
+
+    private static MemoryStream Png(int width, int height) {
+        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(width, height);
+        var stream = new MemoryStream();
+        SixLabors.ImageSharp.ImageExtensions.SaveAsPng(image, stream);
+        stream.Position = 0;
+        return stream;
     }
 
     [Theory]
